@@ -65,7 +65,7 @@ function headlineFor(variant: FeedbackState['variant']): string {
     case 'dontKnow':
       return 'Nie szkodzi!'
     case 'timeout':
-      return 'Następnym razem szybciej'
+      return 'Posłuchaj jeszcze raz'
   }
 }
 
