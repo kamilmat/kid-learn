@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Iskierki</title>
+<script>
+  // SPA fallback dla GitHub Pages — przekształca głębokie URL'e (/kid-learn/letters/...)
+  // na format który index.html dekoduje z window.location.search.
+  // Bazowane na rafgraves/spa-github-pages (MIT).
+  // segmentCount=1 bo nasz repo path to /kid-learn/ (jeden segment).
+  var segmentCount = 1
+  var l = window.location
+  l.replace(
+    l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+    l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?/' +
+    l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
+    (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+    l.hash
+  )
+</script>
+</head>
+<body></body>
+</html>

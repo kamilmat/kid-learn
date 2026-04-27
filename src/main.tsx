@@ -9,9 +9,13 @@ if (!rootElement) {
   throw new Error('Root element #root not found')
 }
 
+// basename z import.meta.env.BASE_URL — Vite wstrzykuje '/' lokalnie i
+// '/kid-learn/' na GitHub Pages. Trim trailing '/' bo BrowserRouter tego wymaga.
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
+
 createRoot(rootElement).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <App />
     </BrowserRouter>
   </StrictMode>,
