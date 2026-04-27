@@ -103,6 +103,31 @@ describe('exportReportToMarkdown', () => {
     expect(md).toContain('2023-07-15')
   })
 
+  it('renderuje sekcję "Limit czasu (per poziom)" z 4 sub-bulletami z dwuspacjowym wcięciem', () => {
+    const md = exportReportToMarkdown({}, [], defaultSettings, NOW)
+    // Header sekcji
+    expect(md).toContain('- Limit czasu (per poziom):')
+    // Per-level defaulty (iskierka/płomyk = 'off', ognik/pochodnia = 15s)
+    // 2-spacjowe wcięcie zagnieżdżonego bulleta jest częścią kontraktu — pinujemy.
+    expect(md).toContain('  - Iskierka: wyłączony')
+    expect(md).toContain('  - Płomyk: wyłączony')
+    expect(md).toContain('  - Ognik: 15s')
+    expect(md).toContain('  - Pochodnia: 15s')
+  })
+
+  it('uwzględnia override per-level w sekcji "Limit czasu"', () => {
+    const settings = {
+      ...defaultSettings,
+      timeLimit: { iskierka: 10 as const, ognik: 'off' as const },
+    }
+    const md = exportReportToMarkdown({}, [], settings, NOW)
+    expect(md).toContain('  - Iskierka: 10s')
+    expect(md).toContain('  - Ognik: wyłączony')
+    // Bez overrideu — fallback do defaultu poziomu
+    expect(md).toContain('  - Płomyk: wyłączony')
+    expect(md).toContain('  - Pochodnia: 15s')
+  })
+
   it('uwzględnia flagi anti-cheat', () => {
     const fast: SessionEvent[] = [
       { type: 'answer', ts: 100, outcome: 'correct', responseMs: 500 },

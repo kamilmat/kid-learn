@@ -2,13 +2,23 @@
 
 ## Aktualny stan
 
-**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. v1.1 UX iteration + v1.1.1 follow-up zmergowane do main fast-forward (31 commitów liniowo, branch `feat/ux-iteration-v1.1` skasowany). Smoke w Chrome ✅. 2026-04-27. Main na `8587fb6`.
+**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. v1.1 UX iteration + v1.1.1 follow-up + polish sweep zmergowane do main. Smoke w Chrome ✅. 2026-04-27.
 
 ### Build / testy
 - `pnpm tsc -b` ✓
 - `pnpm build` ✓ (319 KB JS / 99 KB gzip)
 - `pnpm audio:check` ✓ (137 plików mp3 zgodnie z manifestem)
-- `pnpm test --run` — 407 testy zielone; 1 failure (pre-existing bug — patrz sekcja "Known pre-existing bugs")
+- `pnpm test --run` — 409 testy zielone; 1 failure (pre-existing bug — patrz sekcja "Known pre-existing bugs")
+
+### Co zrobione w sesji (2026-04-27) — polish sweep v1.1.1
+
+Polish backlog z code reviews v1.1.1, jeden commit, bez branchu (zmiany niskoryzykowne):
+
+- **`ALL_LEVELS` export** w `defaults.ts` — single source of truth dla iteracji per-level. Inline tuples podmienione w 5 miejscach: `SettingsScreen.tsx` ×2 (LEVELS const + countdown section), `exporter.ts` (limit czasu loop), `defaults.test.ts`, `levelPools.test.ts`. Eliminuje rozbieżność jeśli kiedyś dojdzie 5ty poziom.
+- **`v` → `limit`** w `exporter.ts` sekcji "Limit czasu per-level" — spójność z resztą pliku (`sorted`, `today`, `streak`, `agg`).
+- **2 nowe testy exporter.test.ts** — pokrycie sekcji "Limit czasu (per poziom):" + 4 sub-bullety. Pinują 2-spacjowe wcięcie nested bulletów (kontrakt MD format) + per-level overrides.
+- **A11y `aria-describedby`** w SettingsScreen disabled countdown checkbox → "(timer wyłączony)" span z `id="countdown-hint-${lvl}"`. Eksplicytna asocjacja dla screen readerów (NVDA/JAWS/VoiceOver przeczytają wskazówkę po nazwie checkboxa).
+- **Komentarz append-only convention** w `settingsStore.ts::merge()` — nowe migracje dopisujemy pod istniejącymi guardami, nigdy nie reorderujemy. Legacy guards usuwamy dopiero gdy persist z tej wersji statystycznie wymarł (miesiące po release).
 
 ### Co zrobione w sesji (2026-04-27) — v1.1.1 follow-up
 
@@ -93,17 +103,11 @@ Wszystkie 4 scenariusze zweryfikowane w Chrome (chrome-devtools-mcp na http://lo
 
 Migracja persist v3→v4 zweryfikowana fresh state (`version: 4`, `timeLimit: {}`).
 
-### Polish backlog (opcjonalny, deferred z code reviews v1.1.1) — NIE blocker
+### Polish backlog (deferred z code reviews v1.1.1)
 
-Można zrobić w jednym małym sweep'ie albo zostawić aż naturalnie tknie się plików:
+Zrobione w sweep 2026-04-27 (sekcja wyżej). Pozostała tylko 1 kosmetyka jako wybór estetyczny:
 
-- **Eksport `ALL_LEVELS = ['iskierka','plomyk','ognik','pochodnia'] as const`** z `defaults.ts`. Inline w 6 miejscach (SettingsScreen ×2, defaults.test, levelPools.test, exporter.ts, prawdopodobnie pickers). DRY.
-- **Rename loop var `v` → `limit`** w `src/shared/stats/exporter.ts` sekcja "Limit czasu per-level". Spójność z resztą pliku (sorted/today/streak/agg).
-- **Unit test dla per-level MD formatu** w raporcie rodzica — `exporter.test.ts` brakuje pokrycia nowej sekcji "- Limit czasu (per poziom):" + 4 sub-bullety. Pin indentation contract (2 spaces dla nested bullets).
-- **A11y `aria-describedby`** na disabled countdown checkbox w `SettingsScreen.tsx` pointing do "(timer wyłączony)" spana (z `id`). Bardziej eksplicytne niż text-flow w label dla screen readerów.
-- **`LEVELS.map` zamiast inline tuple** w sekcji countdown `SettingsScreen.tsx` (linia ~480). Plik ma już `const LEVELS: Level[]` — sekcja countdown wciąż używa inline `(['iskierka','plomyk','ognik','pochodnia'] as const).map`. 1-line cleanup.
-- **`opacity: 0.5` magic number** w SettingsScreen disabled label → token jeśli kiedyś powstanie `disabledOpacity` w `@/app/theme`.
-- **Komentarz hint o future migracjach** w `settingsStore.ts::merge()`. Append-only convention (nigdy nie reorder, drop legacy guards dopiero gdy persist z tej wersji statystycznie wymarł).
+- **`opacity: 0.5` magic number** w SettingsScreen disabled label → token. Czeka aż w `@/app/theme` powstanie ogólny `disabledOpacity` (na razie 1 użycie — premature abstraction). Zostawione świadomie.
 
 ### Średnioterminowe (v2)
 1. **Audio iteracja** — user może chcieć dalej testować różne tekstu w letters.json. Jeśli tak — odtworzyć stronę testową `public/audio-test.html` i symlink `public/audio-source` → `audio-source` (była, usunęliśmy w cleanup).

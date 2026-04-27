@@ -9,6 +9,10 @@ import type {
   TimeLimit,
 } from './types'
 
+// Lista wszystkich poziomów w kolejności rosnącej trudności. Single source of truth
+// dla iteracji per-level (settings UI, persistence, raporty, testy).
+export const ALL_LEVELS = ['iskierka', 'plomyk', 'ognik', 'pochodnia'] as const
+
 // Sekcja 11: pule liter per poziom (kumulacja — wyższy poziom zawiera niższe).
 const iskierkaPool: readonly string[] = ['a', 'm', 'l', 'e', 'o', 't']
 

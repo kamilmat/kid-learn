@@ -14,7 +14,7 @@ import { useState } from 'react'
 import { colors, radii } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
 import { useSettings } from '@/shared/settings/settingsStore'
-import { levelLetterPools, levelDefaults, getEffectiveShowCountdownBar, getEffectiveTimeLimit } from '@/shared/settings/defaults'
+import { ALL_LEVELS, levelLetterPools, levelDefaults, getEffectiveShowCountdownBar, getEffectiveTimeLimit } from '@/shared/settings/defaults'
 import type {
   CaseMode,
   CelebrationTempo,
@@ -38,7 +38,7 @@ export type SettingsScreenProps = {
   now?: () => number
 }
 
-const LEVELS: Level[] = ['iskierka', 'plomyk', 'ognik', 'pochodnia']
+const LEVELS: readonly Level[] = ALL_LEVELS
 
 const LEVEL_LABELS: Record<Level, string> = {
   iskierka: 'Iskierka',
@@ -474,9 +474,10 @@ export function SettingsScreen({
       <section style={sectionStyle} data-testid="section-countdown-bar">
         <div style={labelStyle}>Pokaż pasek czasu (per poziom)</div>
         <div data-testid="show-countdown-per-level" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-          {(['iskierka', 'plomyk', 'ognik', 'pochodnia'] as const).map((lvl) => {
+          {LEVELS.map((lvl) => {
             const timerOff = getEffectiveTimeLimit(settings, lvl) === 'off'
             const effective = getEffectiveShowCountdownBar(settings, lvl)
+            const hintId = `countdown-hint-${lvl}`
             return (
               <label key={lvl} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: timerOff ? 0.5 : 1 }}>
                 <input
@@ -488,10 +489,15 @@ export function SettingsScreen({
                     updateSetting('showCountdownBar', next)
                   }}
                   data-testid={`show-countdown-${lvl}`}
+                  aria-describedby={timerOff ? hintId : undefined}
                 />
                 <span>
                   {LEVEL_LABELS[lvl]}
-                  {timerOff && <span style={{ color: '#7a7a82', marginLeft: 6 }}>(timer wyłączony)</span>}
+                  {timerOff && (
+                    <span id={hintId} style={{ color: '#7a7a82', marginLeft: 6 }}>
+                      (timer wyłączony)
+                    </span>
+                  )}
                 </span>
               </label>
             )

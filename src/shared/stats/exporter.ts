@@ -8,7 +8,7 @@
 import type { LetterState } from '@/shared/srs/types'
 import type { SessionLog } from '@/shared/stats/types'
 import type { Settings } from '@/shared/settings/types'
-import { getEffectiveTimeLimit } from '@/shared/settings/defaults'
+import { ALL_LEVELS, getEffectiveTimeLimit } from '@/shared/settings/defaults'
 import { toUpper } from '@/modules/letters/data/alphabet'
 import {
   masteryPercent,
@@ -153,9 +153,9 @@ export function exportReportToMarkdown(
   lines.push('')
   lines.push(`- Długość sesji: ${settings.sessionLength} pytań`)
   lines.push('- Limit czasu (per poziom):')
-  for (const lvl of (['iskierka', 'plomyk', 'ognik', 'pochodnia'] as const)) {
-    const v = getEffectiveTimeLimit(settings, lvl)
-    const label = v === 'off' ? 'wyłączony' : `${v}s`
+  for (const lvl of ALL_LEVELS) {
+    const limit = getEffectiveTimeLimit(settings, lvl)
+    const label = limit === 'off' ? 'wyłączony' : `${limit}s`
     lines.push(`  - ${LEVEL_LABEL[lvl]}: ${label}`)
   }
   lines.push(

@@ -126,6 +126,12 @@ export const useSettings = create<SettingsStore>()(
       //   v3 → v4: `timeLimit` z prymitywu (TimeLimit) na Partial<Record<Level, TimeLimit>>.
       // W obu przypadkach drop'ujemy legacy wartość — zostają per-level defaults
       // (iskierka/płomyk: timeLimit='off', ognik/pochodnia: timeLimit=15).
+      //
+      // Konwencja append-only: nowe migracje DOPISUJEMY pod istniejącymi guardami,
+      // nigdy nie reorderujemy ani nie usuwamy starych (np. `showCountdownBar`
+      // boolean guard). Legacy guard można usunąć dopiero gdy pewność że żaden
+      // user nie ma już persistu z tej wersji w localStorage — w praktyce
+      // miesiącami po release nowej wersji.
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<PersistedShape>
         const persistedSettings = (p.settings ?? {}) as Record<string, unknown>

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  ALL_LEVELS,
   defaultSettings,
   getActiveLetterPool,
   getEffectiveTimeLimit,
   levelDefaults,
   levelLetterPools,
 } from './defaults'
-import type { Level } from './types'
 
 describe('levelLetterPools', () => {
   it('has expected counts per level (sekcja 11)', () => {
@@ -110,10 +110,8 @@ describe('defaultSettings (sekcja 13.2)', () => {
 })
 
 describe('getActiveLetterPool', () => {
-  const levels: Level[] = ['iskierka', 'plomyk', 'ognik', 'pochodnia']
-
   it('returns level default when no override', () => {
-    for (const level of levels) {
+    for (const level of ALL_LEVELS) {
       const pool = getActiveLetterPool(defaultSettings, level)
       expect(pool).toEqual(levelLetterPools[level])
       expect(pool).not.toBe(levelLetterPools[level]) // copy

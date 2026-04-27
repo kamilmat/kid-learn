@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LEVEL_POOLS, getLevelPool } from './levelPools'
 import { POLISH_ALPHABET } from './alphabet'
+import { ALL_LEVELS } from '@/shared/settings/defaults'
 
 describe('LEVEL_POOLS', () => {
   it('Iskierka ma 6 liter', () => {
@@ -32,7 +33,7 @@ describe('LEVEL_POOLS', () => {
   })
 
   it('każda pula zawiera tylko unikalne litery', () => {
-    for (const level of ['iskierka', 'plomyk', 'ognik', 'pochodnia'] as const) {
+    for (const level of ALL_LEVELS) {
       const pool = LEVEL_POOLS[level]
       expect(new Set(pool).size).toBe(pool.length)
     }
