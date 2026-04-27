@@ -1,13 +1,15 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { colors, radii, tapTargets } from '@/app/theme'
+import { useTapHandler } from './useTapHandler'
 
 type Variant = 'primary' | 'secondary'
 type Size = 'normal' | 'large'
 
-type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
+type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'onClick'> & {
   variant?: Variant
   size?: Size
   children: ReactNode
+  onClick?: () => void
 }
 
 const sizes: Record<Size, { minWidth: number; minHeight: number; fontSize: number; paddingX: number }> = {
@@ -34,13 +36,21 @@ export function Button({
   style,
   children,
   type = 'button',
+  onClick,
+  disabled,
   ...rest
 }: ButtonProps) {
   const sz = sizes[size]
   const va = variants[variant]
+  // Pointer-driven tap z tolerancją — fix dla rysika (mikroruchy gubiły click).
+  const tap = useTapHandler({
+    onTap: onClick ?? (() => {}),
+    disabled: !!disabled,
+  })
   return (
     <button
       type={type}
+      disabled={disabled}
       style={{
         minWidth: sz.minWidth,
         minHeight: sz.minHeight,
@@ -52,8 +62,13 @@ export function Button({
         border: va.border,
         cursor: 'pointer',
         fontWeight: 600,
+        touchAction: 'manipulation',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTapHighlightColor: 'transparent',
         ...style,
       }}
+      {...tap}
       {...rest}
     >
       {children}

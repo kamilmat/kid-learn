@@ -3,13 +3,23 @@
 // No-text dla dziecka — same ikony + audio cue.
 
 import { colors, radii } from '@/app/theme'
+import { useTapHandler } from '@/shared/ui/useTapHandler'
 
 export type PauseOverlayProps = {
   onResume: () => void
   onQuit: () => void
 }
 
+const tapStyleExtras = {
+  touchAction: 'manipulation' as const,
+  userSelect: 'none' as const,
+  WebkitUserSelect: 'none' as const,
+  WebkitTapHighlightColor: 'transparent',
+}
+
 export function PauseOverlay({ onResume, onQuit }: PauseOverlayProps) {
+  const resumeTap = useTapHandler({ onTap: onResume })
+  const quitTap = useTapHandler({ onTap: onQuit })
   return (
     <div
       data-testid="pause-overlay"
@@ -32,7 +42,7 @@ export function PauseOverlay({ onResume, onQuit }: PauseOverlayProps) {
         type="button"
         aria-label="Wznów"
         data-testid="resume-button"
-        onClick={onResume}
+        {...resumeTap}
         style={{
           width: 140,
           height: 140,
@@ -43,6 +53,7 @@ export function PauseOverlay({ onResume, onQuit }: PauseOverlayProps) {
           color: '#ffffff',
           cursor: 'pointer',
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          ...tapStyleExtras,
         }}
       >
         <span aria-hidden="true">▶</span>
@@ -51,7 +62,7 @@ export function PauseOverlay({ onResume, onQuit }: PauseOverlayProps) {
         type="button"
         aria-label="Wyjdź"
         data-testid="quit-button"
-        onClick={onQuit}
+        {...quitTap}
         style={{
           width: 80,
           height: 80,
@@ -60,6 +71,7 @@ export function PauseOverlay({ onResume, onQuit }: PauseOverlayProps) {
           border: `3px solid ${colors.accentOrange}`,
           fontSize: 36,
           cursor: 'pointer',
+          ...tapStyleExtras,
         }}
       >
         <span aria-hidden="true">🏠</span>

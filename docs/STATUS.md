@@ -5,6 +5,25 @@
 
 ## Aktualny stan (2026-04-27)
 
+### iPad audio + tap fixy + cleanup `assoc-*`
+
+**Co zrobione (uncommitted):**
+- **AudioBus** zrefaktorowany na pojedynczy persistent `HTMLAudioElement` zamiast `new Audio()` per `play()` — iOS Safari unlock'uje audio per-element, więc raz unlocked = działa do końca tab session
+- **`onPlayAudio` w SessionView**: `audioBus.stop()` przed `play()` — wielokrotne kliknięcia 🔊 nie nakładają się już sekwencyjnie (FIFO queue robiło "powtórz × 5")
+- **LevelSelect.handleTileClick**: synchroniczny `audioBus.play('nav-tap')` w gesture-context — primuje persistent element zanim `session.start()` wywoła pierwsze `letter-X`. To naprawia "literka czasem nie gra na iPad / trzeba klikać 🔊"
+- **`useTapHandler` hook** (`src/shared/ui/useTapHandler.ts`) — pointer-events z tolerancją 12px naprawia rysik (Apple Pencil/stylus mikroruchy gubiły natywny `click`). Podpięty w: LetterTile, QuizCard (audio/dontKnow/pause), LevelSelect (LevelTile + MasteryCell wyciągnięte do osobnych komponentów żeby hooki nie były w pętli), PauseOverlay, KidNav, Home, Button (shared)
+- **CSS na tap-targetach**: `touch-action: manipulation` + `user-select: none` + `WebkitTapHighlightColor: transparent`
+- **Cleanup `assoc-*`**: usunięte 32 wpisy `assoc-${letter}` z `audio-source/words.json`, 32 `assoc-*.mp3` z `public/audio/`, 32 entries z `.manifest.json`, `phraseAudioKey` z typu `Association` i `buildAssociation`. Pozostaje grane `audioKey` = `word-${seed.word}` (sam wyraz "arbuz") — konsensus: "X jak Y" myli przy literach typu Ę (gęś — w środku)
+
+**Wynik:** `pnpm tsc -b` ✓, `pnpm test --run` 389/389 ✓ (poprzednio 384, +5 z poprawionych testów AudioBus / associations).
+
+**Co dalej:**
+- User testuje na iPadzie (palec + Apple Pencil) czy:
+  - pierwsza literka w sesji gra automatycznie
+  - powtarzanie 🔊 wieloma klikami nie nakłada audio
+  - rysik niezawodnie wybiera kafelki
+- Jeśli OK → commit + push (GH Pages auto-deploy)
+
 ### Audio Recorder zaimplementowany
 
 **Co zrobione:**

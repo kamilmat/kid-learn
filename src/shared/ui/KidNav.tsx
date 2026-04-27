@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { colors, radii, tapTargets } from '@/app/theme'
+import { useTapHandler } from './useTapHandler'
 
 type KidNavProps = {
   onBack?: () => void
@@ -18,6 +19,10 @@ const buttonStyle = {
   alignItems: 'center',
   justifyContent: 'center',
   cursor: 'pointer',
+  touchAction: 'manipulation',
+  userSelect: 'none',
+  WebkitUserSelect: 'none',
+  WebkitTapHighlightColor: 'transparent',
 } as const
 
 export function KidNav({ onBack, onHome }: KidNavProps) {
@@ -39,6 +44,9 @@ export function KidNav({ onBack, onHome }: KidNavProps) {
     navigate('/')
   }
 
+  const backTap = useTapHandler({ onTap: handleBack })
+  const homeTap = useTapHandler({ onTap: handleHome })
+
   return (
     <nav
       aria-label="Nawigacja"
@@ -55,7 +63,7 @@ export function KidNav({ onBack, onHome }: KidNavProps) {
       <button
         type="button"
         aria-label="Wróć"
-        onClick={handleBack}
+        {...backTap}
         style={buttonStyle}
       >
         <span aria-hidden="true">⬅️</span>
@@ -63,7 +71,7 @@ export function KidNav({ onBack, onHome }: KidNavProps) {
       <button
         type="button"
         aria-label="Strona główna"
-        onClick={handleHome}
+        {...homeTap}
         style={buttonStyle}
       >
         <span aria-hidden="true">🏠</span>

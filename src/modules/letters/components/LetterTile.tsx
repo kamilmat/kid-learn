@@ -6,6 +6,7 @@ import type { CSSProperties } from 'react'
 import { colors, radii } from '@/app/theme'
 import type { CaseMode, StyleMode } from '@/shared/settings/types'
 import { toUpper } from '@/modules/letters/data/alphabet'
+import { useTapHandler } from '@/shared/ui/useTapHandler'
 
 export type LetterTileState =
   | 'idle'
@@ -180,12 +181,20 @@ export function LetterTile({
     padding: showsBothStyles ? 8 : 12,
     gap: showsBothStyles ? 6 : 4,
     overflow: 'hidden',
+    // touch-action: manipulation wyłącza double-tap zoom + browser-level pan,
+    // user-select: none chroni przed text-selection przy press z rysika.
+    touchAction: 'manipulation',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    WebkitTapHighlightColor: 'transparent',
   }
+
+  const tapProps = useTapHandler({ onTap: onClick, disabled: !!disabled })
 
   return (
     <button
       type="button"
-      onClick={onClick}
+      {...tapProps}
       disabled={disabled}
       aria-label={`Litera ${toUpper(letter)}`}
       data-letter={letter}

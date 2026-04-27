@@ -5,6 +5,7 @@
 import type { CSSProperties } from 'react'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { IskraMascot, type IskraIntensity } from '@/shared/ui/IskraMascot'
+import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { LetterTile } from './LetterTile'
 import type { LetterTileState } from './LetterTile'
 import type { CaseMode, StyleMode } from '@/shared/settings/types'
@@ -124,6 +125,10 @@ export function QuizCard({
       ? Math.max(0, Math.min(1, countdownMs / countdownTotalMs))
       : null
 
+  const pauseTap = useTapHandler({ onTap: onPause, disabled: !interactive })
+  const audioTap = useTapHandler({ onTap: onPlayAudio })
+  const dontKnowTap = useTapHandler({ onTap: onDontKnow, disabled: !interactive })
+
   return (
     <div
       data-testid="quiz-card"
@@ -196,7 +201,7 @@ export function QuizCard({
           type="button"
           aria-label="Pauza"
           data-testid="pause-button"
-          onClick={onPause}
+          {...pauseTap}
           disabled={!interactive}
           style={{
             width: tapTargets.minSize,
@@ -206,6 +211,10 @@ export function QuizCard({
             border: `2px solid ${colors.accentBlue}`,
             fontSize: 24,
             cursor: interactive ? 'pointer' : 'default',
+            touchAction: 'manipulation',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTapHighlightColor: 'transparent',
           }}
         >
           <span aria-hidden="true">⏸</span>
@@ -217,7 +226,7 @@ export function QuizCard({
         type="button"
         data-testid="audio-button"
         aria-label="Odtwórz literę"
-        onClick={onPlayAudio}
+        {...audioTap}
         style={{
           width: '100%',
           height: 72,
@@ -228,6 +237,10 @@ export function QuizCard({
           fontSize: 40,
           border: 'none',
           cursor: 'pointer',
+          touchAction: 'manipulation',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTapHighlightColor: 'transparent',
         }}
       >
         <span aria-hidden="true">🔊</span>
@@ -320,7 +333,7 @@ export function QuizCard({
           type="button"
           data-testid="dont-know-button"
           aria-label="Nie wiem"
-          onClick={onDontKnow}
+          {...dontKnowTap}
           disabled={!interactive}
           style={{
             width: 96,
@@ -331,6 +344,10 @@ export function QuizCard({
             fontSize: 56,
             cursor: interactive ? 'pointer' : 'default',
             boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+            touchAction: 'manipulation',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTapHighlightColor: 'transparent',
           }}
         >
           <span aria-hidden="true">🤷</span>

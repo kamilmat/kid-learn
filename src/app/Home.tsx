@@ -18,6 +18,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { audioBus } from '@/shared/audio/AudioBus'
 import { IskraMascot } from '@/shared/ui/IskraMascot'
+import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { colors, radii, tapTargets } from '@/app/theme'
 
 const HOME_INTRO_KEY = 'iskierki-home-introduced-v1'
@@ -59,6 +60,10 @@ export function Home() {
   const handleLettersClick = () => {
     navigate('/letters')
   }
+
+  const lettersTap = useTapHandler({ onTap: handleLettersClick })
+  const settingsTap = useTapHandler({ onTap: () => navigate('/settings') })
+  const reportTap = useTapHandler({ onTap: () => navigate('/report') })
 
   return (
     <div
@@ -106,7 +111,7 @@ export function Home() {
         <button
           type="button"
           data-testid="module-letters"
-          onClick={handleLettersClick}
+          {...lettersTap}
           style={{
             minHeight: 220,
             padding: 24,
@@ -120,6 +125,10 @@ export function Home() {
             justifyContent: 'center',
             gap: 16,
             color: colors.text,
+            touchAction: 'manipulation',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTapHighlightColor: 'transparent',
           }}
         >
           <span
@@ -183,7 +192,7 @@ export function Home() {
           type="button"
           aria-label="Ustawienia"
           data-testid="link-settings"
-          onClick={() => navigate('/settings')}
+          {...settingsTap}
           style={parentButtonStyle}
         >
           <span aria-hidden="true">⚙</span>
@@ -192,7 +201,7 @@ export function Home() {
           type="button"
           aria-label="Raport"
           data-testid="link-report"
-          onClick={() => navigate('/report')}
+          {...reportTap}
           style={parentButtonStyle}
         >
           <span aria-hidden="true">📊</span>
@@ -216,4 +225,8 @@ const parentButtonStyle = {
   color: colors.text,
   padding: 0,
   boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+  touchAction: 'manipulation',
+  userSelect: 'none',
+  WebkitUserSelect: 'none',
+  WebkitTapHighlightColor: 'transparent',
 } as const

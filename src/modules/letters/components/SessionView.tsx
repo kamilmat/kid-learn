@@ -167,6 +167,10 @@ export function SessionView({
           onTileClick={(letter, slot) => session.answer(letter, slot)}
           onPlayAudio={() => {
             if (session.currentQuestion) {
+              // Stop przed play — bez tego wielokrotne kliknięcia w 🔊
+              // dorzucały kolejne kopie do FIFO queue, które grały sekwencyjnie
+              // z opóźnieniem ("powtórz" powinno restartować, nie kolejkować).
+              audioBus.stop()
               void audioBus.play(`letter-${session.currentQuestion.targetLetter}`)
             }
           }}

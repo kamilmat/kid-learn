@@ -13,6 +13,10 @@ type FakeAudio = {
   fire: (type: string) => void
 }
 
+// Po refaktorze AudioBus używa jednego persistent HTMLAudioElement —
+// w testach widzimy zatem tylko jedno `new Audio()` per session, a kolejne
+// odtwarzania zmieniają `.src`. created[0] jest tym samym mockiem przez
+// całe życie buseu (do resetInstanceForTests).
 const created: FakeAudio[] = []
 
 function makeFakeAudio(src: string): FakeAudio {
@@ -82,23 +86,26 @@ describe('AudioBus', () => {
     await promise
   })
 
-  it('plays queued items in FIFO order, one at a time', async () => {
+  it('plays queued items in FIFO order on the same element', async () => {
     const bus = AudioBus.getInstance()
     const p1 = bus.play('a')
     const p2 = bus.enqueue('b')
 
     await Promise.resolve()
     expect(created).toHaveLength(1)
-    expect(created[0]!.src).toContain('/audio/a.mp3')
+    const el = created[0]!
+    expect(el.src).toContain('/audio/a.mp3')
 
-    created[0]!.fire('ended')
+    el.fire('ended')
     await p1
 
     await Promise.resolve()
-    expect(created).toHaveLength(2)
-    expect(created[1]!.src).toContain('/audio/b.mp3')
+    // Persistent element — nie tworzymy nowego Audio, tylko zmieniamy src.
+    expect(created).toHaveLength(1)
+    expect(el.src).toContain('/audio/b.mp3')
+    expect(el.play).toHaveBeenCalledTimes(2)
 
-    created[1]!.fire('ended')
+    el.fire('ended')
     await p2
   })
 
@@ -124,5 +131,20 @@ describe('AudioBus', () => {
     await Promise.resolve()
     created[0]!.fire('error')
     await expect(promise).rejects.toThrow(/missing/)
+  })
+
+  it('after stop, next play reuses the same element and starts fresh', async () => {
+    const bus = AudioBus.getInstance()
+    const p1 = bus.play('a')
+    await Promise.resolve()
+    bus.stop()
+    await p1
+
+    const p2 = bus.play('c')
+    await Promise.resolve()
+    expect(created).toHaveLength(1)
+    expect(created[0]!.src).toContain('/audio/c.mp3')
+    created[0]!.fire('ended')
+    await p2
   })
 })

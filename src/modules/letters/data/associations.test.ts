@@ -60,12 +60,11 @@ describe('ASSOCIATIONS', () => {
     expect(ASSOCIATIONS.m?.position).toBe('start')
   })
 
-  it('imagePath/audioKey/phraseAudioKey generowane jednolicie', () => {
+  it('imagePath/audioKey generowane jednolicie', () => {
     for (const letter of POLISH_ALPHABET) {
       const a = ASSOCIATIONS[letter]!
       expect(a.imagePath).toBe(`/images/letters/${letter}.svg`)
       expect(a.audioKey).toBe(`word-${a.word}`)
-      expect(a.phraseAudioKey).toBe(`assoc-${letter}`)
     }
   })
 

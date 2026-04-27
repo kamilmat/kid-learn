@@ -1,7 +1,12 @@
 // Asocjacje litera → słowo + obrazek — sekcja 12 spec.
 // Dual coding (Paivio): każda litera ma kotwicę słowną i wizualną.
-// audioKey/phraseAudioKey wskazują pliki w `public/audio/` (generowane ze
+// audioKey wskazuje plik w `public/audio/` (generowany ze
 // `scripts/generate-audio.ts`). Image path zarezerwowany — svg dorobimy później.
+//
+// Świadomie NIE mamy frazy "X jak Y" — pozycja litery w słowie bywa różna
+// (start/middle/end), a fraza "Ę jak gęś" myli (Ę jest w środku, nie na początku).
+// Gramy tylko sam wyraz (`word-${seed.word}`) — mózg dziecka pary skojarzeń
+// litera↔obraz buduje sam.
 
 import { POLISH_ALPHABET } from './alphabet'
 
@@ -14,7 +19,6 @@ export type Association = {
   imagePath: string
   emoji: string
   audioKey: string
-  phraseAudioKey: string
 }
 
 type AssocSeed = {
@@ -69,7 +73,6 @@ function buildAssociation(seed: AssocSeed): Association {
     emoji: seed.emoji,
     imagePath: `/images/letters/${seed.letter}.svg`,
     audioKey: `word-${seed.word}`,
-    phraseAudioKey: `assoc-${seed.letter}`,
   }
 }
 

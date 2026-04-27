@@ -13,6 +13,7 @@ import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import { levelLetterPools } from '@/shared/settings/defaults'
 import type { Level } from '@/shared/settings/types'
 import { IskraMascot, type IskraIntensity } from '@/shared/ui/IskraMascot'
+import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { POLISH_ALPHABET, toUpper } from '@/modules/letters/data/alphabet'
 import {
   selectMasteredLetters,
@@ -71,6 +72,91 @@ const tileStyle: React.CSSProperties = {
   gap: 4,
   fontSize: 18,
   fontWeight: 600,
+  touchAction: 'manipulation',
+  userSelect: 'none',
+  WebkitUserSelect: 'none',
+  WebkitTapHighlightColor: 'transparent',
+}
+
+// Pojedynczy kafelek — wyciągnięty żeby useTapHandler żył w komponencie
+// (hooki w pętli LEVEL_META.map nie są dozwolone).
+function LevelTile({
+  meta,
+  onSelect,
+}: {
+  meta: LevelMeta
+  onSelect: (level: Level) => void
+}) {
+  const count = levelLetterPools[meta.level].length
+  const tap = useTapHandler({ onTap: () => onSelect(meta.level) })
+  return (
+    <button
+      type="button"
+      data-testid={`level-tile-${meta.level}`}
+      data-level={meta.level}
+      aria-label={`Poziom ${meta.label}, ${count} literek`}
+      style={tileStyle}
+      {...tap}
+    >
+      <span style={{ display: 'flex', justifyContent: 'center', minHeight: 92, alignItems: 'center' }} aria-hidden="true">
+        <IskraMascot size={INTENSITY_TO_BODY_SIZE[meta.intensity]} state="idle" intensity={meta.intensity} />
+      </span>
+      <span style={{ fontSize: 20 }}>{meta.label}</span>
+      <span
+        style={{
+          fontSize: 13,
+          color: '#7a7a82',
+          textAlign: 'center',
+          lineHeight: 1.3,
+          padding: '0 6px',
+          whiteSpace: 'normal',
+          wordBreak: 'break-word',
+        }}
+      >
+        {meta.description}
+      </span>
+    </button>
+  )
+}
+
+// Pojedyncza komórka opanowanej litery — wyciągnięta z tego samego powodu.
+function MasteryCell({
+  letter,
+  isMastered,
+  isCelebrating,
+  onTap,
+}: {
+  letter: string
+  isMastered: boolean
+  isCelebrating: boolean
+  onTap: (letter: string) => void
+}) {
+  const baseStyle = isMastered ? masteryCellMastered : masteryCellDim
+  const cellStyle: React.CSSProperties = isCelebrating
+    ? { ...baseStyle, transform: 'scale(1.18)' }
+    : baseStyle
+  const tap = useTapHandler({
+    onTap: () => onTap(letter),
+    disabled: !isMastered,
+  })
+  return (
+    <button
+      type="button"
+      data-testid={`mastery-cell-${letter}`}
+      data-letter={letter}
+      data-mastered={isMastered ? 'true' : 'false'}
+      aria-label={
+        isMastered
+          ? `Litera ${toUpper(letter)} opanowana`
+          : `Litera ${toUpper(letter)} jeszcze nie opanowana`
+      }
+      disabled={!isMastered}
+      {...(isMastered ? tap : {})}
+      style={cellStyle}
+    >
+      {toUpper(letter)}
+    </button>
+  )
 }
 
 const masteryWallContainer: React.CSSProperties = {
@@ -149,6 +235,12 @@ export function LevelSelect({
   const [celebratingLetter, setCelebratingLetter] = useState<string | null>(null)
 
   const handleTileClick = (level: Level) => {
+    // iPad/Safari unlock: pierwsze synchroniczne audioBus.play() w user-gesture
+    // context (onClick) "primuje" persistent HTMLAudioElement. Bez tego pierwsze
+    // letter-X w sesji bywało blokowane przez autoplay policy → cisza, dziecko
+    // musiało ręcznie klikać 🔊. session.start() i tak zaraz robi stop(), więc
+    // nav-tap zagra tylko 50-100ms — to wystarczy do unlocku.
+    void audioBus.play('nav-tap')
     onSelect(level)
   }
 
@@ -190,38 +282,9 @@ export function LevelSelect({
           minHeight: 0,
         }}
       >
-        {LEVEL_META.map((meta) => {
-          const count = levelLetterPools[meta.level].length
-          return (
-            <button
-              key={meta.level}
-              type="button"
-              data-testid={`level-tile-${meta.level}`}
-              data-level={meta.level}
-              aria-label={`Poziom ${meta.label}, ${count} literek`}
-              style={tileStyle}
-              onClick={() => handleTileClick(meta.level)}
-            >
-              <span style={{ display: 'flex', justifyContent: 'center', minHeight: 92, alignItems: 'center' }} aria-hidden="true">
-                <IskraMascot size={INTENSITY_TO_BODY_SIZE[meta.intensity]} state="idle" intensity={meta.intensity} />
-              </span>
-              <span style={{ fontSize: 20 }}>{meta.label}</span>
-              <span
-                style={{
-                  fontSize: 13,
-                  color: '#7a7a82',
-                  textAlign: 'center',
-                  lineHeight: 1.3,
-                  padding: '0 6px',
-                  whiteSpace: 'normal',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {meta.description}
-              </span>
-            </button>
-          )
-        })}
+        {LEVEL_META.map((meta) => (
+          <LevelTile key={meta.level} meta={meta} onSelect={handleTileClick} />
+        ))}
       </div>
 
       <section
@@ -236,37 +299,15 @@ export function LevelSelect({
           Tu pojawią się literki, których się nauczysz
         </p>
         <div style={masteryGridStyle}>
-          {POLISH_ALPHABET.map((letter) => {
-            const isMastered = masteredSet.has(letter)
-            const isCelebrating = celebratingLetter === letter
-            const baseStyle = isMastered ? masteryCellMastered : masteryCellDim
-            const cellStyle: React.CSSProperties = isCelebrating
-              ? { ...baseStyle, transform: 'scale(1.18)' }
-              : baseStyle
-            return (
-              <button
-                key={letter}
-                type="button"
-                data-testid={`mastery-cell-${letter}`}
-                data-letter={letter}
-                data-mastered={isMastered ? 'true' : 'false'}
-                aria-label={
-                  isMastered
-                    ? `Litera ${toUpper(letter)} opanowana`
-                    : `Litera ${toUpper(letter)} jeszcze nie opanowana`
-                }
-                disabled={!isMastered}
-                onClick={
-                  isMastered
-                    ? () => handleMasteredCellClick(letter)
-                    : undefined
-                }
-                style={cellStyle}
-              >
-                {toUpper(letter)}
-              </button>
-            )
-          })}
+          {POLISH_ALPHABET.map((letter) => (
+            <MasteryCell
+              key={letter}
+              letter={letter}
+              isMastered={masteredSet.has(letter)}
+              isCelebrating={celebratingLetter === letter}
+              onTap={handleMasteredCellClick}
+            />
+          ))}
         </div>
       </section>
     </div>
