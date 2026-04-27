@@ -4,6 +4,7 @@
 
 import type { CSSProperties } from 'react'
 import { colors, radii, tapTargets } from '@/app/theme'
+import { IskraMascot, type IskraIntensity } from '@/shared/ui/IskraMascot'
 import { LetterTile } from './LetterTile'
 import type { LetterTileState } from './LetterTile'
 import type { CaseMode, StyleMode } from '@/shared/settings/types'
@@ -17,9 +18,9 @@ export type QuizCardProps = {
   totalQuestions: number
   iskierki: number
   /** Liczba poprawnych z rzędu w sesji — wpływa na intensywność mascotki. */
-  currentStreak?: number
+  currentStreak: number
   /** Intensywność małej Iskry w status barze (z useSession). */
-  mascotIntensity?: import('@/shared/ui/IskraMascot').IskraIntensity
+  mascotIntensity: IskraIntensity
   /** Litera kliknięta przy wrong — używana do mini-mascotki nad kafelkiem. */
   lastWrongSlot?: Slot | null
   /** Ms remaining; null = ukryj pasek. */
@@ -47,10 +48,11 @@ function progressDotStyle(filled: boolean): CSSProperties {
   }
 }
 
+// Łagodna paleta — usunięta intensywna czerwień. Kontrast ≥3.0 do tła #eeeef2.
 function countdownColor(ratio: number): string {
-  if (ratio > 0.5) return colors.accentGreen
-  if (ratio > 0.2) return '#e6c554' // żółty
-  return '#e26a4f' // czerwony
+  if (ratio > 0.4) return colors.accentGreen // zielony
+  if (ratio > 0.15) return '#e6c554' // ciepły żółty
+  return '#e89270' // miękki pomarańczowy
 }
 
 export function gridLayoutFor(count: number): {
@@ -90,6 +92,9 @@ export function QuizCard({
   questionNumber,
   totalQuestions,
   iskierki,
+  currentStreak: _currentStreak,
+  mascotIntensity,
+  lastWrongSlot,
   countdownMs,
   countdownTotalMs,
   interactive,
@@ -137,7 +142,9 @@ export function QuizCard({
           data-testid="iskierki-counter"
           style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 20 }}
         >
-          <span aria-hidden="true">🔥</span>
+          <div data-testid="status-bar-mascot" style={{ width: 50, height: 50 }}>
+            <IskraMascot size={50} state="idle" intensity={mascotIntensity} />
+          </div>
           <span aria-label={`Iskierki: ${iskierki}`}>{iskierki}</span>
         </div>
         <div data-testid="progress-dots" style={{ display: 'flex', gap: 6 }}>
@@ -235,8 +242,23 @@ export function QuizCard({
           return (
             <div
               key={`${question.index}-${slot}`}
-              style={{ ...tileStyle, display: 'flex', minHeight: 0 }}
+              style={{ ...tileStyle, display: 'flex', minHeight: 0, position: 'relative' }}
             >
+              {lastWrongSlot === slot && (
+                <div
+                  data-testid={`mini-mascot-wrong-${slot}`}
+                  style={{
+                    position: 'absolute',
+                    top: -20,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    pointerEvents: 'none',
+                    zIndex: 10,
+                  }}
+                >
+                  <IskraMascot size={64} state="surprise" intensity="spark" />
+                </div>
+              )}
               <LetterTile
                 letter={letter}
                 caseMode={caseMode}
