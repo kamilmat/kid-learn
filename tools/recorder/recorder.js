@@ -111,6 +111,36 @@ document.getElementById('filter-unrecorded').addEventListener('change', (e) => {
   renderKeyList();
 });
 
+async function pickFolder() {
+  try {
+    state.dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+  } catch (err) {
+    if (err.name === 'AbortError') return; // user zamknął picker
+    alert(`Błąd wyboru folderu: ${err.message}`);
+    return;
+  }
+  document.querySelector('#folder-status em').textContent = state.dirHandle.name;
+  await scanFolder();
+  renderKeyList();
+}
+
+async function scanFolder() {
+  if (!state.dirHandle) return;
+  const existing = new Set();
+  for await (const entry of state.dirHandle.values()) {
+    if (entry.kind !== 'file') continue;
+    const name = entry.name;
+    // <klucz>.webm lub <klucz>.mp3
+    const m = name.match(/^(.+)\.(webm|mp3|wav)$/i);
+    if (m) existing.add(m[1]);
+  }
+  for (const k of state.keys) {
+    k.status = existing.has(k.key) ? 'recorded' : 'unrecorded';
+  }
+}
+
+document.getElementById('pick-folder').addEventListener('click', pickFolder);
+
 // init
 (async () => {
   try {
