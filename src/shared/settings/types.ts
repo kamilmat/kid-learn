@@ -25,7 +25,8 @@ export type Settings = {
   caseMode: Partial<Record<Level, CaseMode>>
   styleMode: Partial<Record<Level, StyleMode>>
   sessionLength: SessionLength
-  timeLimit: TimeLimit
+  // override per poziom; brak klucza = używaj domyślnej wartości poziomu
+  timeLimit: Partial<Record<Level, TimeLimit>>
   // override per poziom; brak klucza = używaj domyślnej wartości poziomu
   showCountdownBar: Partial<Record<Level, boolean>>
   celebrationTempo: CelebrationTempo

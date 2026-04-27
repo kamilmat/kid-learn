@@ -6,6 +6,7 @@ import type {
   Settings,
   StyleMode,
   TilesPerQuestion,
+  TimeLimit,
 } from './types'
 
 // Sekcja 11: pule liter per poziom (kumulacja — wyższy poziom zawiera niższe).
@@ -64,21 +65,23 @@ export const levelLetterPools: Record<Level, string[]> = {
 // `showCountdownBar` — wyłączone dla prostszych poziomów, włączone od Ognika.
 export const levelDefaults: Record<
   Level,
-  { caseMode: CaseMode; styleMode: StyleMode; tilesPerQuestion: TilesPerQuestion; showCountdownBar: boolean }
+  { caseMode: CaseMode; styleMode: StyleMode; tilesPerQuestion: TilesPerQuestion; showCountdownBar: boolean; timeLimit: TimeLimit }
 > = {
-  iskierka: { caseMode: 'para', styleMode: 'tylko-drukowane', tilesPerQuestion: 4, showCountdownBar: false },
-  plomyk: { caseMode: 'para', styleMode: 'tylko-drukowane', tilesPerQuestion: 4, showCountdownBar: false },
+  iskierka: { caseMode: 'para', styleMode: 'tylko-drukowane', tilesPerQuestion: 4, showCountdownBar: false, timeLimit: 'off' },
+  plomyk: { caseMode: 'para', styleMode: 'tylko-drukowane', tilesPerQuestion: 4, showCountdownBar: false, timeLimit: 'off' },
   ognik: {
     caseMode: 'mieszane',
     styleMode: 'mieszane-per-pytanie',
     tilesPerQuestion: 5,
     showCountdownBar: true,
+    timeLimit: 15,
   },
   pochodnia: {
     caseMode: 'mieszane',
     styleMode: 'oba-na-kafelku',
     tilesPerQuestion: 6,
     showCountdownBar: true,
+    timeLimit: 15,
   },
 }
 
@@ -88,7 +91,7 @@ export const defaultSettings: Settings = {
   caseMode: {},
   styleMode: {},
   sessionLength: 10,
-  timeLimit: 15,
+  timeLimit: {},
   showCountdownBar: {},
   celebrationTempo: 'medium',
   defaultLevel: 'last-used',
@@ -120,6 +123,17 @@ export function getEffectiveShowCountdownBar(
   return (
     settings.showCountdownBar?.[level] ?? levelDefaults[level].showCountdownBar
   )
+}
+
+/**
+ * Zwraca efektywny limit czasu dla poziomu — override z
+ * `settings.timeLimit[level]` jeśli ustawiony, inaczej `levelDefaults`.
+ */
+export function getEffectiveTimeLimit(
+  settings: Settings,
+  level: Level,
+): TimeLimit {
+  return settings.timeLimit?.[level] ?? levelDefaults[level].timeLimit
 }
 
 /**

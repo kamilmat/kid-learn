@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   defaultSettings,
   getActiveLetterPool,
+  getEffectiveTimeLimit,
   levelDefaults,
   levelLetterPools,
 } from './defaults'
@@ -61,12 +62,14 @@ describe('levelDefaults (sekcja 10.2)', () => {
       styleMode: 'tylko-drukowane',
       tilesPerQuestion: 4,
       showCountdownBar: false,
+      timeLimit: 'off',
     })
     expect(levelDefaults.plomyk).toEqual({
       caseMode: 'para',
       styleMode: 'tylko-drukowane',
       tilesPerQuestion: 4,
       showCountdownBar: false,
+      timeLimit: 'off',
     })
   })
 
@@ -76,6 +79,7 @@ describe('levelDefaults (sekcja 10.2)', () => {
       styleMode: 'mieszane-per-pytanie',
       tilesPerQuestion: 5,
       showCountdownBar: true,
+      timeLimit: 15,
     })
   })
 
@@ -85,6 +89,7 @@ describe('levelDefaults (sekcja 10.2)', () => {
       styleMode: 'oba-na-kafelku',
       tilesPerQuestion: 6,
       showCountdownBar: true,
+      timeLimit: 15,
     })
   })
 })
@@ -92,7 +97,7 @@ describe('levelDefaults (sekcja 10.2)', () => {
 describe('defaultSettings (sekcja 13.2)', () => {
   it('matches the spec defaults', () => {
     expect(defaultSettings.sessionLength).toBe(10)
-    expect(defaultSettings.timeLimit).toBe(15)
+    expect(defaultSettings.timeLimit).toEqual({})
     expect(defaultSettings.showCountdownBar).toEqual({})
     expect(defaultSettings.celebrationTempo).toBe('medium')
     expect(defaultSettings.defaultLevel).toBe('last-used')
@@ -130,5 +135,25 @@ describe('getActiveLetterPool', () => {
     expect(getActiveLetterPool(settings, 'iskierka')).toEqual(
       levelLetterPools.iskierka,
     )
+  })
+})
+
+describe('getEffectiveTimeLimit', () => {
+  it('returns level default when no override', () => {
+    expect(getEffectiveTimeLimit(defaultSettings, 'iskierka')).toBe('off')
+    expect(getEffectiveTimeLimit(defaultSettings, 'plomyk')).toBe('off')
+    expect(getEffectiveTimeLimit(defaultSettings, 'ognik')).toBe(15)
+    expect(getEffectiveTimeLimit(defaultSettings, 'pochodnia')).toBe(15)
+  })
+
+  it('returns override when present', () => {
+    const settings = {
+      ...defaultSettings,
+      timeLimit: { iskierka: 25 as const, ognik: 'off' as const },
+    }
+    expect(getEffectiveTimeLimit(settings, 'iskierka')).toBe(25)
+    expect(getEffectiveTimeLimit(settings, 'plomyk')).toBe('off')
+    expect(getEffectiveTimeLimit(settings, 'ognik')).toBe('off')
+    expect(getEffectiveTimeLimit(settings, 'pochodnia')).toBe(15)
   })
 })
