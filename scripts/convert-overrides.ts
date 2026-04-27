@@ -71,13 +71,14 @@ function main(): void {
     console.log(`Brak folderu ${OVERRIDES_DIR} — nic do konwersji.`)
     return
   }
-  ensureFfmpeg()
 
   const files = readdirSync(OVERRIDES_DIR).filter((f) => f.endsWith('.webm'))
   if (files.length === 0) {
     console.log('Brak plików .webm do konwersji.')
     return
   }
+
+  ensureFfmpeg()
 
   let converted = 0
   let skipped = 0

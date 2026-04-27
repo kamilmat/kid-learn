@@ -10,7 +10,9 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "audio:build": "tsx scripts/generate-audio.ts build",
-    "audio:check": "tsx scripts/generate-audio.ts check"
+    "audio:check": "tsx scripts/generate-audio.ts check",
+    "audio:convert-overrides": "tsx scripts/convert-overrides.ts",
+    "dev:recorder": "cd tools/recorder && python3 -m http.server 8080"
   },
   "dependencies": {
     "react": "^19.2.5",

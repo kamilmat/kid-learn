@@ -15,3 +15,6 @@ coverage
 
 # tsbuildinfo (regenerable)
 *.tsbuildinfo
+
+# Audio recorder source files (kept locally only; MP3 wersje commitowane)
+audio-source/manual-overrides/*.webm
