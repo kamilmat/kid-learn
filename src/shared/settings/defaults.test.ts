@@ -67,7 +67,7 @@ describe('levelDefaults (sekcja 10.2)', () => {
     expect(levelDefaults.plomyk).toEqual({
       caseMode: 'para',
       styleMode: 'tylko-drukowane',
-      tilesPerQuestion: 4,
+      tilesPerQuestion: 6,
       showCountdownBar: false,
       timeLimit: 'off',
     })
@@ -77,7 +77,7 @@ describe('levelDefaults (sekcja 10.2)', () => {
     expect(levelDefaults.ognik).toEqual({
       caseMode: 'mieszane',
       styleMode: 'mieszane-per-pytanie',
-      tilesPerQuestion: 5,
+      tilesPerQuestion: 8,
       showCountdownBar: true,
       timeLimit: 15,
     })
@@ -87,7 +87,7 @@ describe('levelDefaults (sekcja 10.2)', () => {
     expect(levelDefaults.pochodnia).toEqual({
       caseMode: 'mieszane',
       styleMode: 'oba-na-kafelku',
-      tilesPerQuestion: 8,
+      tilesPerQuestion: 10,
       showCountdownBar: true,
       timeLimit: 15,
     })

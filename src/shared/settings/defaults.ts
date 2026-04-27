@@ -73,26 +73,25 @@ export const levelLetterPools: Record<Level, string[]> = {
 }
 
 // Sekcja 10.2 / 11: defaulty wizualne per poziom.
-// `tilesPerQuestion` rośnie z poziomem — Iskierka/Płomyk niskie (4),
-// Ognik wyższy (5), Pochodnia (6).
+// `tilesPerQuestion` rośnie z poziomem — Iskierka 4, Płomyk 6, Ognik 8, Pochodnia 10.
 // `showCountdownBar` — wyłączone dla prostszych poziomów, włączone od Ognika.
 export const levelDefaults: Record<
   Level,
   { caseMode: CaseMode; styleMode: StyleMode; tilesPerQuestion: TilesPerQuestion; showCountdownBar: boolean; timeLimit: TimeLimit }
 > = {
   iskierka: { caseMode: 'para', styleMode: 'tylko-drukowane', tilesPerQuestion: 4, showCountdownBar: false, timeLimit: 'off' },
-  plomyk: { caseMode: 'para', styleMode: 'tylko-drukowane', tilesPerQuestion: 4, showCountdownBar: false, timeLimit: 'off' },
+  plomyk: { caseMode: 'para', styleMode: 'tylko-drukowane', tilesPerQuestion: 6, showCountdownBar: false, timeLimit: 'off' },
   ognik: {
     caseMode: 'mieszane',
     styleMode: 'mieszane-per-pytanie',
-    tilesPerQuestion: 5,
+    tilesPerQuestion: 8,
     showCountdownBar: true,
     timeLimit: 15,
   },
   pochodnia: {
     caseMode: 'mieszane',
     styleMode: 'oba-na-kafelku',
-    tilesPerQuestion: 8,
+    tilesPerQuestion: 10,
     showCountdownBar: true,
     timeLimit: 15,
   },

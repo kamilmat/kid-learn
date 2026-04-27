@@ -77,8 +77,8 @@ describe('LevelSelect', () => {
 
     expect(screen.getByTestId('level-tile-iskierka').textContent).toContain('6 literek')
     expect(screen.getByTestId('level-tile-plomyk').textContent).toContain('14 literek')
-    expect(screen.getByTestId('level-tile-ognik').textContent).toContain('24 literek')
-    expect(screen.getByTestId('level-tile-pochodnia').textContent).toContain('32 literek')
+    expect(screen.getByTestId('level-tile-ognik').textContent).toContain('24 literki')
+    expect(screen.getByTestId('level-tile-pochodnia').textContent).toContain('32 literki')
   })
 
   it('clicking a tile invokes onSelect with the correct level', () => {

@@ -84,6 +84,12 @@ export function gridLayoutFor(count: number): {
         gridTemplateColumns: 'repeat(4, 1fr)',
         gridTemplateRows: '1fr 1fr',
       }
+    case 10:
+      // 5 kolumn × 2 rzędy — pełen alfabet (Pochodnia)
+      return {
+        gridTemplateColumns: 'repeat(5, 1fr)',
+        gridTemplateRows: '1fr 1fr',
+      }
     case 4:
     default:
       return {

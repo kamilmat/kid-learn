@@ -206,10 +206,17 @@ export function LevelSelect({
                 <IskraMascot size={INTENSITY_TO_BODY_SIZE[meta.intensity]} state="idle" intensity={meta.intensity} />
               </span>
               <span style={{ fontSize: 20 }}>{meta.label}</span>
-              <span style={{ fontSize: 13, color: '#7a7a82' }}>
-                {count} literek
-              </span>
-              <span style={{ fontSize: 11, color: '#a0a0a8' }}>
+              <span
+                style={{
+                  fontSize: 13,
+                  color: '#7a7a82',
+                  textAlign: 'center',
+                  lineHeight: 1.3,
+                  padding: '0 6px',
+                  whiteSpace: 'normal',
+                  wordBreak: 'break-word',
+                }}
+              >
                 {meta.description}
               </span>
             </button>
