@@ -4,13 +4,18 @@ type QueueItem = {
   reject: (error: unknown) => void
 }
 
+// Vite wstrzykuje import.meta.env.BASE_URL: '/' lokalnie, '/kid-learn/' na GH Pages.
+// Bez tego audio MP3 były szukane pod /audio/ od root domeny i 404'owały na produkcji.
+const DEFAULT_BASE_PATH =
+  ((typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/') + 'audio'
+
 export class AudioBus {
   private static instance: AudioBus | null = null
   private queue: QueueItem[] = []
   private current: HTMLAudioElement | null = null
   private currentResolve: (() => void) | null = null
   private playing = false
-  private basePath = '/audio'
+  private basePath = DEFAULT_BASE_PATH
 
   static getInstance(): AudioBus {
     if (!AudioBus.instance) {
