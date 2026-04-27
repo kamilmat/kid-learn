@@ -227,6 +227,8 @@ export function FeedbackOverlay({
           borderRadius: radii.kid,
           padding: '8px 32px',
           lineHeight: 1,
+          // Para "Aa" bez odstępu zlepia się (zwłaszcza "Ll") — patrz LetterTile.
+          letterSpacing: caseMode === 'para' ? '0.18em' : undefined,
         }}
       >
         {letterText}

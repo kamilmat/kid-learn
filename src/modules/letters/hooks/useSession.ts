@@ -115,18 +115,24 @@ export type UseSessionApi = {
 
 const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
 
-// Czas trzymania feedback overlay — pokrywa pełny audio sequence + ~0.5s buffer:
-//   - correct:  ding (~0.3s) + pochwała (~0.8s) + assoc "X jak Y" (~1.5s) ≈ 3s
-//   - wrong:    correction (~1.5s) ≈ 2s — bez modala, tylko podświetlenie kafelków
-//   - dontKnow: "Nie szkodzi..." (~2s) + correction (~1.5s) ≈ 4s
-//   - timeout:  "...spróbuj szybciej" (~2s) + correction (~1.5s) ≈ 4s
-//   - mastery:  "Iskra! Umiesz literkę!" + animacja ≈ 3s
+// Czas trzymania feedback overlay — pokrywa pełny audio sequence + ~300ms buffer.
+// Wartości w komentarzu zmierzone afinfo na public/audio/*.mp3 (Edge TTS PL Zofia).
+// PILNUJ: każda zmiana w `audio-source/` może wymagać re-pomiaru (komenda:
+// `afinfo public/audio/<key>.mp3 | grep duration`). Audio-driven dismissal
+// (czekanie na koniec kolejki) byłoby porządniejsze, ale sztywny timer jest
+// prostszy i deterministyczny w testach.
+//   - correct:  sfx-ding (1.8s) + praise (~1.5s) + assoc "X jak Y" (~1.9s) ≈ 5.2s → 5500
+//   - wrong:    correction-prefix (~2.1s) + letter (~1.2s) ≈ 3.3s → 5000 (z marginesem)
+//   - dontKnow: dont-know (~1.7s) + correction-prefix (~2.1s) + letter (~1.2s) ≈ 5.0s → 6000
+//   - timeout:  identyczne audio jak dontKnow ≈ 5.0s → 6000 (było 7000 — nadbufor)
+//   - mastery:  sfx-fanfara (2.1s) + mastery-celebration (3.3s) ≈ 5.4s → 5800
+//               (streak audio dorzucany przez STREAK_AUDIO_DURATION_MS gdy próg)
 const FEEDBACK_DURATION_BASE_MS: Record<FeedbackVariant, number> = {
-  correct: 3500,
+  correct: 5500,
   wrong: 5000,
   dontKnow: 6000,
-  timeout: 7000,
-  mastery: 3500,
+  timeout: 6000,
+  mastery: 5800,
 }
 
 const TEMPO_MULTIPLIERS: Record<CelebrationTempo, number> = {
@@ -324,6 +330,12 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   const eventsRef = useRef<SessionEvent[]>([])
   const iskierkiRef = useRef<number>(0)
   const questionStartedAtRef = useRef<number>(0)
+  // Flag: pause został wyzwolony podczas status='feedback' (przerywając
+  // pipeline feedback→breath→next-question). Resume rekonstruuje pipeline.
+  const pausedDuringFeedbackRef = useRef<boolean>(false)
+  // Pamiętany efektywny duration ostatniego feedbacku (z extra streak/mastery audio)
+  // — używany przy resume po pauzie podczas feedback.
+  const lastFeedbackEffectiveMsRef = useRef<number>(0)
 
   // Init letter states z poolu (lub początkowych jeśli przekazane).
   const initActiveLettersStableRef = useRef<string[]>(activeLetters)
@@ -369,6 +381,12 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   const handleOutcomeRef = useRef<
     ((outcome: Outcome, chosenLetter?: string, chosenSlot?: Slot) => void) | null
   >(null)
+
+  // Forward-ref na scheduleFeedbackDismiss — używany przez handleOutcome
+  // (definiowany powyżej) oraz resume (rekonstrukcja po pauzie podczas feedback).
+  const scheduleFeedbackDismissRef = useRef<(effectiveMs: number) => void>(() => {
+    // no-op zanim zostanie nadpisany podczas pierwszego renderu
+  })
 
   const startCountdown = useCallback(() => {
     const cfg = cfgRef.current
@@ -633,34 +651,14 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       }
 
       // Po feedbacku — następne pytanie lub koniec.
-      // Sekwencja: feedback overlay znika → 500ms wdech → audioBus.stop() (urywa
-      // ewentualny ogon streak audio) → generateNextQuestion (czysta kolejka).
-      clearFeedbackTimer()
-      feedbackTimerRef.current = setTimeout(() => {
-        feedbackTimerRef.current = null
-        const nextNum = questionNumberRef.current + 1
-        if (nextNum >= cfg.sessionLength) {
-          finishSession()
-          return
-        }
-        // Zamykamy overlay, ale nie generujemy pytania — wdech.
-        setLastFeedback(null)
-        setStatus('playing')
-        // Drugi timer — wdech 500ms
-        feedbackTimerRef.current = setTimeout(() => {
-          feedbackTimerRef.current = null
-          // Czyścimy kolejkę audio przed nowym promptem (urywa ewentualny
-          // ogon streak audio — dla 7-latka 100-200ms ucięcia niedostrzegalne).
-          // Używamy cfgRef.current (nie closure-captured cfg) — pattern spójny
-          // z startCountdown, odporny na ewentualne re-injection AudioBus w testach.
-          cfgRef.current.audioBus.stop()
-          questionNumberRef.current = nextNum
-          setQuestionNumber(nextNum)
-          generateNextQuestion()
-        }, POST_FEEDBACK_BREATH_MS)
-      }, durationMs + extraDurationMs)
+      // Sekwencja: durationMs+extra → zamknij overlay → 500ms wdech → next.
+      // Status pozostaje 'feedback' przez cały wdech (kafelki disabled), co
+      // chroni przed re-tap na stare pytanie. `setStatus('playing')` dopiero
+      // gdy generujemy nowe pytanie.
+      lastFeedbackEffectiveMsRef.current = durationMs + extraDurationMs
+      scheduleFeedbackDismissRef.current(durationMs + extraDurationMs)
     },
-    [clearCountdown, clearFeedbackTimer, finishSession, generateNextQuestion, pushEvent],
+    [clearCountdown, pushEvent],
   )
 
   // Refs równoległe do state'u: wewnątrz callbacków używamy ref-version żeby
@@ -674,6 +672,38 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   // Wpinamy handleOutcome do forward-ref synchronicznie podczas renderowania —
   // useEffect byłby za późno dla timera ustawionego w obrębie render-effect chain.
   handleOutcomeRef.current = handleOutcome
+
+  // Pipeline po feedbacku: timer1 (effectiveMs) zamyka overlay i utrzymuje
+  // status='feedback' przez wdech (kafelki disabled — chroni przed re-tap).
+  // Timer2 (POST_FEEDBACK_BREATH_MS) flipuje na 'playing' i generuje next.
+  const scheduleFeedbackDismiss = useCallback(
+    (effectiveMs: number) => {
+      clearFeedbackTimer()
+      feedbackTimerRef.current = setTimeout(() => {
+        feedbackTimerRef.current = null
+        const nextNum = questionNumberRef.current + 1
+        if (nextNum >= cfgRef.current.sessionLength) {
+          finishSession()
+          return
+        }
+        // Zamykamy overlay (lastFeedback=null) ale status pozostaje 'feedback'
+        // — kafelki disabled, dziecko nie może re-tapnąć starego pytania.
+        setLastFeedback(null)
+        feedbackTimerRef.current = setTimeout(() => {
+          feedbackTimerRef.current = null
+          // Czyścimy kolejkę audio przed nowym promptem (urywa ewentualny
+          // ogon streak audio — dla 7-latka 100-200ms ucięcia niedostrzegalne).
+          cfgRef.current.audioBus.stop()
+          questionNumberRef.current = nextNum
+          setQuestionNumber(nextNum)
+          setStatus('playing')
+          generateNextQuestion()
+        }, POST_FEEDBACK_BREATH_MS)
+      }, effectiveMs)
+    },
+    [clearFeedbackTimer, finishSession, generateNextQuestion],
+  )
+  scheduleFeedbackDismissRef.current = scheduleFeedbackDismiss
 
   const start = useCallback(() => {
     if (status !== 'preparing' && status !== 'finished') {
@@ -712,6 +742,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   const pause = useCallback(
     (reason: 'manual' | 'idle' | 'visibility' = 'manual') => {
       if (status !== 'playing' && status !== 'feedback') return
+      // Zapamiętaj że pauza złapała feedback w trakcie — resume musi
+      // ponowić scheduleFeedbackDismiss, bo clearFeedbackTimer urywa pipeline.
+      pausedDuringFeedbackRef.current = status === 'feedback'
       clearCountdown()
       clearFeedbackTimer()
       pushEvent({ type: 'pause', ts: cfgRef.current.now(), reason })
@@ -725,6 +758,17 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     if (status !== 'paused') return
     pushEvent({ type: 'resume', ts: cfgRef.current.now() })
     void cfgRef.current.audioBus.play('nav-resume')
+
+    // Jeśli pauza złapała feedback w trakcie — odtwórz pipeline od nowa
+    // (overlay nadal w lastFeedback, czas resetujemy do pełnej długości
+    // żeby dziecko zobaczyło/usłyszało feedback ponownie po wznowieniu).
+    if (pausedDuringFeedbackRef.current) {
+      pausedDuringFeedbackRef.current = false
+      setStatus('feedback')
+      scheduleFeedbackDismissRef.current(lastFeedbackEffectiveMsRef.current)
+      return
+    }
+
     setStatus('playing')
     // restart timer dla bieżącego pytania od pełnej długości — uczciwie wobec dziecka
     if (currentQuestionRef.current) {

@@ -131,9 +131,9 @@ describe('useSession — lifecycle', () => {
       result.current.answer(q1.targetLetter, q1.targetSlot)
     })
     expect(result.current.status).toBe('feedback')
-    // correct @ medium: durationMs=3500ms + POST_FEEDBACK_BREATH_MS=500ms = 4000ms total
+    // correct @ medium: durationMs=5500ms + POST_FEEDBACK_BREATH_MS=500ms = 6000ms total
     act(() => {
-      vi.advanceTimersByTime(3500)
+      vi.advanceTimersByTime(5500)
     })
     act(() => {
       vi.advanceTimersByTime(500)
@@ -148,24 +148,24 @@ describe('useSession — lifecycle', () => {
     act(() => {
       result.current.start()
     })
-    // q1 (non-last) — correct @ medium: 3500ms feedback + 500ms breath = 4000ms
+    // q1 (non-last) — correct @ medium: 5500ms feedback + 500ms breath = 6000ms
     let q = result.current.currentQuestion!
     act(() => {
       result.current.answer(q.targetLetter, q.targetSlot)
     })
     act(() => {
-      vi.advanceTimersByTime(3500)
+      vi.advanceTimersByTime(5500)
     })
     act(() => {
       vi.advanceTimersByTime(500)
     })
-    // q2 (last) — correct @ medium: 3500ms only (finishSession called directly)
+    // q2 (last) — correct @ medium: 5500ms only (finishSession called directly)
     q = result.current.currentQuestion!
     act(() => {
       result.current.answer(q.targetLetter, q.targetSlot)
     })
     act(() => {
-      vi.advanceTimersByTime(3500)
+      vi.advanceTimersByTime(5500)
     })
     expect(result.current.status).toBe('finished')
   })
@@ -181,9 +181,9 @@ describe('useSession — lifecycle', () => {
     act(() => {
       result.current.answer(q.targetLetter, q.targetSlot)
     })
-    // sessionLength=1 → last question → finishSession after 3500ms (no breath)
+    // sessionLength=1 → last question → finishSession after 5500ms (no breath)
     act(() => {
-      vi.advanceTimersByTime(3500)
+      vi.advanceTimersByTime(5500)
     })
     expect(onSessionEnd).toHaveBeenCalledTimes(1)
     const [log, states] = onSessionEnd.mock.calls[0]!

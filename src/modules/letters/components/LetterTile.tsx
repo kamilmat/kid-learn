@@ -70,22 +70,37 @@ function stateStyle(state: LetterTileState): CSSProperties {
   }
 }
 
-function HandwrittenLetter({ text, fontSize }: { text: string; fontSize: number }) {
+// Odstęp między literami w parze "Aa" — bez niego "Ll" zlepia się w jedną
+// pionową kreskę dla 7-latka. 0.18em = ok 10-12px przy fontSize 56-64.
+const PAIR_LETTER_SPACING = '0.18em'
+
+function HandwrittenLetter({ text, fontSize, pair }: { text: string; fontSize: number; pair: boolean }) {
   return (
     <span
       data-testid="handwritten-letter"
-      style={{ fontFamily: 'var(--font-handwritten)', fontStyle: 'italic', fontSize, lineHeight: 1 }}
+      style={{
+        fontFamily: 'var(--font-handwritten)',
+        fontStyle: 'italic',
+        fontSize,
+        lineHeight: 1,
+        letterSpacing: pair ? PAIR_LETTER_SPACING : undefined,
+      }}
     >
       {text}
     </span>
   )
 }
 
-function PrintLetter({ text, fontSize }: { text: string; fontSize: number }) {
+function PrintLetter({ text, fontSize, pair }: { text: string; fontSize: number; pair: boolean }) {
   return (
     <span
       data-testid="print-letter"
-      style={{ fontFamily: 'system-ui, sans-serif', fontSize, lineHeight: 1 }}
+      style={{
+        fontFamily: 'system-ui, sans-serif',
+        fontSize,
+        lineHeight: 1,
+        letterSpacing: pair ? PAIR_LETTER_SPACING : undefined,
+      }}
     >
       {text}
     </span>
@@ -178,8 +193,8 @@ export function LetterTile({
       data-testid={testId ?? `letter-tile-${letter}`}
       style={{ ...baseStyle, ...stateStyle(state) }}
     >
-      {showPrint && <PrintLetter text={text} fontSize={fontSize} />}
-      {showHandwritten && <HandwrittenLetter text={text} fontSize={fontSize} />}
+      {showPrint && <PrintLetter text={text} fontSize={fontSize} pair={isPair} />}
+      {showHandwritten && <HandwrittenLetter text={text} fontSize={fontSize} pair={isPair} />}
     </button>
   )
 }

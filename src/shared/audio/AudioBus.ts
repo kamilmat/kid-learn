@@ -53,6 +53,12 @@ export class AudioBus {
     for (const item of pending) {
       item.resolve()
     }
+    // Reset `playing` defensywnie. Drain pętla i tak ustawia false po
+    // wyjściu z while, ale jeśli stop() lądował MIĘDZY iteracjami pętli
+    // (po cleanup'ie playOne, przed kolejnym shift'em), playing zostaje
+    // true a drain re-entry zostaje zablokowany — kolejne play() nigdy
+    // nie odpalą się aż do ponownego stopu.
+    this.playing = false
   }
 
   private async drain(): Promise<void> {

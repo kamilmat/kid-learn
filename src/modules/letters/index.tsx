@@ -13,11 +13,12 @@
 // (App już renderuje `<KidNav />` poza `<Routes />`). Zostawiamy hook do
 // mountu lokalnego KidNav tylko gdyby moduł był używany standalone.
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import {
   Navigate,
   Route,
   Routes,
+  useLocation,
   useNavigate,
   useParams,
 } from 'react-router-dom'
@@ -88,9 +89,30 @@ type LettersIndexProps = {
 
 function LettersIndex({ audioBus }: LettersIndexProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const setLastUsedLevel = useLetters((s) => s.setLastUsedLevel)
   const markIntroSeen = useLetters((s) => s.markIntroSeen)
   const hasSeenIntro = useLetters((s) => s.hasSeenIntro)
+  const defaultLevel = useSettings((s) => s.settings.defaultLevel)
+  const lastUsedLevel = useLetters((s) => s.lastUsedLevel)
+  const autoNavHandledRef = useRef(false)
+
+  // Auto-navigate do defaultLevel (lub lastUsedLevel) gdy wchodzi się świeżo
+  // na /letters — POMIJAMY gdy user wraca ze sesji przez "Wróć"
+  // (LettersSession nadaje state.fromExit). Jednorazowo per mount, żeby
+  // user mógł wybrać inny poziom z LevelSelect bez przekierowania.
+  useEffect(() => {
+    if (autoNavHandledRef.current) return
+    autoNavHandledRef.current = true
+    const fromExit = (location.state as { fromExit?: boolean } | null)?.fromExit
+    if (fromExit) return
+    const targetLevel: Level | null =
+      defaultLevel === 'last-used' ? lastUsedLevel : defaultLevel
+    if (targetLevel) {
+      setLastUsedLevel(targetLevel)
+      navigate(`session/${targetLevel}`, { replace: true })
+    }
+  }, [defaultLevel, lastUsedLevel, location.state, navigate, setLastUsedLevel])
 
   // Onboarding `letters-intro` — 1× per `seenIntros`.
   useEffect(() => {
@@ -149,7 +171,9 @@ function LettersSession({ audioBus }: LettersSessionProps) {
   }, [isValidLevel])
 
   const handleExit = useCallback(() => {
-    navigate('..')
+    // state.fromExit informuje LettersIndex że to powrót, żeby nie aktywował
+    // auto-navigate na defaultLevel (zapętlenie sesji).
+    navigate('..', { state: { fromExit: true } })
   }, [navigate])
 
   const handleSessionComplete = useCallback(

@@ -89,9 +89,9 @@ describe('SessionView — integration', () => {
       correctTile.click()
     })
     expect(screen.getByTestId('feedback-overlay')).toBeInTheDocument()
-    // correct @ medium: 3500ms feedback overlay + 500ms breath before next question
+    // correct @ medium: 5500ms feedback overlay + 500ms breath before next question
     act(() => {
-      vi.advanceTimersByTime(3500)
+      vi.advanceTimersByTime(5500)
     })
     act(() => {
       vi.advanceTimersByTime(500)
