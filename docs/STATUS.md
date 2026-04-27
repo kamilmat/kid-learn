@@ -2,7 +2,7 @@
 
 ## Aktualny stan
 
-**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. v1.1 UX iteration + v1.1.1 follow-up ukończone na branchu `feat/ux-iteration-v1.1` (29 commitów łącznie, NIEMERGED do main — czeka na decyzję user'a). 2026-04-27.
+**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. v1.1 UX iteration + v1.1.1 follow-up zmergowane do main fast-forward (31 commitów liniowo, branch `feat/ux-iteration-v1.1` skasowany). Smoke w Chrome ✅. 2026-04-27. Main na `8587fb6`.
 
 ### Build / testy
 - `pnpm tsc -b` ✓
@@ -32,7 +32,7 @@ Plan: `docs/superpowers/plans/2026-04-27-iskierki-letters-v1.1.1-followup.md`. 9
 
 ### Co zrobione w sesji (2026-04-27) — v1.1 UX iteration
 
-**Branch:** `feat/ux-iteration-v1.1` (20 commitów, NIEMERGED do main — czeka na decyzję user'a). Spec: `docs/superpowers/specs/2026-04-27-iskierki-letters-ux-iteration-v1.1-design.md`. Plan: `docs/superpowers/plans/2026-04-27-iskierki-letters-ux-iteration-v1.1.md`.
+Spec: `docs/superpowers/specs/2026-04-27-iskierki-letters-ux-iteration-v1.1-design.md`. Plan: `docs/superpowers/plans/2026-04-27-iskierki-letters-ux-iteration-v1.1.md`. (Zmergowane do main razem z v1.1.1.)
 
 **Obszar B (cieplejszy odzew dla dziecka):**
 - **B1 — Mascotka w sesji**: `IskraMascot` wpięta w `QuizCard` (mała 50px w status barze, intensywność rośnie z streak'iem `spark→flame→fire→torch`) + mini-mascotka surprise nad błędnym kafelkiem dla `wrong`. `FeedbackOverlay` używa pełnej mascotki per-wariant (happy/dance/idle/spark) zamiast emoji 🔥. `SessionEnd` ma wariant **perfect** (Iskra dance/torch + sparkle ✨🎉✨) gdy `detectPerfectSession` (length===sessionLength + all correct).
@@ -83,23 +83,27 @@ Strona testowa do odsłuchu: była w `public/audio-test.html` ale **została usu
 
 ## Najbliższe rzeczy do zrobienia (jeśli user wróci)
 
-### TOP: merge `feat/ux-iteration-v1.1` do main?
+### Smoke ✅ przeszedł 2026-04-27
 
-Branch ma 29 commitów, build/testy/audio zielone, wszystkie 3 v1.1.1 follow-up issues z UX review zaadresowane. Opcje:
-- **(a)** Squash merge (jeden commit "v1.1 + v1.1.1 — UX iteration") — czystsza historia, łatwiej rollback
-- **(b)** Merge commit zachowujący wszystkie 29 commitów — pełna granularność, łatwiejszy bisect
-- **(c)** Rebase + fast-forward — historia liniowa bez merge commita
+Wszystkie 4 scenariusze zweryfikowane w Chrome (chrome-devtools-mcp na http://localhost:5178/, fresh localStorage):
+1. Iskierka 25s bez kliknięcia → bez auto-advance ✓
+2. Settings → 4 per-level radiogroupy + countdown disabled dla Iskierki/Płomyk ✓
+3. Ognik 17s timeout → headline "Posłuchaj jeszcze raz" ✓
+4. LevelSelect → IskraMascot zamiast 🔥 ✓
 
-### Smoke checklist do user'a (manual w przeglądarce)
+Migracja persist v3→v4 zweryfikowana fresh state (`version: 4`, `timeLimit: {}`).
 
-Przed merge warto przelecieć ręcznie 3 scenariusze (testy automatyczne nie pokrywają wszystkiego):
+### Polish backlog (opcjonalny, deferred z code reviews v1.1.1) — NIE blocker
 
-1. **Wyczyść localStorage** (DevTools → Application → Storage → Clear site data) → odpal Iskierkę → przeczekaj 30s na pytaniu BEZ klikania → nic się nie zmienia (timer 'off' z per-level defaultu). Pre-fix: progress dots skakały 1→4 same.
-2. **Settings → Limit czasu** → 4 wiersze per-level z radiami 'wyłączony'/10s/15s/20s/25s. **Pasek czasu**: dla Iskierki/Płomyk checkbox wyszarzony "(timer wyłączony)", dla Ognik/Pochodnia aktywny.
-3. **Timeout flow** w Ognik/Pochodnia: przeczekaj timer → headline mówi "Posłuchaj jeszcze raz" (NIE "Następnym razem szybciej"), audio mówi `dont-know-X` + `correction-prefix-N` + `letter-X`.
-4. **LevelSelect**: zamiast gołych `🔥` widoczne są animowane mascotki Iskry o rosnącej intensywności (spark→flame→fire→torch).
+Można zrobić w jednym małym sweep'ie albo zostawić aż naturalnie tknie się plików:
 
-Migracja persist v3→v4 zadziała automatycznie — jeśli localStorage z v1.1 trzymał `timeLimit: 15` jako prymityw, merge() drop'uje go i bierze per-level defaults.
+- **Eksport `ALL_LEVELS = ['iskierka','plomyk','ognik','pochodnia'] as const`** z `defaults.ts`. Inline w 6 miejscach (SettingsScreen ×2, defaults.test, levelPools.test, exporter.ts, prawdopodobnie pickers). DRY.
+- **Rename loop var `v` → `limit`** w `src/shared/stats/exporter.ts` sekcja "Limit czasu per-level". Spójność z resztą pliku (sorted/today/streak/agg).
+- **Unit test dla per-level MD formatu** w raporcie rodzica — `exporter.test.ts` brakuje pokrycia nowej sekcji "- Limit czasu (per poziom):" + 4 sub-bullety. Pin indentation contract (2 spaces dla nested bullets).
+- **A11y `aria-describedby`** na disabled countdown checkbox w `SettingsScreen.tsx` pointing do "(timer wyłączony)" spana (z `id`). Bardziej eksplicytne niż text-flow w label dla screen readerów.
+- **`LEVELS.map` zamiast inline tuple** w sekcji countdown `SettingsScreen.tsx` (linia ~480). Plik ma już `const LEVELS: Level[]` — sekcja countdown wciąż używa inline `(['iskierka','plomyk','ognik','pochodnia'] as const).map`. 1-line cleanup.
+- **`opacity: 0.5` magic number** w SettingsScreen disabled label → token jeśli kiedyś powstanie `disabledOpacity` w `@/app/theme`.
+- **Komentarz hint o future migracjach** w `settingsStore.ts::merge()`. Append-only convention (nigdy nie reorder, drop legacy guards dopiero gdy persist z tej wersji statystycznie wymarł).
 
 ### Średnioterminowe (v2)
 1. **Audio iteracja** — user może chcieć dalej testować różne tekstu w letters.json. Jeśli tak — odtworzyć stronę testową `public/audio-test.html` i symlink `public/audio-source` → `audio-source` (była, usunęliśmy w cleanup).
@@ -132,12 +136,13 @@ Migracja persist v3→v4 zadziała automatycznie — jeśli localStorage z v1.1 
 ## Wskazówki na następną sesję
 
 1. **Przeczytaj CLAUDE.md** najpierw — to jest globalny context.
-2. **Sprawdź na jakim branchu jesteś** — `git branch --show-current`. Aktualnie powinieneś być na `feat/ux-iteration-v1.1` (NIE main). Jeśli chcesz zacząć v1.1.1 fix, rozważ czy:
-   - kontynuujesz na tym branchu (nadbudowa) — ale wtedy historia rośnie i trudniej rollback
-   - mergujesz v1.1 do main najpierw, potem nowy branch v1.1.1 — czystsze
-3. **Zapytaj user'a co chce robić** — najprawdopodobniej v1.1.1 follow-up albo merge v1.1 do main. Patrz sekcja "Decyzja przed innymi rzeczami" wyżej.
-4. **Stan dev-server** — może już nie chodzi. Sprawdź `lsof -i :5178` lub po prostu odpal `pnpm dev` (Vite szuka kolejnego wolnego portu, prawdopodobnie 5178+).
-5. **localStorage** — user może mieć zapisany progres z testowania. Jeśli coś dziwnie się zachowuje, dev tools → Application → Local Storage → wyczyść `iskierki-state-v1` i `iskierki-letters-v1`. UWAGA: dla v1.1 dorzuciliśmy migrację `showCountdownBar` boolean→per-level (v2→v3). Jeśli user miał stare ustawienia, automatycznie się zresetują (drop'ujemy stary boolean).
+2. **Sprawdź na jakim branchu jesteś** — `git branch --show-current`. Powinieneś być na `main`. v1.1 + v1.1.1 zmergowane FF, branch `feat/ux-iteration-v1.1` usunięty. Nowy branch tylko gdy zaczynasz nową iterację.
+3. **Zapytaj user'a co chce robić.** Najczęstsze ścieżki:
+   - "dopieść/posprzątaj v1.1.1" → polish backlog z sekcji wyżej (małe items, można jeden sweep branch).
+   - "co dalej" bez kontekstu → propozycje z v2: czcionka pisana + tracing palcem, drugi moduł sylab, drugi typ ćwiczenia liter, manual recordings głosu.
+   - Bug do naprawy → `activeLettersValidation` pre-existing (osobny task, patrz "Known pre-existing bugs").
+4. **Stan dev-server** — może już nie chodzi. Sprawdź `lsof -i :5178` lub po prostu odpal `pnpm dev` (Vite szuka kolejnego wolnego portu).
+5. **localStorage** — user może mieć zapisany progres z testowania. Jeśli coś dziwnie się zachowuje, dev tools → Application → Local Storage → wyczyść `iskierki-state-v1` i `iskierki-letters-v1`. UWAGA: settings store ma migracje v2→v3 (`showCountdownBar` boolean→per-level) i v3→v4 (`timeLimit` primitive→per-level). Stare wartości są drop'owane automatycznie do per-level defaults.
 6. **Audio status** — `pnpm audio:check` powie czy wszystko na miejscu (137 plików). Jeśli user zmienił JSON od ostatniego buildu, woła `pnpm audio:build` (regeneruje tylko zmienione).
 7. **Memories** — sprawdź `~/.claude/projects/-Users-kamilmat87-kid-learn/memory/MEMORY.md`. Aktywne:
    - `project_audio_voice_consistency.md` — nie miksować głosów audio
