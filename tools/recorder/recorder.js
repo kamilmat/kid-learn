@@ -331,6 +331,55 @@ function stopVuMeter() {
   if (bar) bar.style.width = '0%';
 }
 
+function getFilteredKeys() {
+  return state.keys.filter((k) => {
+    if (state.filterGroup !== 'all' && k.group !== state.filterGroup) return false;
+    if (state.filterUnrecorded && k.status !== 'unrecorded') return false;
+    return true;
+  });
+}
+
+function moveActive(delta) {
+  const filtered = getFilteredKeys();
+  if (filtered.length === 0) return;
+  const idx = filtered.findIndex((k) => k.key === state.activeKey);
+  let next;
+  if (idx === -1) {
+    next = filtered[0];
+  } else {
+    const ni = (idx + delta + filtered.length) % filtered.length;
+    next = filtered[ni];
+  }
+  selectKey(next.key);
+}
+
+document.addEventListener('keydown', (e) => {
+  // ignoruj jeśli focus jest w jakimś input/textarea (defensywnie — nie mamy ich, ale zawczasu)
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    toggleRecording();
+  } else if (e.code === 'Enter') {
+    e.preventDefault();
+    if (state.currentBlob) saveCurrent();
+  } else if (e.code === 'KeyR') {
+    e.preventDefault();
+    if (state.currentBlob) {
+      state.currentBlob = null;
+      setKeyStatus(state.activeKey, 'unrecorded');
+      renderActivePane();
+    }
+  } else if (e.code === 'ArrowDown' || e.code === 'ArrowRight') {
+    e.preventDefault();
+    moveActive(+1);
+  } else if (e.code === 'ArrowUp' || e.code === 'ArrowLeft') {
+    e.preventDefault();
+    moveActive(-1);
+  }
+});
+
 // init
 (async () => {
   try {
