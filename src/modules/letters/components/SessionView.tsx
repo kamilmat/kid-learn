@@ -178,9 +178,10 @@ export function SessionView({
           caseMode={caseMode}
           styleMode={styleMode}
           chosenCase={session.currentQuestion?.chosenCase ?? 'upper'}
+          onSkip={session.skipFeedback}
           onDismiss={() => {
-            // FeedbackOverlay sam się dismissuje — useSession pilnuje timera.
-            // Tu nic nie robimy; obecność onDismiss jest tylko dla lokalnego efektu.
+            // useSession pilnuje timera. onDismiss jest no-op dla zgodności
+            // z FeedbackOverlay API (overlay nie planuje własnego setTimeout).
           }}
         />
       )}

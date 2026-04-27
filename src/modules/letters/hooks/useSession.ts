@@ -109,6 +109,8 @@ export type UseSessionApi = {
   resume: () => void
   answer: (chosenLetter: string, position: Slot) => void
   dontKnow: () => void
+  /** Pomiń wybrzmiewanie feedback i przejdź do następnego pytania od razu. */
+  skipFeedback: () => void
   quit: () => void
 }
 
@@ -124,17 +126,18 @@ const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
 // 7-latek potrzebuje ~1s na uświadomienie sobie pochwały/korekty PO tym
 // jak nagranie skończy mówić. Bez tego buforu ekran zmienia się w środku
 // "wybrzmiewania" — czujemy że za szybko leci.
-//   - correct:  sfx-ding (1.8s) + praise (~1.5s) + assoc "X jak Y" (~1.9s) ≈ 5.2s → 6500
+//   - correct:  sfx-ding (1.8s) + praise (~1.5s) ≈ 3.3s → 4500
+//               (bez assoc "X jak Y" — dziecko zna literę; guzik "→" do skip)
 //   - wrong:    correction-prefix (~2.1s) + letter (~1.2s) ≈ 3.3s → 5500
-//   - dontKnow: dont-know (~1.7s) + letter (~1.2s) ≈ 2.9s → 4500
-//   - timeout:  identyczne audio jak dontKnow ≈ 2.9s → 4500
+//   - dontKnow: dont-know (~1.7s) + letter (~1.2s) + assoc "X jak Y" (~1.9s) ≈ 4.8s → 6500
+//   - timeout:  identyczne audio jak dontKnow ≈ 4.8s → 6500
 //   - mastery:  sfx-fanfara (2.1s) + mastery-celebration (3.3s) ≈ 5.4s → 7000
 //               (streak audio dorzucany przez STREAK_AUDIO_DURATION_MS gdy próg)
 const FEEDBACK_DURATION_BASE_MS: Record<FeedbackVariant, number> = {
-  correct: 6500,
+  correct: 4500,
   wrong: 5500,
-  dontKnow: 4500,
-  timeout: 4500,
+  dontKnow: 6500,
+  timeout: 6500,
   mastery: 7000,
 }
 
@@ -594,16 +597,14 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
 
       switch (variant) {
         case 'correct': {
+          // Bez assoc-X audio — gdy dziecko zna literę, "X jak Y" wydłuża
+          // sequence niepotrzebnie. Asocjacja gra tylko dla dontKnow/timeout
+          // (gdy dziecko potrzebuje wskazówki). Guzik "→ Dalej" daje opcję
+          // pominięcia czekania.
           void cfg.audioBus.play('sfx-correct-ding')
           const praiseKey = pickPraiseKey(lastPraiseKeyRef.current, cfg.rng)
           lastPraiseKeyRef.current = praiseKey
           void cfg.audioBus.play(praiseKey)
-          try {
-            const assoc = getAssociation(target)
-            void cfg.audioBus.play(assoc.audioKey)
-          } catch {
-            // brak asocjacji = pomijamy bez kruszenia hooka
-          }
           // Streak audio (jeśli próg)
           const skey = streakAudioKey(newStreak)
           if (skey !== null) {
@@ -625,14 +626,20 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
         }
         case 'dontKnow':
         case 'timeout': {
-          // Scalone audio — dla obu wariantów ten sam zestaw.
-          // NIE gramy correction-prefix — to "ojej, posłuchaj!" było zaprojektowane
-          // dla `wrong` (komentarz do błędu). Dla dontKnow/timeout dziecko nie
-          // pomyliło się, świadomie/biernie nie odpowiedziało — wystarczy
-          // wsparcie ("nie szkodzi") + litera. Dwa audio ("spokojnie posłuchaj
-          // jeszcze raz" + "ojej, posłuchaj!") brzmiały redundantnie.
+          // Scalone audio dla obu wariantów: wsparcie + litera + asocjacja.
+          // Asocjacja "X jak Y" gra TYLKO tu (nie przy correct) — gdy dziecko
+          // nie wiedziało, "X jak Y" pomaga zapamiętać. NIE gramy
+          // correction-prefix — to było zaprojektowane dla `wrong` (komentarz
+          // do błędu). Dziecko nie pomyliło się, świadomie/biernie nie
+          // odpowiedziało.
           void cfg.audioBus.play(pickRandom(DONTKNOW_KEYS, cfg.rng))
           void cfg.audioBus.play(`letter-${target}`)
+          try {
+            const assoc = getAssociation(target)
+            void cfg.audioBus.play(assoc.audioKey)
+          } catch {
+            // brak asocjacji = pomijamy bez kruszenia hooka
+          }
           break
         }
         case 'mastery': {
@@ -788,6 +795,28 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     [handleOutcome, status],
   )
 
+  // Pomiń wybrzmiewanie feedback overlay i przejdź do następnego pytania
+  // od razu (lub zakończ sesję). Wywoływane przez guzik "→ Dalej" — daje
+  // dziecku kontrolę nad tempem zamiast czekać na timer.
+  const skipFeedback = useCallback(() => {
+    if (status !== 'feedback') return
+    if (feedbackTimerRef.current !== null) {
+      clearTimeout(feedbackTimerRef.current)
+      feedbackTimerRef.current = null
+    }
+    cfgRef.current.audioBus.stop()
+    const nextNum = questionNumberRef.current + 1
+    if (nextNum >= cfgRef.current.sessionLength) {
+      finishSession()
+      return
+    }
+    setLastFeedback(null)
+    questionNumberRef.current = nextNum
+    setQuestionNumber(nextNum)
+    setStatus('playing')
+    generateNextQuestion()
+  }, [finishSession, generateNextQuestion, status])
+
   const dontKnow = useCallback(() => {
     if (status !== 'playing') return
     // NIE dodajemy nav-tap — to TTS "klik" (1.4s) co brzydko miesza się
@@ -846,6 +875,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     resume,
     answer,
     dontKnow,
+    skipFeedback,
     quit,
   }
 }

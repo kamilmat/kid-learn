@@ -113,15 +113,15 @@ describe('SessionView — integration', () => {
       />,
     )
     // Klikamy "Nie wiem" 5 razy.
-    // dontKnow @ medium: 4500ms feedback; pytania 1-4 (non-last) + 1200ms breath = 5700ms;
-    // pytanie 5 (last) finishSession wywołane bezpośrednio po 4500ms.
-    // Advancing 5700ms covers both cases.
+    // dontKnow @ medium: 6500ms feedback; pytania 1-4 (non-last) + 1200ms breath = 7700ms;
+    // pytanie 5 (last) finishSession wywołane bezpośrednio po 6500ms.
+    // Advancing 7700ms covers both cases.
     for (let i = 0; i < 5; i++) {
       act(() => {
         screen.getByTestId('dont-know-button').click()
       })
       act(() => {
-        vi.advanceTimersByTime(5700)
+        vi.advanceTimersByTime(7700)
       })
     }
     expect(screen.getByTestId('session-end')).toBeInTheDocument()

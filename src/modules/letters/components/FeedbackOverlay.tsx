@@ -20,6 +20,8 @@ export type FeedbackOverlayProps = {
   feedback: FeedbackState
   /** Wywoływane po `durationMs`. */
   onDismiss: () => void
+  /** Wywoływane gdy dziecko klika guzik "→ Dalej" — pomija wybrzmiewanie. */
+  onSkip?: () => void
   /** Tryb wielkości litery — żeby pokazać wielką literę spójnie z kafelkami. */
   caseMode?: CaseMode
   /** Tryb stylu (drukowane/pisane) — spójność z kafelkami. */
@@ -138,6 +140,7 @@ function renderHighlightedWord(
 export function FeedbackOverlay({
   feedback,
   onDismiss,
+  onSkip,
   caseMode = 'tylko-duze',
   styleMode = 'tylko-drukowane',
   chosenCase = 'upper',
@@ -266,6 +269,35 @@ export function FeedbackOverlay({
         <div data-testid="iskierki-burst" aria-hidden="true" style={{ fontSize: 48 }}>
           ✨ ✨ ✨
         </div>
+      )}
+      {onSkip !== undefined && (
+        <button
+          type="button"
+          data-testid="feedback-skip-button"
+          aria-label="Dalej"
+          onClick={onSkip}
+          style={{
+            position: 'fixed',
+            right: 24,
+            bottom: 24,
+            width: 88,
+            height: 88,
+            borderRadius: 44,
+            border: '3px solid #ffffff',
+            background: '#ffffffee',
+            color: colors.text,
+            fontSize: 44,
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingBottom: 4,
+          }}
+        >
+          →
+        </button>
       )}
     </div>
   )
