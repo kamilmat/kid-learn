@@ -1,0 +1,35 @@
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0; padding: 0;
+  background: #fef9f2; color: #2d2d33;
+  display: grid; grid-template-rows: auto auto 1fr; height: 100vh;
+}
+header { padding: 12px 20px; border-bottom: 1px solid #ddd; display: flex; gap: 24px; align-items: center; }
+header h1 { margin: 0; font-size: 20px; }
+nav { padding: 8px 20px; border-bottom: 1px solid #eee; display: flex; gap: 8px; align-items: center; }
+nav button { padding: 4px 12px; border: 1px solid #ccc; background: white; cursor: pointer; border-radius: 4px; }
+nav button.active { background: #2d2d33; color: white; }
+nav label { margin-left: auto; }
+main { display: grid; grid-template-columns: 360px 1fr; overflow: hidden; }
+#key-list { overflow-y: auto; padding: 12px; border-right: 1px solid #eee; }
+#key-list .group { margin-bottom: 16px; }
+#key-list .group h3 { margin: 0 0 4px; font-size: 13px; color: #666; text-transform: uppercase; }
+#key-list .key-row { padding: 6px 8px; cursor: pointer; border-radius: 4px; display: flex; gap: 8px; align-items: center; font-size: 14px; }
+#key-list .key-row:hover { background: #f4eedb; }
+#key-list .key-row.active { background: #2d2d33; color: white; }
+#key-list .key-row .status { width: 18px; }
+#key-list .key-row .key { font-family: monospace; min-width: 140px; }
+#key-list .key-row .text { color: #888; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#key-list .key-row.active .text { color: #ddd; }
+#active-pane { padding: 32px; display: flex; flex-direction: column; gap: 20px; align-items: center; justify-content: center; }
+#active-pane .key-name { font-family: monospace; font-size: 18px; color: #666; }
+#active-pane .text-prompt { font-size: 64px; font-weight: bold; text-align: center; }
+#active-pane .source-hint { color: #888; font-size: 13px; }
+#active-pane .vu-meter { width: 320px; height: 24px; background: #eee; border-radius: 12px; overflow: hidden; }
+#active-pane .vu-meter .vu-bar { height: 100%; background: linear-gradient(90deg, #4ade80 0%, #facc15 70%, #ef4444 100%); width: 0%; transition: width 60ms linear; }
+#active-pane .controls { display: flex; gap: 12px; }
+#active-pane .controls button { padding: 12px 24px; font-size: 16px; border: none; background: #2d2d33; color: white; border-radius: 8px; cursor: pointer; }
+#active-pane .controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+#active-pane .preview { width: 320px; }
+.hint { color: #999; }

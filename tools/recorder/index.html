@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Iskierki — Audio Recorder</title>
+  <link rel="stylesheet" href="./recorder.css" />
+</head>
+<body>
+  <header>
+    <h1>Iskierki — Audio Recorder</h1>
+    <div id="folder-status">Folder: <em>nie wybrany</em> <button id="pick-folder">Wybierz folder</button></div>
+    <div id="progress">Postęp: <span id="progress-count">0 / 0</span></div>
+  </header>
+  <nav id="filters">
+    <button data-group="all" class="active">Wszystkie</button>
+    <button data-group="Litery">Litery</button>
+    <button data-group="Słowa">Słowa</button>
+    <button data-group="Asocjacje">Asocjacje</button>
+    <button data-group="UI">UI</button>
+    <label><input type="checkbox" id="filter-unrecorded" /> tylko nieskończone</label>
+  </nav>
+  <main>
+    <aside id="key-list">Ładowanie…</aside>
+    <section id="active-pane">
+      <p class="hint">Wybierz klucz z listy po lewej.</p>
+    </section>
+  </main>
+  <script type="module" src="./recorder.js"></script>
+</body>
+</html>
