@@ -2,13 +2,40 @@
 
 ## Aktualny stan
 
-**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. v1.1 UX iteration + v1.1.1 follow-up + polish sweep zmergowane do main. Smoke w Chrome ✅. 2026-04-27.
+**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. v1.1 + v1.1.1 + polish + **CR sweep + bug fixes (3 commity)** zmergowane do main. Smoke w Chrome ✅. 2026-04-27.
 
 ### Build / testy
 - `pnpm tsc -b` ✓
 - `pnpm build` ✓ (319 KB JS / 99 KB gzip)
 - `pnpm audio:check` ✓ (137 plików mp3 zgodnie z manifestem)
-- `pnpm test --run` — 409 testy zielone; 1 failure (pre-existing bug — patrz sekcja "Known pre-existing bugs")
+- `pnpm test --run` — 383 testy zielone; 1 failure (pre-existing bug — patrz "Known pre-existing bugs"). Spadek z 409 → 383 to świadome usunięcie 26 testów dead engagement modułów.
+
+### Co zrobione w sesji (2026-04-27) — CR sweep + bug fixes (3 commity)
+
+Niezależny CR przez `superpowers:code-reviewer` agent + eksploracja UX w Chrome (chrome-devtools-mcp, iPad viewport 810×1080) wykryły 5 realnych bugów + 5 UX issues + 6 refactor opportunities. Wszystko naprawione w 3 commitach.
+
+**Commit 1 (`7015919`) — bug fixes:**
+- **Pair "Ll/Aa/Mm/Oo" zlepiało się** w kafelkach quizu i FeedbackOverlay → `letterSpacing: '0.18em'` dla `caseMode === 'para'`. 7-latek czytał "Ll" jako jedną pionową kreskę.
+- **Audio sequence "X jak Y" się ucinało** — `FEEDBACK_DURATION_BASE_MS` zaktualizowane z rzeczywistych pomiarów `afinfo`: correct 3500→5500ms (faktyczny audio: ding 1.8s + praise 1.5s + assoc 1.9s = 5.2s), mastery 3500→5800. Stary komentarz mówił 0.3s + 0.8s + 1.5s = 2.6s — zupełnie nieaktualny.
+- **Re-tap w 500ms breath** (CR finding #1): Status pozostaje `'feedback'` przez wdech (kafelki disabled), `setStatus('playing')` dopiero przy generateNextQuestion. Wcześniej szybkie dziecko mogło tapnąć stary kafelek 2× → fałszywe iskierki.
+- **Pause-during-feedback rozbijał sesję** (CR finding #2): page-visibility podczas FeedbackOverlay clearował feedbackTimer, resume nie wskrzeszał pipeline. Fix: `pausedDuringFeedbackRef` + scheduleFeedbackDismissRef rekonstruuje pipeline z `lastFeedbackEffectiveMsRef.current`.
+- **AudioBus.stop() race** (CR finding #3): defensywne `this.playing = false` w stop() — bez tego między iteracjami drain'u stop mógł zostawić queue zdeadlockowaną.
+- **defaultLevel ghost feature** (CR finding #4): settings.defaultLevel był zapisywany w UI ale **nigdy nieczytany**. LettersIndex teraz auto-navigate'uje do session na podstawie defaultLevel (lub lastUsedLevel). Module-level flag `autoNavApplied` chroni przed re-trigger po Wróć z sesji. handleExit nadaje `state.fromExit` jako dodatkowy guard.
+
+**Commit 2 (`2783911`) — UX dla dziecka:**
+- **POST_FEEDBACK_BREATH_MS 500→1200ms** + duration zwiększone (correct→6500, dontKnow/timeout 6000→7000, mastery 5800→7000). 7-latek nie nadążał reset uwagi po wybrzmiewaniu pochwały — user reportował "po tym jak skonczy mowic nagranie strasznie szybko sie przelacza".
+- **dontKnow audio cue** (CR #7): `audioBus.play('nav-tap')` przed handleOutcome — bez tego dziecko czekało 200-400ms na feedback bez potwierdzenia że "Nie wiem" zarejestrowane.
+- **SessionEnd nav-tap cue** (CR #6): Restart/Exit buttony grają nav-tap. Nie pełna narracja audio (wymaga nowych nagrań cyfr "iskierki-N"), ale przynajmniej basic feedback.
+- **LevelSelect mascotki różnicowanie** (UX #5): Skalowanie body per intensity (44/60/76/92px). Sama liczba iskier 1/2/4/6 wokół ciała była dla 7-latka prawie nieczytelna jako sygnał wzrostu trudności.
+- **Niespójny styl ikon nav** (UX #8): ⬅ (text presentation, lineart) → ⬅️ (z VS-16, color emoji ujednolicone z 🏠).
+- **Home placeholder "Wkrótce więcej!"** (UX #9): tekstowy placeholder → 🔒 + ✨ (no-text dla dziecka, zgodnie z generalną zasadą).
+
+**Commit 3 (`3386441`) — refactor (-700 linii):**
+- **Level type duplikat** (CR #10): `shared/stats/types.Level` → re-export z `@/shared/settings/types`. Single source przeciwko silent divergence.
+- **LEVEL_LABEL duplikat** (CR #12): wyodrębnione do `@/shared/settings/defaults` obok `ALL_LEVELS`. Usunięte z 5 plików (SettingsScreen, ActiveLettersEditor, exporter, LiveSessionSection).
+- **Dead engagement code** (CR #11): usunięte 4 moduły + ich testy (~250 linii implementacji + ~430 linii testów = ~680 linii). `countdownTimer`, `useCountdown`, `fastClickDetector`, `samePositionDetector` — wszystko miało referencje TYLKO z własnych testów. `useSession` ma inline countdown, `antiCheatFlags` ma własną logikę post-sesji.
+- **pickContrastivePairs dead allocation** (CR #13): usunięte z useSession + sygnatura `pickDistractors` na `Readonly<Record<string, readonly string[]>>` — eliminuje per-pytanie Map allocation + Object.entries spread.
+- **Drobne dead code** (CR #14, #15): ReportScreen martwy `<span data-radii>` marker (z importem `radii`), `currentStreak` prop z QuizCard/SessionView (był z `_` prefiksem unused).
 
 ### Co zrobione w sesji (2026-04-27) — polish sweep v1.1.1
 
