@@ -38,7 +38,6 @@ import {
   streakIntensity,
   streakAudioKey,
   detectPerfectSession,
-  CORRECTION_PREFIX_KEYS,
   type PraiseKey,
 } from './useSession.pickers'
 import type { IskraIntensity } from '@/shared/ui/IskraMascot'
@@ -127,15 +126,15 @@ const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
 // "wybrzmiewania" — czujemy że za szybko leci.
 //   - correct:  sfx-ding (1.8s) + praise (~1.5s) + assoc "X jak Y" (~1.9s) ≈ 5.2s → 6500
 //   - wrong:    correction-prefix (~2.1s) + letter (~1.2s) ≈ 3.3s → 5500
-//   - dontKnow: dont-know (~1.7s) + correction-prefix (~2.1s) + letter (~1.2s) ≈ 5.0s → 7000
-//   - timeout:  identyczne audio jak dontKnow ≈ 5.0s → 7000
+//   - dontKnow: dont-know (~1.7s) + letter (~1.2s) ≈ 2.9s → 4500
+//   - timeout:  identyczne audio jak dontKnow ≈ 2.9s → 4500
 //   - mastery:  sfx-fanfara (2.1s) + mastery-celebration (3.3s) ≈ 5.4s → 7000
 //               (streak audio dorzucany przez STREAK_AUDIO_DURATION_MS gdy próg)
 const FEEDBACK_DURATION_BASE_MS: Record<FeedbackVariant, number> = {
   correct: 6500,
   wrong: 5500,
-  dontKnow: 7000,
-  timeout: 7000,
+  dontKnow: 4500,
+  timeout: 4500,
   mastery: 7000,
 }
 
@@ -626,9 +625,13 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
         }
         case 'dontKnow':
         case 'timeout': {
-          // Scalone audio — dla obu wariantów leci ten sam zestaw
+          // Scalone audio — dla obu wariantów ten sam zestaw.
+          // NIE gramy correction-prefix — to "ojej, posłuchaj!" było zaprojektowane
+          // dla `wrong` (komentarz do błędu). Dla dontKnow/timeout dziecko nie
+          // pomyliło się, świadomie/biernie nie odpowiedziało — wystarczy
+          // wsparcie ("nie szkodzi") + litera. Dwa audio ("spokojnie posłuchaj
+          // jeszcze raz" + "ojej, posłuchaj!") brzmiały redundantnie.
           void cfg.audioBus.play(pickRandom(DONTKNOW_KEYS, cfg.rng))
-          void cfg.audioBus.play(pickRandom(CORRECTION_PREFIX_KEYS, cfg.rng))
           void cfg.audioBus.play(`letter-${target}`)
           break
         }

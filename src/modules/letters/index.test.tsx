@@ -151,15 +151,15 @@ describe('LettersModule — integration', () => {
     expect(screen.getByTestId('session-view')).toBeInTheDocument()
 
     // Kończymy sesję klikając "Nie wiem" pełną liczbę pytań (default sessionLength=10)
-    // dontKnow @ medium: 7000ms feedback; non-last + 1200ms breath = 8200ms;
-    // last question finishSession po 7000ms bezpośrednio.
-    // Advancing 8200ms covers all cases.
+    // dontKnow @ medium: 4500ms feedback; non-last + 1200ms breath = 5700ms;
+    // last question finishSession po 4500ms bezpośrednio.
+    // Advancing 5700ms covers all cases.
     for (let i = 0; i < 10; i++) {
       act(() => {
         screen.getByTestId('dont-know-button').click()
       })
       act(() => {
-        vi.advanceTimersByTime(8200)
+        vi.advanceTimersByTime(5700)
       })
     }
 
