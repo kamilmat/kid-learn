@@ -17,7 +17,9 @@ Z roota repo:
 pnpm dev:recorder
 ```
 
-Otwórz `http://localhost:8080` w Chrome.
+Otwórz `http://localhost:8080/tools/recorder/` w Chrome.
+
+(HTTP server musi startować z roota repo, żeby fetch mógł sięgnąć do `audio-source/*.json`. Skrypt `pnpm dev:recorder` to robi.)
 
 ## Workflow
 
