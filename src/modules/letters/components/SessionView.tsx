@@ -12,6 +12,7 @@ import {
   getActiveLetterPool,
   getEffectiveShowCountdownBar,
   getEffectiveTilesPerQuestion,
+  getEffectiveTimeLimit,
   levelDefaults,
 } from '@/shared/settings/defaults'
 import type {
@@ -74,7 +75,7 @@ export function SessionView({
     level,
     activeLetters,
     sessionLength: settings.sessionLength,
-    timeLimit: settings.timeLimit,
+    timeLimit: getEffectiveTimeLimit(settings, level),
     showCountdownBar: getEffectiveShowCountdownBar(settings, level),
     caseMode,
     styleMode,
