@@ -13,6 +13,15 @@ import type {
 // dla iteracji per-level (settings UI, persistence, raporty, testy).
 export const ALL_LEVELS = ['iskierka', 'plomyk', 'ognik', 'pochodnia'] as const
 
+// Polskie etykiety per poziom — używane wszędzie gdzie pokazujemy nazwę
+// poziomu w UI/raportach (settings, eksport, live session). Single source.
+export const LEVEL_LABEL: Record<Level, string> = {
+  iskierka: 'Iskierka',
+  plomyk: 'Płomyk',
+  ognik: 'Ognik',
+  pochodnia: 'Pochodnia',
+}
+
 // Sekcja 11: pule liter per poziom (kumulacja — wyższy poziom zawiera niższe).
 const iskierkaPool: readonly string[] = ['a', 'm', 'l', 'e', 'o', 't']
 

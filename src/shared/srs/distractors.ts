@@ -67,7 +67,7 @@ export function pickDistractors(
   target: string,
   activePool: string[],
   targetState: LetterState,
-  contrastivePairs: Record<string, string[]>,
+  contrastivePairs: Readonly<Record<string, readonly string[]>>,
   rng: () => number = Math.random,
   count: number = DEFAULT_REQUIRED_DISTRACTORS,
 ): string[] {

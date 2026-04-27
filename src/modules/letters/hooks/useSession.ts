@@ -184,15 +184,6 @@ function pickRandom<T>(arr: readonly T[], rng: () => number): T {
   return arr[idx] as T
 }
 
-function pickContrastivePairs(states: Map<string, LetterState>): Record<string, string[]> {
-  const out: Record<string, string[]> = {}
-  for (const [letter] of states) {
-    const partners = CONTRASTIVE_PAIRS[letter]
-    out[letter] = partners ? [...partners] : []
-  }
-  return out
-}
-
 function caseModeToInitialChosenCase(mode: CaseMode): 'upper' | 'lower' {
   switch (mode) {
     case 'tylko-duze':
@@ -456,8 +447,8 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       target,
       cfg.activeLetters,
       targetState,
-      // CONTRASTIVE_PAIRS jest readonly Record — kopiujemy do mutable shape.
-      pickContrastivePairs(new Map(Object.entries(statesRef.current))),
+      // pickDistractors czyta tylko `contrastivePairs[target]` — readonly OK.
+      CONTRASTIVE_PAIRS,
       cfg.rng,
       distractorCount,
     )

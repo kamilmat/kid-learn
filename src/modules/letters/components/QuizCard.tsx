@@ -17,9 +17,7 @@ export type QuizCardProps = {
   questionNumber: number
   totalQuestions: number
   iskierki: number
-  /** Liczba poprawnych z rzędu w sesji — wpływa na intensywność mascotki. */
-  currentStreak: number
-  /** Intensywność małej Iskry w status barze (z useSession). */
+  /** Intensywność małej Iskry w status barze (z useSession, wyliczona ze streak'a). */
   mascotIntensity: IskraIntensity
   /** Litera kliknięta przy wrong — używana do mini-mascotki nad kafelkiem. */
   lastWrongSlot?: Slot | null
@@ -92,7 +90,6 @@ export function QuizCard({
   questionNumber,
   totalQuestions,
   iskierki,
-  currentStreak: _currentStreak,
   mascotIntensity,
   lastWrongSlot,
   countdownMs,

@@ -1,7 +1,10 @@
 // Session log types — zgodne ze spec sekcja 18.
-// TODO: ujednolicić jeśli kod modułowy potrzebuje rozszerzenia (np. źródło dźwięku itd.).
+// `Level` jest re-eksportowany z @/shared/settings/types — settings to bardziej
+// fundamentalna warstwa i powinno być jedno źródło prawdy dla typu poziomu
+// (5ty poziom = aktualizacja jednego miejsca, nie kilku silently divergent).
 
-export type Level = 'iskierka' | 'plomyk' | 'ognik' | 'pochodnia'
+import type { Level } from '@/shared/settings/types'
+export type { Level }
 
 export type SessionEventQuestionStart = {
   type: 'question-start'

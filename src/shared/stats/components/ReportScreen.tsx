@@ -4,7 +4,7 @@
 // scrollowalnych sekcji + przycisk "Skopiuj raport" w toolbar.
 
 import { useCallback, useState } from 'react'
-import { colors, radii } from '@/app/theme'
+import { colors } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
 import { MathGate } from '@/shared/settings/components/MathGate'
 import { useSettings } from '@/shared/settings/settingsStore'
@@ -167,8 +167,6 @@ export function ReportScreen({
         <AntiCheatSection sessions={sessions} />
       </div>
 
-      {/* Marker dla `radii.kid` żeby utrzymać typowanie spójne — */}
-      <span style={{ display: 'none' }} data-radii={radii.kid} />
     </div>
   )
 }

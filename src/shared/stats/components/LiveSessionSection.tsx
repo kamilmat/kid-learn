@@ -3,6 +3,7 @@
 // Tabela eventów ostatniej sesji z timestampami HH:MM:SS i opisem akcji.
 
 import type { SessionEvent, SessionLog } from '@/shared/stats/types'
+import { LEVEL_LABEL } from '@/shared/settings/defaults'
 import { toUpper } from '@/modules/letters/data/alphabet'
 
 export type LiveSessionSectionProps = {
@@ -20,13 +21,6 @@ const PAUSE_REASON_LABEL: Record<'manual' | 'idle' | 'visibility', string> = {
   manual: 'manualnie',
   idle: 'bezczynność',
   visibility: 'utrata focus tabu',
-}
-
-const LEVEL_LABEL: Record<SessionLog['level'], string> = {
-  iskierka: 'Iskierka',
-  plomyk: 'Płomyk',
-  ognik: 'Ognik',
-  pochodnia: 'Pochodnia',
 }
 
 export function formatTime(ts: number): string {

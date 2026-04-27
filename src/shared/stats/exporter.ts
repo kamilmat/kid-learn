@@ -8,7 +8,7 @@
 import type { LetterState } from '@/shared/srs/types'
 import type { SessionLog } from '@/shared/stats/types'
 import type { Settings } from '@/shared/settings/types'
-import { ALL_LEVELS, getEffectiveTimeLimit } from '@/shared/settings/defaults'
+import { ALL_LEVELS, LEVEL_LABEL, getEffectiveTimeLimit } from '@/shared/settings/defaults'
 import { toUpper } from '@/modules/letters/data/alphabet'
 import {
   masteryPercent,
@@ -48,12 +48,7 @@ function fmtDate(ts: number): string {
   return `${y}-${m}-${day} ${hh}:${mm}`
 }
 
-const LEVEL_LABEL = {
-  iskierka: 'Iskierka',
-  plomyk: 'Płomyk',
-  ognik: 'Ognik',
-  pochodnia: 'Pochodnia',
-} as const
+// LEVEL_LABEL importowany z settings/defaults — single source of truth.
 
 /**
  * Generuje pełny raport rodzica jako Markdown.

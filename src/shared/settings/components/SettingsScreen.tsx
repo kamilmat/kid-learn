@@ -14,7 +14,7 @@ import { useState } from 'react'
 import { colors, radii } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
 import { useSettings } from '@/shared/settings/settingsStore'
-import { ALL_LEVELS, levelLetterPools, levelDefaults, getEffectiveShowCountdownBar, getEffectiveTimeLimit } from '@/shared/settings/defaults'
+import { ALL_LEVELS, LEVEL_LABEL, levelLetterPools, levelDefaults, getEffectiveShowCountdownBar, getEffectiveTimeLimit } from '@/shared/settings/defaults'
 import type {
   CaseMode,
   CelebrationTempo,
@@ -39,13 +39,7 @@ export type SettingsScreenProps = {
 }
 
 const LEVELS: readonly Level[] = ALL_LEVELS
-
-const LEVEL_LABELS: Record<Level, string> = {
-  iskierka: 'Iskierka',
-  plomyk: 'Płomyk',
-  ognik: 'Ognik',
-  pochodnia: 'Pochodnia',
-}
+const LEVEL_LABELS = LEVEL_LABEL
 
 const CASE_LABELS: Record<CaseMode, string> = {
   'tylko-duze': 'tylko duże',
@@ -85,10 +79,7 @@ const DEFAULT_LEVEL_OPTIONS: DefaultLevelSetting[] = [
   'last-used',
 ]
 const DEFAULT_LEVEL_LABELS: Record<DefaultLevelSetting, string> = {
-  iskierka: 'Iskierka',
-  plomyk: 'Płomyk',
-  ognik: 'Ognik',
-  pochodnia: 'Pochodnia',
+  ...LEVEL_LABEL,
   'last-used': 'ostatnio użyty',
 }
 

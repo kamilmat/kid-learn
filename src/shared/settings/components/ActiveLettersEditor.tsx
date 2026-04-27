@@ -10,7 +10,7 @@ import { colors, radii } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
 import { POLISH_ALPHABET, toUpper } from '@/modules/letters/data/alphabet'
 import { useSettings } from '@/shared/settings/settingsStore'
-import { levelLetterPools } from '@/shared/settings/defaults'
+import { LEVEL_LABEL, levelLetterPools } from '@/shared/settings/defaults'
 import {
   MIN_ACTIVE_LETTERS,
   isActiveLettersValid,
@@ -24,12 +24,7 @@ export type ActiveLettersEditorProps = {
   onCancel: () => void
 }
 
-const LEVEL_LABELS: Record<Level, string> = {
-  iskierka: 'Iskierka',
-  plomyk: 'Płomyk',
-  ognik: 'Ognik',
-  pochodnia: 'Pochodnia',
-}
+const LEVEL_LABELS = LEVEL_LABEL
 
 export function ActiveLettersEditor({
   level,
