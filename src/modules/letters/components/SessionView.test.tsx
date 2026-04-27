@@ -15,7 +15,7 @@ function settingsForTest(overrides: Partial<Settings> = {}): Settings {
   return {
     ...defaultSettings,
     sessionLength: 5,
-    timeLimit: 'off',
+    timeLimit: { iskierka: 'off', plomyk: 'off', ognik: 'off', pochodnia: 'off' },
     ...overrides,
   }
 }
