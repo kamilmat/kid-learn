@@ -1,5 +1,8 @@
 // Pickery wyodrębnione z useSession dla testowalności i czystości hooka.
 
+import type { SessionEvent } from '@/modules/letters/types'
+import type { IskraIntensity } from '@/shared/ui/IskraMascot'
+
 export const PRAISE_KEYS = [
   'praise-1',
   'praise-2',
@@ -61,9 +64,6 @@ export function pickCorrectionPrefix(
   const idx = Math.floor(rng() * CORRECTION_PREFIX_KEYS.length)
   return CORRECTION_PREFIX_KEYS[idx] as CorrectionPrefixKey
 }
-
-import type { SessionEvent } from '@/modules/letters/types'
-import type { IskraIntensity } from '@/shared/ui/IskraMascot'
 
 export type StreakAudioKey = 'streak-3' | 'streak-5' | 'streak-7-plus'
 
