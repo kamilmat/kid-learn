@@ -14,7 +14,7 @@ import { useState } from 'react'
 import { colors, radii } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
 import { useSettings } from '@/shared/settings/settingsStore'
-import { levelLetterPools, levelDefaults } from '@/shared/settings/defaults'
+import { levelLetterPools, levelDefaults, getEffectiveShowCountdownBar } from '@/shared/settings/defaults'
 import type {
   CaseMode,
   CelebrationTempo,
@@ -69,7 +69,7 @@ const STYLE_OPTIONS: StyleMode[] = [
 ]
 
 const SESSION_LENGTH_OPTIONS: SessionLength[] = [5, 10, 15]
-const TIME_LIMIT_OPTIONS: TimeLimit[] = ['off', 10, 15, 20]
+const TIME_LIMIT_OPTIONS: TimeLimit[] = ['off', 10, 15, 20, 25]
 const TILES_PER_QUESTION_OPTIONS: TilesPerQuestion[] = [3, 4, 5, 6]
 const CELEBRATION_OPTIONS: CelebrationTempo[] = ['short', 'medium', 'long']
 const CELEBRATION_LABELS: Record<CelebrationTempo, string> = {
@@ -447,19 +447,26 @@ export function SettingsScreen({
       {/* Pasek odliczania (visible tylko gdy timeLimit ≠ off) */}
       {settings.timeLimit !== 'off' && (
         <section style={sectionStyle} data-testid="section-countdown-bar">
-          <label
-            style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}
-          >
-            <span style={labelStyle}>Pasek odliczania</span>
-            <input
-              type="checkbox"
-              checked={settings.showCountdownBar}
-              data-testid="countdown-bar-toggle"
-              onChange={(e) =>
-                updateSetting('showCountdownBar', e.target.checked)
-              }
-            />
-          </label>
+          <div style={labelStyle}>Pokaż pasek czasu (per poziom)</div>
+          <div data-testid="show-countdown-per-level" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+            {(['iskierka', 'plomyk', 'ognik', 'pochodnia'] as const).map((lvl) => {
+              const effective = getEffectiveShowCountdownBar(settings, lvl)
+              return (
+                <label key={lvl} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={effective}
+                    onChange={(e) => {
+                      const next = { ...settings.showCountdownBar, [lvl]: e.target.checked }
+                      updateSetting('showCountdownBar', next)
+                    }}
+                    data-testid={`show-countdown-${lvl}`}
+                  />
+                  <span>{LEVEL_LABELS[lvl]}</span>
+                </label>
+              )
+            })}
+          </div>
         </section>
       )}
 
