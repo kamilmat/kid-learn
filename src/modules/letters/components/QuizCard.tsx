@@ -16,6 +16,12 @@ export type QuizCardProps = {
   questionNumber: number
   totalQuestions: number
   iskierki: number
+  /** Liczba poprawnych z rzędu w sesji — wpływa na intensywność mascotki. */
+  currentStreak?: number
+  /** Intensywność małej Iskry w status barze (z useSession). */
+  mascotIntensity?: import('@/shared/ui/IskraMascot').IskraIntensity
+  /** Litera kliknięta przy wrong — używana do mini-mascotki nad kafelkiem. */
+  lastWrongSlot?: Slot | null
   /** Ms remaining; null = ukryj pasek. */
   countdownMs: number | null
   countdownTotalMs: number | null

@@ -29,6 +29,16 @@ import type {
   StyleMode,
   TimeLimit,
 } from '@/shared/settings/types'
+import {
+  pickPraiseKey,
+  pickCorrectionPrefix,
+  streakIntensity,
+  streakAudioKey,
+  detectPerfectSession,
+  CORRECTION_PREFIX_KEYS,
+  type PraiseKey,
+} from './useSession.pickers'
+import type { IskraIntensity } from '@/shared/ui/IskraMascot'
 import { CONTRASTIVE_PAIRS } from '@/modules/letters/data/contrastivePairs'
 import { getAssociation } from '@/modules/letters/data/associations'
 import { createInitialLetterState } from '@/shared/srs/createInitialLetterState'
@@ -84,6 +94,10 @@ export type UseSessionApi = {
   questionNumber: number // 1-based, dla UX (np. "5/10")
   totalQuestions: number
   iskierki: number
+  /** Aktualny streak w sesji (resetowany po dowolnej nie-correct). */
+  currentStreak: number
+  /** Intensywność mascotki w status barze QuizCard (z streak'a). */
+  mascotIntensity: IskraIntensity
   countdownMs: number | null
   countdownTotalMs: number | null
   lastFeedback: FeedbackState | null
@@ -96,16 +110,7 @@ export type UseSessionApi = {
   quit: () => void
 }
 
-const PRAISE_KEYS = [
-  'praise-1',
-  'praise-2',
-  'praise-3',
-  'praise-4',
-  'praise-5',
-  'praise-6',
-] as const
 const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
-const TIMEOUT_KEYS = ['timeout-1', 'timeout-2'] as const
 
 // Czas trzymania feedback overlay — pokrywa pełny audio sequence + ~0.5s buffer:
 //   - correct:  ding (~0.3s) + pochwała (~0.8s) + assoc "X jak Y" (~1.5s) ≈ 3s
@@ -128,9 +133,9 @@ const TEMPO_MULTIPLIERS: Record<CelebrationTempo, number> = {
 }
 
 const COUNTDOWN_TICK_MS = 100
-// Ostrzeżenie głosowe (~1s audio) musi zostawić dziecku jakieś 4s na reakcję,
-// stąd próg na 5s pozostałego czasu (audio kończy się ok. 4s przed timeoutem).
-const COUNTDOWN_3S_WARNING_MS = 5000
+const COUNTDOWN_3S_WARNING_MS = 3000
+const POST_FEEDBACK_BREATH_MS = 500
+const STREAK_AUDIO_DURATION_MS = 2000
 
 function defaultUuid(): string {
   // Krótki UUID-lite — dla testów i logów wystarcza.
@@ -290,6 +295,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   const [lastFeedback, setLastFeedback] = useState<FeedbackState | null>(null)
   const [sessionEvents, setSessionEvents] = useState<SessionEvent[]>([])
   const [countdownMs, setCountdownMs] = useState<number | null>(null)
+  const [currentStreak, setCurrentStreak] = useState(0)
+  const lastPraiseKeyRef = useRef<PraiseKey | null>(null)
+  const currentStreakRef = useRef<number>(0)
 
   // Imperatywny stan, którego nie chcemy renderować — w refach.
   const sessionIdRef = useRef<string>('')
@@ -372,6 +380,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       setCountdownMs(remaining)
       if (
         !warned3sRef.current &&
+        cfgRef.current.showCountdownBar &&
         remaining <= COUNTDOWN_3S_WARNING_MS &&
         remaining > 0
       ) {
@@ -469,7 +478,8 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     clearFeedbackTimer()
     setStatus('finished')
     setCurrentQuestion(null)
-    void cfgRef.current.audioBus.play('session-end')
+    const isPerfect = detectPerfectSession(eventsRef.current, cfgRef.current.sessionLength)
+    void cfgRef.current.audioBus.play(isPerfect ? 'session-end-perfect' : 'session-end')
 
     const log: SessionLog = {
       id: sessionIdRef.current,
@@ -549,45 +559,63 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       })
       setStatus('feedback')
 
-      // Audio sequence (non-blocking)
+      // Audio sequence (non-blocking) + streak update
+      const isCorrectOutcome = outcome === 'correct'
+      const newStreak = isCorrectOutcome ? currentStreakRef.current + 1 : 0
+      currentStreakRef.current = newStreak
+      setCurrentStreak(newStreak)
+
+      let extraDurationMs = 0
+
       switch (variant) {
         case 'correct': {
-          void cfg.audioBus.play(pickRandom(PRAISE_KEYS, cfg.rng))
-          // word-association — sekcja 12 wzmocnienie
+          void cfg.audioBus.play('sfx-correct-ding')
+          const praiseKey = pickPraiseKey(lastPraiseKeyRef.current, cfg.rng)
+          lastPraiseKeyRef.current = praiseKey
+          void cfg.audioBus.play(praiseKey)
           try {
             const assoc = getAssociation(target)
             void cfg.audioBus.play(assoc.audioKey)
           } catch {
             // brak asocjacji = pomijamy bez kruszenia hooka
           }
+          // Streak audio (jeśli próg)
+          const skey = streakAudioKey(newStreak)
+          if (skey !== null) {
+            void cfg.audioBus.play(skey)
+            extraDurationMs += STREAK_AUDIO_DURATION_MS
+          }
           break
         }
         case 'wrong': {
-          // "to była literka" + custom letter audio (z letters.json) —
-          // dzięki temu nazwa litery jest spójna z prompt audio.
-          void cfg.audioBus.play('correction-prefix')
+          const prefixKey = pickCorrectionPrefix(
+            target,
+            chosenLetter ?? '',
+            CONTRASTIVE_PAIRS as Record<string, readonly string[]>,
+            cfg.rng,
+          )
+          void cfg.audioBus.play(prefixKey)
           void cfg.audioBus.play(`letter-${target}`)
           break
         }
-        case 'dontKnow': {
-          void cfg.audioBus.play(pickRandom(DONTKNOW_KEYS, cfg.rng))
-          void cfg.audioBus.play('correction-prefix')
-          void cfg.audioBus.play(`letter-${target}`)
-          break
-        }
+        case 'dontKnow':
         case 'timeout': {
-          void cfg.audioBus.play(pickRandom(TIMEOUT_KEYS, cfg.rng))
-          void cfg.audioBus.play('correction-prefix')
+          // Scalone audio — dla obu wariantów leci ten sam zestaw
+          void cfg.audioBus.play(pickRandom(DONTKNOW_KEYS, cfg.rng))
+          void cfg.audioBus.play(pickRandom(CORRECTION_PREFIX_KEYS, cfg.rng))
           void cfg.audioBus.play(`letter-${target}`)
           break
         }
         case 'mastery': {
+          void cfg.audioBus.play('sfx-mastery-fanfara')
           void cfg.audioBus.play('mastery-celebration')
           break
         }
       }
 
-      // Po feedbacku — następne pytanie lub koniec
+      // Po feedbacku — następne pytanie lub koniec.
+      // Sekwencja: feedback overlay znika → 500ms wdech → audioBus.stop() (urywa
+      // ewentualny ogon streak audio) → generateNextQuestion (czysta kolejka).
       clearFeedbackTimer()
       feedbackTimerRef.current = setTimeout(() => {
         feedbackTimerRef.current = null
@@ -596,13 +624,20 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
           finishSession()
           return
         }
-        questionNumberRef.current = nextNum
-        setQuestionNumber(nextNum)
-        setStatus('playing')
+        // Zamykamy overlay, ale nie generujemy pytania — wdech.
         setLastFeedback(null)
-        // generateNextQuestion korzysta z najnowszych refów + state — ok
-        generateNextQuestion()
-      }, durationMs)
+        setStatus('playing')
+        // Drugi timer — wdech 500ms
+        feedbackTimerRef.current = setTimeout(() => {
+          feedbackTimerRef.current = null
+          // Czyścimy kolejkę audio przed nowym promptem (urywa ewentualny
+          // ogon streak audio — dla 7-latka 100-200ms ucięcia niedostrzegalne).
+          cfg.audioBus.stop()
+          questionNumberRef.current = nextNum
+          setQuestionNumber(nextNum)
+          generateNextQuestion()
+        }, POST_FEEDBACK_BREATH_MS)
+      }, durationMs + extraDurationMs)
     },
     [clearCountdown, clearFeedbackTimer, finishSession, generateNextQuestion, pushEvent],
   )
@@ -638,6 +673,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     lastTargetRef.current = null
     finishedRef.current = false
     setLastFeedback(null)
+    currentStreakRef.current = 0
+    setCurrentStreak(0)
+    lastPraiseKeyRef.current = null
     // re-init letter states zgodnie z aktywną pulą
     const initial = initialStates ?? {}
     const next: Record<string, LetterState> = {}
@@ -728,6 +766,8 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     questionNumber: questionNumber + 1,
     totalQuestions,
     iskierki,
+    currentStreak,
+    mascotIntensity: streakIntensity(currentStreak),
     countdownMs: exposedCountdownMs,
     countdownTotalMs: exposedCountdownTotalMs,
     lastFeedback,

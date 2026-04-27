@@ -10,6 +10,7 @@ import { usePageVisibility } from '@/shared/engagement/usePageVisibility'
 import {
   defaultSettings,
   getActiveLetterPool,
+  getEffectiveShowCountdownBar,
   getEffectiveTilesPerQuestion,
   levelDefaults,
 } from '@/shared/settings/defaults'
@@ -74,7 +75,7 @@ export function SessionView({
     activeLetters,
     sessionLength: settings.sessionLength,
     timeLimit: settings.timeLimit,
-    showCountdownBar: settings.showCountdownBar,
+    showCountdownBar: getEffectiveShowCountdownBar(settings, level),
     caseMode,
     styleMode,
     celebrationTempo: settings.celebrationTempo,
@@ -153,6 +154,9 @@ export function SessionView({
           questionNumber={session.questionNumber}
           totalQuestions={session.totalQuestions}
           iskierki={session.iskierki}
+          currentStreak={session.currentStreak}
+          mascotIntensity={session.mascotIntensity}
+          lastWrongSlot={session.lastFeedback?.variant === 'wrong' ? session.lastFeedback.chosenSlot ?? null : null}
           countdownMs={session.countdownMs}
           countdownTotalMs={session.countdownTotalMs}
           interactive={session.status === 'playing'}
