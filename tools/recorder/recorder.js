@@ -186,6 +186,9 @@ async function toggleRecording() {
   } else {
     await startRecording();
   }
+  // Blur after toggle so Space/Enter keydown doesn't double-fire
+  // via focused button's default activation.
+  document.getElementById('btn-rec')?.blur();
 }
 
 async function startRecording() {
@@ -244,8 +247,12 @@ function showPreview() {
       <button id="btn-retry">🔄 Nagraj jeszcze raz (R)</button>
     </div>
   `;
-  document.getElementById('btn-save').addEventListener('click', saveCurrent);
-  document.getElementById('btn-retry').addEventListener('click', () => {
+  document.getElementById('btn-save').addEventListener('click', (e) => {
+    e.currentTarget.blur();
+    saveCurrent();
+  });
+  document.getElementById('btn-retry').addEventListener('click', (e) => {
+    e.currentTarget.blur();
     clearBlobUrl();
     state.currentBlob = null;
     setKeyStatus(state.activeKey, 'unrecorded');
