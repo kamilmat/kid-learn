@@ -10,14 +10,17 @@
 //
 // API: start / pause / resume / answer / dontKnow / quit
 //
-// Audio (wywoływane przez `audioBus.play(key)`):
+// Audio (wywoływane przez `audioBus.play(key)`, sekwencja FIFO):
 //   - prompt: `letter-<x>`
-//   - correct: `feedback-correct` (ding) + losowa pochwała `praise-1..6` + word-association `assoc-<x>`
-//   - wrong:   `feedback-wrong-prefix` + `correction-<x>` + `letter-<x>`
-//   - dontKnow: losowy `dont-know-1..3` + `correction-<x>` + `letter-<x>`
-//   - timeout: losowy `timeout-1..2` + `correction-<x>` + `letter-<x>`
-//   - mastery: `mastery-celebration` (zastępuje pochwałę gdy firstMastery)
-//   - 3s warning: `cue-warning-3s` gdy zostają 3s do końca timera
+//   - correct: `sfx-correct-ding` + pickPraiseKey z `praise-1..12` (no-repeat-with-last)
+//              + `assoc-<x>` + opcjonalnie `streak-3` / `streak-5` / `streak-7-plus`
+//   - wrong:   pickCorrectionPrefix (`correction-prefix-1..3` lub `correction-prefix-contrastive`
+//              gdy chosenLetter ∈ CONTRASTIVE_PAIRS[target]) + `letter-<x>`
+//   - dontKnow + timeout (scalone audio): losowy `dont-know-1..3` + losowy
+//              `correction-prefix-1..3` + `letter-<x>`
+//   - mastery: `sfx-mastery-fanfara` + `mastery-celebration` (+ ewentualnie streak audio)
+//   - 3s warning: `cue-warning-3s` gdy zostają 3s do końca timera (tylko gdy showCountdownBar)
+//   - session-end: `session-end-perfect` jeśli detectPerfectSession else `session-end`
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
@@ -133,8 +136,16 @@ const TEMPO_MULTIPLIERS: Record<CelebrationTempo, number> = {
 }
 
 const COUNTDOWN_TICK_MS = 100
+// Cue "uwaga, mało czasu" leci ~1s; 3s zostawia dziecku ~2s realnej reakcji
+// po skończeniu cue. Wcześniej było 5s — krzyczeło za wcześnie (na 1/3 czasu).
 const COUNTDOWN_3S_WARNING_MS = 3000
+// Krótki "wdech" między feedback overlay a kolejnym pytaniem — daje dziecku
+// chwilę na reset uwagi. AudioBus.stop() na końcu wdechu czyści ogon
+// poprzedniego audio (np. niedokończony streak audio) przed nowym promptem.
 const POST_FEEDBACK_BREATH_MS = 500
+// Górny bound dla najdłuższego streak audio ("ognisty streak!" ~1.6-1.9s
+// w Edge TTS PL Zofia). Dorzucany do feedback duration tylko gdy próg streak
+// osiągnięty — inaczej overlay zniknie przed końcem audio.
 const STREAK_AUDIO_DURATION_MS = 2000
 
 function defaultUuid(): string {
@@ -609,6 +620,14 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
         case 'mastery': {
           void cfg.audioBus.play('sfx-mastery-fanfara')
           void cfg.audioBus.play('mastery-celebration')
+          // Mastery dziedziczy streak (firstMastery zawsze == correct outcome).
+          // Jeśli próg streak osiągnięty, dorzucamy też streak audio — dziecko
+          // dostaje pełen "wow" zamiast cichego pominięcia.
+          const skey = streakAudioKey(newStreak)
+          if (skey !== null) {
+            void cfg.audioBus.play(skey)
+            extraDurationMs += STREAK_AUDIO_DURATION_MS
+          }
           break
         }
       }
@@ -632,7 +651,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
           feedbackTimerRef.current = null
           // Czyścimy kolejkę audio przed nowym promptem (urywa ewentualny
           // ogon streak audio — dla 7-latka 100-200ms ucięcia niedostrzegalne).
-          cfg.audioBus.stop()
+          // Używamy cfgRef.current (nie closure-captured cfg) — pattern spójny
+          // z startCountdown, odporny na ewentualne re-injection AudioBus w testach.
+          cfgRef.current.audioBus.stop()
           questionNumberRef.current = nextNum
           setQuestionNumber(nextNum)
           generateNextQuestion()
