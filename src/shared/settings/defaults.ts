@@ -92,7 +92,7 @@ export const levelDefaults: Record<
   pochodnia: {
     caseMode: 'mieszane',
     styleMode: 'oba-na-kafelku',
-    tilesPerQuestion: 6,
+    tilesPerQuestion: 8,
     showCountdownBar: true,
     timeLimit: 15,
   },

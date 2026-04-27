@@ -64,7 +64,7 @@ const STYLE_OPTIONS: StyleMode[] = [
 
 const SESSION_LENGTH_OPTIONS: SessionLength[] = [5, 10, 15]
 const TIME_LIMIT_OPTIONS: TimeLimit[] = ['off', 10, 15, 20, 25]
-const TILES_PER_QUESTION_OPTIONS: TilesPerQuestion[] = [3, 4, 5, 6]
+const TILES_PER_QUESTION_OPTIONS: TilesPerQuestion[] = [3, 4, 5, 6, 8]
 const CELEBRATION_OPTIONS: CelebrationTempo[] = ['short', 'medium', 'long']
 const CELEBRATION_LABELS: Record<CelebrationTempo, string> = {
   short: 'krótka',

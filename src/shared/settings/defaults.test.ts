@@ -87,7 +87,7 @@ describe('levelDefaults (sekcja 10.2)', () => {
     expect(levelDefaults.pochodnia).toEqual({
       caseMode: 'mieszane',
       styleMode: 'oba-na-kafelku',
-      tilesPerQuestion: 6,
+      tilesPerQuestion: 8,
       showCountdownBar: true,
       timeLimit: 15,
     })

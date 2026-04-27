@@ -78,6 +78,12 @@ export function gridLayoutFor(count: number): {
         gridTemplateColumns: 'repeat(3, 1fr)',
         gridTemplateRows: '1fr 1fr',
       }
+    case 8:
+      // 4 kolumny × 2 rzędy — zachowuje proporcje kafelka, mieści się na iPad portrait
+      return {
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateRows: '1fr 1fr',
+      }
     case 4:
     default:
       return {

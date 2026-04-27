@@ -17,7 +17,7 @@ export type TimeLimit = 'off' | 10 | 15 | 20 | 25
 export type CelebrationTempo = 'short' | 'medium' | 'long'
 export type DefaultLevelSetting = Level | 'last-used'
 export type Voice = 'zofia' // tylko Zofia w MVP — sekcja 13.2
-export type TilesPerQuestion = 3 | 4 | 5 | 6
+export type TilesPerQuestion = 3 | 4 | 5 | 6 | 8
 
 export type Settings = {
   // override per poziom; brak klucza = używaj domyślnej puli poziomu
