@@ -2,13 +2,41 @@
 
 ## Aktualny stan
 
-**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. v1.1 + v1.1.1 + polish + **CR sweep + bug fixes (3 commity)** zmergowane do main. Smoke w Chrome ✅. 2026-04-27.
+**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. v1.1 + v1.1.1 + polish + CR sweep + **audio rebalance + UI control + Kalam font + counters** (10 commitów łącznie) zmergowane do main. Smoke w Chrome ✅. 2026-04-27.
 
 ### Build / testy
 - `pnpm tsc -b` ✓
 - `pnpm build` ✓ (319 KB JS / 99 KB gzip)
 - `pnpm audio:check` ✓ (137 plików mp3 zgodnie z manifestem)
-- `pnpm test --run` — 383 testy zielone; 1 failure (pre-existing bug — patrz "Known pre-existing bugs"). Spadek z 409 → 383 to świadome usunięcie 26 testów dead engagement modułów.
+- `pnpm test --run` — **384/384 zielone** (pre-existing `activeLettersValidation` bug naprawiony). Spadek z 410 → 384 to świadome usunięcie 26 testów dead engagement modułów.
+
+### Co zrobione w sesji (2026-04-27) — audio rebalance + UI control + font + counters
+
+Po CR sweep odkryliśmy że audio sequence brzmi nienaturalnie i tempo jest dla dziecka za szybkie. User zgłosił 3 konkretne bugi (przeskakiwanie po nagraniu, "klik" przed dont-know, dwa audio dublujące się). Następnie dorzucone: kontrola tempa (skip button), zmiana czcionki, liczniki w UI.
+
+**Commit `0c1fb13` — usunięcie nav-tap z dontKnow + SessionEnd:**
+- Mój wcześniejszy fix zakładał że `nav-tap` to krótki SFX (ding/click), a to TTS "klik" 1.4s wpadające do FIFO kolejki AudioBus. Po Nie wiem leciało: "klik" + "spokojnie..." + "posłuchaj jeszcze raz" + "L" — mylące. Audio `dont-know-X` jest natychmiastowym (~100ms) potwierdzeniem akcji, prefiks niepotrzebny.
+
+**Commit `25d491e` — dontKnow/timeout bez correction-prefix:**
+- User: "spokojnie posłuchaj jeszcze raz" + "ojej, posłuchaj!" — dwie pierwsze frazy miały zbliżone znaczenie. correction-prefix był zaprojektowany dla `wrong` (komentarz do błędu); dla dontKnow/timeout dziecko świadomie/biernie nie odpowiedziało — wystarczy wsparcie + litera. Skróciliśmy duration 7000→4500ms.
+
+**Commit `1e1f718` — guzik "→ Dalej" + asocjacja tylko gdy nie wie:**
+- `correct`: usunięte assoc audio "X jak Y" — gdy dziecko ZNA literę, asocjacja niepotrzebnie wydłuża sequence. Pozostaje ding + praise + (streak). Duration 6500→4500ms.
+- `dontKnow`/`timeout`: dodane assoc audio (po dont-know + letter) — gdy dziecko NIE WIE, "X jak Y" jest mnemoniką która faktycznie pomaga zapamiętać. Duration 4500→6500ms.
+- Guzik **"→ Dalej"** w FeedbackOverlay (88×88 prawy dolny róg) — dziecko może pominąć wybrzmiewanie. Nowa metoda `useSession.skipFeedback()` — clearTimer + audioBus.stop + generateNextQuestion (lub finishSession dla ostatniego). Audio i ekran nie rozjeżdżają się więcej.
+
+**Commit `11eb052` + `9a3311c` — czcionka Kalam:**
+- `public/font-test.html` — porównawcza strona z 15 czcionkami pisanymi (wszystkie OFL z Google Fonts, polskie znaki). Każda próbka renderowana na **SVG czterolinii** (proporcje takie same jak `src/shared/ui/HandwrittenLetter.tsx` — TOP/UPPER_HELPER/BASELINE/BOTTOM 0/30/70/100%). Pełen polski alfabet UPPER + LOWER + 10 par "Aa" jako duże kafelki.
+- User wybrał **Kalam** — najbliższa polskiemu pismu szkolnemu z dostępnych OFL: prawdziwa kursywa z połączeniami między literami, nachylenie ~75°, owalne kształty. Oficjalny standard MEN ("Mazowiecka") jest płatny — zostawiamy w v2 backlog jako opcjonalny upgrade.
+- Zmiana 1-line w `src/index.css` `--font-handwritten` — cała aplikacja przejmuje natychmiast (CSS variable z v1.1 specjalnie pod tę swap).
+
+**Commit `e8302bb` — liczniki ✅/❌/🤷:**
+- Status bar (QuizCard): 🔥 N (zielone) | ❌ N (pomarańczowe) | 🤷 N (szare). Nie wiem + timeout scalone (z perspektywy dziecka to ten sam "nie umiałem"). Mascotka Iskra obok pierwszego countera (intensity z streak'a).
+- SessionEnd: nowa sekcja `outcome-breakdown` — 3 karty side-by-side z ikoną + liczbą + procent (dla correct) + label. 🔥 Świetnie XX% / ❌ Pomyłki / 🤷 Nie wiem.
+- useSession nowe state'y: `wrongCount`, `dontKnowCount`, `timeoutCount` + refs. handleOutcome inkrementuje. start() resetuje.
+
+**Commit `47c104f` — fix pre-existing `activeLettersValidation`:**
+- `validateAndApplyOverride` waliduje override przeciwko **puli poziomu** (np. iskierka = 6 liter), nie całemu POLISH_ALPHABET. Test "rejects letters outside the level pool" był failing od dawna — bug nie manifestował się w UI bo edytor pokazuje tylko litery puli. Suite teraz **384/384 zielone**.
 
 ### Co zrobione w sesji (2026-04-27) — CR sweep + bug fixes (3 commity)
 
