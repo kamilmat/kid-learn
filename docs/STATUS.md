@@ -1,14 +1,23 @@
-# Iskierki — Status (2026-04-26)
+# Iskierki — Status (2026-04-27)
 
 ## Aktualny stan
 
-**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. User aktywnie iteruje na audio + UX.
+**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. v1.1 UX iteration ukończona (B + A wpięte, D odłożone do v2) — 2026-04-27.
 
 ### Build / testy
 - `pnpm tsc -b` ✓
-- `pnpm build` ✓ (315 KB JS / 98 KB gzip)
-- `pnpm audio:check` ✓ (129 plików mp3 zgodnie z manifestem)
-- `pnpm test --run` — kilka testów ma stale assertions z czasów gdy duration był inny (np. `'Spróbuj się nie spieszyć'` zamiast `'Następnym razem szybciej'`, oczekiwanie `'feedback-correct'` audio key który już nie istnieje). Nie blokuje rozwoju, do uporządkowania przy okazji.
+- `pnpm build` ✓ (318 KB JS / 99 KB gzip)
+- `pnpm audio:check` ✓ (137 plików mp3 zgodnie z manifestem)
+- `pnpm test --run` — 402 testy zielone; 1 failure (pre-existing bug — patrz sekcja "Known pre-existing bugs")
+
+### Co zrobione w sesji (2026-04-27) — v1.1 UX iteration T18
+
+- **B1**: QuizCard — mascotka Iskra w status barze (streak intensity), pauza mascot reset
+- **B2**: FeedbackOverlay — per-wariant mascotka (happy/dance/idle), correct pokazuje mascot
+- **B3**: SessionEnd — "perfect session" konfetti + fanfara (`session-end-perfect` audio klucz)
+- **B4**: useSession — audio pipeline refaktor: `sfx-correct-ding`, `praise-1..12`, `correction-prefix-1..3`, `correction-prefix-contrastive`; dontKnow/timeout scalone audio; `POST_FEEDBACK_BREATH_MS`=500ms wdech; `STREAK_AUDIO_DURATION_MS` dorzucane do extraDuration
+- **A**: Settings — CSS var theme tokens + grupowanie sekcji + per-level pickery (caseMode/styleMode/tilesPerQuestion)
+- **T18 fix**: Naprawiono 9 stale assertions (timer arithmetic + zmienione klucze audio + stary tekst headline)
 
 ### Co zrobione w ostatniej sesji (2026-04-26)
 - Spec napisany i wycyzelowany (22 sekcje, research-backed, w docs/superpowers/specs/)
@@ -61,6 +70,10 @@ Strona testowa do odsłuchu: była w `public/audio-test.html` ale **została usu
 - `QuizCard` adaptive grid dla 5 kafelków używa col-span (3+2 układ) — działa ale wizualnie nieuporządkowany. Może warto inną strategię (np. "4+1" z mniejszym 5tym).
 - Mastery wall w LevelSelect pokazuje tylko 32 polskie litery niezależnie od poziomu. Mogłoby pokazywać tylko aktywną pulę (np. 6 dla Iskierki) z wyraźniejszym progresem.
 - Anti-cheat flagi w raporcie patrzą tylko na ostatnich 5 sesji — może lepiej okno czasowe (24h, tydzień)?
+
+## Known pre-existing bugs
+
+- **`activeLettersValidation > rejects letters outside the level pool`** — `validateAndApplyOverride` waliduje litery przeciwko `POLISH_ALPHABET` (wszystkie 32) zamiast puli konkretnego poziomu. Test słusznie oczekuje błędu gdy litera jest spoza puli poziomowej, ale implementacja przepuszcza każdą literę będącą w polskim alfabecie. Pre-existing od przed branchem feat/ux-iteration-v1.1. Nie blokuje działania aplikacji (użytkownik nie może dodać litery spoza alfabetu — UI tego nie pozwala). Do naprawy w osobnym tasku.
 
 ## Wskazówki na następną sesję
 
