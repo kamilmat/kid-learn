@@ -136,6 +136,7 @@ export function SessionView({
       <SessionEnd
         iskierki={session.iskierki}
         totalQuestions={session.totalQuestions}
+        sessionLength={settings.sessionLength}
         events={session.sessionEvents}
         onRestart={session.start}
         onExit={onExit}

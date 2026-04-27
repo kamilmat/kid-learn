@@ -9,10 +9,13 @@ import { toUpper } from '@/modules/letters/data/alphabet'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import type { SessionEvent } from '@/modules/letters/types'
+import { IskraMascot } from '@/shared/ui/IskraMascot'
+import { detectPerfectSession } from '@/modules/letters/hooks/useSession.pickers'
 
 export type SessionEndProps = {
   iskierki: number
   totalQuestions: number
+  sessionLength: number
   events: SessionEvent[]
   onRestart: () => void
   onExit: () => void
@@ -66,6 +69,7 @@ function summarize(events: SessionEvent[]): {
 export function SessionEnd({
   iskierki,
   totalQuestions,
+  sessionLength,
   events,
   onRestart,
   onExit,
@@ -73,6 +77,10 @@ export function SessionEnd({
 }: SessionEndProps) {
   const { best, worst, correctRate } = useMemo(() => summarize(events), [events])
   const suggestLevelUp = correctRate >= 0.8 && totalQuestions > 0
+  const isPerfect = useMemo(
+    () => detectPerfectSession(events, sessionLength),
+    [events, sessionLength],
+  )
 
   useEffect(() => {
     if (suggestLevelUp) {
@@ -93,9 +101,23 @@ export function SessionEnd({
         gap: 16,
       }}
     >
-      <div data-testid="iskra-end" style={{ fontSize: 96 }} aria-hidden="true">
-        🔥
+      <div data-testid="iskra-end" aria-hidden="true">
+        <IskraMascot
+          size={isPerfect ? 180 : 120}
+          state={isPerfect ? 'dance' : 'happy'}
+          intensity={isPerfect ? 'torch' : 'flame'}
+          oneshotKey={isPerfect ? 'perfect' : 'normal'}
+        />
       </div>
+      {isPerfect && (
+        <div
+          data-testid="perfect-sparkle"
+          aria-hidden="true"
+          style={{ fontSize: 48 }}
+        >
+          ✨ 🎉 ✨
+        </div>
+      )}
       <div style={{ fontSize: 36, fontWeight: 700 }}>Skończyłeś!</div>
       <div
         data-testid="iskierki-summary"
