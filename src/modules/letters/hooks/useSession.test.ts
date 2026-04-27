@@ -131,8 +131,12 @@ describe('useSession — lifecycle', () => {
       result.current.answer(q1.targetLetter, q1.targetSlot)
     })
     expect(result.current.status).toBe('feedback')
+    // correct @ medium: durationMs=3500ms + POST_FEEDBACK_BREATH_MS=500ms = 4000ms total
     act(() => {
-      vi.advanceTimersByTime(1500)
+      vi.advanceTimersByTime(3500)
+    })
+    act(() => {
+      vi.advanceTimersByTime(500)
     })
     expect(result.current.status).toBe('playing')
     expect(result.current.questionNumber).toBe(2)
@@ -144,21 +148,24 @@ describe('useSession — lifecycle', () => {
     act(() => {
       result.current.start()
     })
-    // q1
+    // q1 (non-last) — correct @ medium: 3500ms feedback + 500ms breath = 4000ms
     let q = result.current.currentQuestion!
     act(() => {
       result.current.answer(q.targetLetter, q.targetSlot)
     })
     act(() => {
-      vi.advanceTimersByTime(1500)
+      vi.advanceTimersByTime(3500)
     })
-    // q2
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
+    // q2 (last) — correct @ medium: 3500ms only (finishSession called directly)
     q = result.current.currentQuestion!
     act(() => {
       result.current.answer(q.targetLetter, q.targetSlot)
     })
     act(() => {
-      vi.advanceTimersByTime(1500)
+      vi.advanceTimersByTime(3500)
     })
     expect(result.current.status).toBe('finished')
   })
@@ -174,8 +181,9 @@ describe('useSession — lifecycle', () => {
     act(() => {
       result.current.answer(q.targetLetter, q.targetSlot)
     })
+    // sessionLength=1 → last question → finishSession after 3500ms (no breath)
     act(() => {
-      vi.advanceTimersByTime(1500)
+      vi.advanceTimersByTime(3500)
     })
     expect(onSessionEnd).toHaveBeenCalledTimes(1)
     const [log, states] = onSessionEnd.mock.calls[0]!
@@ -197,7 +205,7 @@ describe('useSession — lifecycle', () => {
       result.current.answer(q.targetLetter, q.targetSlot)
     })
     const calls = audioBus.play.mock.calls.map((c) => c[0])
-    expect(calls).toContain('feedback-correct')
+    expect(calls).toContain('sfx-correct-ding')
     expect(calls.some((k) => k.startsWith('praise-'))).toBe(true)
   })
 
@@ -215,8 +223,8 @@ describe('useSession — lifecycle', () => {
       result.current.answer(wrong, q.tiles.indexOf(wrong) as 0 | 1 | 2 | 3)
     })
     const calls = audioBus.play.mock.calls.map((c) => c[0])
-    expect(calls).toContain('feedback-wrong-prefix')
-    expect(calls).toContain(`correction-${q.targetLetter}`)
+    expect(calls.some((k) => k.startsWith('correction-prefix-'))).toBe(true)
+    expect(calls).toContain(`letter-${q.targetLetter}`)
   })
 })
 

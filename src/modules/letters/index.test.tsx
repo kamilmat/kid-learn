@@ -151,13 +151,15 @@ describe('LettersModule — integration', () => {
     expect(screen.getByTestId('session-view')).toBeInTheDocument()
 
     // Kończymy sesję klikając "Nie wiem" pełną liczbę pytań (default sessionLength=10)
-    // Każde "dontKnow" otwiera feedback overlay; medium tempo = 3000ms.
+    // dontKnow @ medium: 6000ms feedback; non-last + 500ms breath = 6500ms;
+    // last question finishSession po 6000ms bezpośrednio.
+    // Advancing 6500ms covers all cases.
     for (let i = 0; i < 10; i++) {
       act(() => {
         screen.getByTestId('dont-know-button').click()
       })
       act(() => {
-        vi.advanceTimersByTime(3000)
+        vi.advanceTimersByTime(6500)
       })
     }
 

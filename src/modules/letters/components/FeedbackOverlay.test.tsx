@@ -46,7 +46,7 @@ describe('FeedbackOverlay — variants', () => {
   it('renders timeout variant headline', () => {
     render(<FeedbackOverlay feedback={fb({ variant: 'timeout' })} onDismiss={vi.fn()} />)
     expect(screen.getByTestId('feedback-headline')).toHaveTextContent(
-      'Spróbuj się nie spieszyć',
+      'Następnym razem szybciej',
     )
   })
 

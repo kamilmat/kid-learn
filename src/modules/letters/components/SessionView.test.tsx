@@ -89,8 +89,12 @@ describe('SessionView — integration', () => {
       correctTile.click()
     })
     expect(screen.getByTestId('feedback-overlay')).toBeInTheDocument()
+    // correct @ medium: 3500ms feedback overlay + 500ms breath before next question
     act(() => {
-      vi.advanceTimersByTime(1500)
+      vi.advanceTimersByTime(3500)
+    })
+    act(() => {
+      vi.advanceTimersByTime(500)
     })
     expect(screen.queryByTestId('feedback-overlay')).not.toBeInTheDocument()
     expect(screen.getByTestId('quiz-card')).toBeInTheDocument()
@@ -108,13 +112,16 @@ describe('SessionView — integration', () => {
         audioBus={audioBus}
       />,
     )
-    // Klikamy "Nie wiem" 5 razy, każde z advance feedback timer (3000ms dla dontKnow @medium)
+    // Klikamy "Nie wiem" 5 razy.
+    // dontKnow @ medium: 6000ms feedback; pytania 1-4 (non-last) + 500ms breath = 6500ms;
+    // pytanie 5 (last) finishSession wywołane bezpośrednio po 6000ms.
+    // Advancing 6500ms covers both cases.
     for (let i = 0; i < 5; i++) {
       act(() => {
         screen.getByTestId('dont-know-button').click()
       })
       act(() => {
-        vi.advanceTimersByTime(3000)
+        vi.advanceTimersByTime(6500)
       })
     }
     expect(screen.getByTestId('session-end')).toBeInTheDocument()
