@@ -134,7 +134,9 @@ export const useSettings = create<SettingsStore>()(
           delete sanitizedSettings.showCountdownBar
         }
         const tl = sanitizedSettings.timeLimit
-        if (tl === 'off' || typeof tl === 'number') {
+        // Drop wszystkie legacy prymitywy — per-level shape jest zawsze obiektem.
+        // Bardziej odporne niż enumeracja typeof === 'number' || === 'off'.
+        if (tl !== null && tl !== undefined && typeof tl !== 'object') {
           delete sanitizedSettings.timeLimit
         }
         return {
