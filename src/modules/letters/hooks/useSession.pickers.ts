@@ -32,3 +32,32 @@ export function pickPraiseKey(
   const fallbackIdx = (idx + 1) % PRAISE_KEYS.length
   return PRAISE_KEYS[fallbackIdx] as PraiseKey
 }
+
+export const CORRECTION_PREFIX_KEYS = [
+  'correction-prefix-1',
+  'correction-prefix-2',
+  'correction-prefix-3',
+] as const
+
+export type CorrectionPrefixKey =
+  | (typeof CORRECTION_PREFIX_KEYS)[number]
+  | 'correction-prefix-contrastive'
+
+/**
+ * Picker correction-prefix dla wariantu `wrong`. Jeśli `chosenLetter` jest
+ * w parze contrastive z `targetLetter` (z `CONTRASTIVE_PAIRS`), zwraca
+ * `correction-prefix-contrastive` — inaczej losuje 1/2/3.
+ */
+export function pickCorrectionPrefix(
+  targetLetter: string,
+  chosenLetter: string,
+  contrastivePairs: Record<string, readonly string[] | string[]>,
+  rng: () => number,
+): CorrectionPrefixKey {
+  const pairs = contrastivePairs[targetLetter] ?? []
+  if (pairs.includes(chosenLetter)) {
+    return 'correction-prefix-contrastive'
+  }
+  const idx = Math.floor(rng() * CORRECTION_PREFIX_KEYS.length)
+  return CORRECTION_PREFIX_KEYS[idx] as CorrectionPrefixKey
+}
