@@ -13,7 +13,7 @@ export type StyleMode =
   | 'oba-na-kafelku'
 
 export type SessionLength = 5 | 10 | 15
-export type TimeLimit = 'off' | 10 | 15 | 20
+export type TimeLimit = 'off' | 10 | 15 | 20 | 25
 export type CelebrationTempo = 'short' | 'medium' | 'long'
 export type DefaultLevelSetting = Level | 'last-used'
 export type Voice = 'zofia' // tylko Zofia w MVP — sekcja 13.2
@@ -26,7 +26,8 @@ export type Settings = {
   styleMode: Partial<Record<Level, StyleMode>>
   sessionLength: SessionLength
   timeLimit: TimeLimit
-  showCountdownBar: boolean
+  // override per poziom; brak klucza = używaj domyślnej wartości poziomu
+  showCountdownBar: Partial<Record<Level, boolean>>
   celebrationTempo: CelebrationTempo
   defaultLevel: DefaultLevelSetting
   voice: Voice

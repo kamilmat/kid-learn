@@ -120,15 +120,22 @@ export const useSettings = create<SettingsStore>()(
         mathGateState: state.mathGateState,
         parentGateUnlockedUntil: state.parentGateUnlockedUntil,
       }),
-      version: 2,
-      // Merge defaults with persisted state — zapewnia że nowe pola (np.
-      // `tilesPerQuestion` dodane w v2) są obecne nawet dla starych zapisów.
+      version: 3,
+      // Migration: v2 miał `showCountdownBar: boolean`. v3 zmienia na
+      // `Partial<Record<Level, boolean>>`. Drop'ujemy stary boolean całkowicie
+      // — biorą się per-level defaults (iskierka/płomyk false, ognik/pochodnia true).
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<PersistedShape>
+        const persistedSettings = (p.settings ?? {}) as Record<string, unknown>
+        const sanitizedSettings = { ...persistedSettings }
+        if (typeof sanitizedSettings.showCountdownBar === 'boolean') {
+          // Stary boolean — drop'ujemy do {}, weźmie się z defaultu
+          delete sanitizedSettings.showCountdownBar
+        }
         return {
           ...current,
           ...p,
-          settings: { ...defaultSettings, ...(p.settings ?? {}) },
+          settings: { ...defaultSettings, ...sanitizedSettings },
         }
       },
     },

@@ -50,6 +50,8 @@ const { COOLDOWN_MS } = await import('./mathGate')
 const { STORAGE_KEY, UNLOCK_TTL_MS, useSettings } = await import(
   './settingsStore'
 )
+const { defaultSettings } = await import('./defaults')
+const { initialMathGateState } = await import('./mathGate')
 
 const reset = (): void => {
   localStorage.clear()
@@ -79,10 +81,10 @@ describe('useSettings store', () => {
 
     it('updates timeLimit and showCountdownBar independently', () => {
       useSettings.getState().updateSetting('timeLimit', 'off')
-      useSettings.getState().updateSetting('showCountdownBar', false)
+      useSettings.getState().updateSetting('showCountdownBar', { iskierka: true })
       const s = useSettings.getState().settings
       expect(s.timeLimit).toBe('off')
-      expect(s.showCountdownBar).toBe(false)
+      expect(s.showCountdownBar).toEqual({ iskierka: true })
     })
   })
 
@@ -195,5 +197,32 @@ describe('useSettings store', () => {
         cooldownUntil: 0,
       })
     })
+  })
+})
+
+describe('showCountdownBar migration (v2 → v3)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSettings.getState()._resetForTests()
+  })
+
+  it('drops legacy boolean showCountdownBar from persisted state', () => {
+    // Symulujemy stary persist (v2): showCountdownBar był boolean
+    const legacyPersisted = {
+      state: {
+        settings: {
+          ...defaultSettings,
+          showCountdownBar: true as unknown as (typeof defaultSettings)['showCountdownBar'],
+        },
+        mathGateState: initialMathGateState,
+        parentGateUnlockedUntil: 0,
+      },
+      version: 2,
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(legacyPersisted))
+    // Force rehydrate
+    useSettings.persist.rehydrate()
+    const settings = useSettings.getState().settings
+    expect(settings.showCountdownBar).toEqual({})
   })
 })

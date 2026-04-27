@@ -61,21 +61,24 @@ export const levelLetterPools: Record<Level, string[]> = {
 // Sekcja 10.2 / 11: defaulty wizualne per poziom.
 // `tilesPerQuestion` rośnie z poziomem — Iskierka/Płomyk niskie (4),
 // Ognik wyższy (5), Pochodnia (6).
+// `showCountdownBar` — wyłączone dla prostszych poziomów, włączone od Ognika.
 export const levelDefaults: Record<
   Level,
-  { caseMode: CaseMode; styleMode: StyleMode; tilesPerQuestion: TilesPerQuestion }
+  { caseMode: CaseMode; styleMode: StyleMode; tilesPerQuestion: TilesPerQuestion; showCountdownBar: boolean }
 > = {
-  iskierka: { caseMode: 'para', styleMode: 'tylko-drukowane', tilesPerQuestion: 4 },
-  plomyk: { caseMode: 'para', styleMode: 'tylko-drukowane', tilesPerQuestion: 4 },
+  iskierka: { caseMode: 'para', styleMode: 'tylko-drukowane', tilesPerQuestion: 4, showCountdownBar: false },
+  plomyk: { caseMode: 'para', styleMode: 'tylko-drukowane', tilesPerQuestion: 4, showCountdownBar: false },
   ognik: {
     caseMode: 'mieszane',
     styleMode: 'mieszane-per-pytanie',
     tilesPerQuestion: 5,
+    showCountdownBar: true,
   },
   pochodnia: {
     caseMode: 'mieszane',
     styleMode: 'oba-na-kafelku',
     tilesPerQuestion: 6,
+    showCountdownBar: true,
   },
 }
 
@@ -86,7 +89,7 @@ export const defaultSettings: Settings = {
   styleMode: {},
   sessionLength: 10,
   timeLimit: 15,
-  showCountdownBar: true,
+  showCountdownBar: {},
   celebrationTempo: 'medium',
   defaultLevel: 'last-used',
   voice: 'zofia',
@@ -103,6 +106,19 @@ export function getEffectiveTilesPerQuestion(
 ): TilesPerQuestion {
   return (
     settings.tilesPerQuestion?.[level] ?? levelDefaults[level].tilesPerQuestion
+  )
+}
+
+/**
+ * Zwraca efektywną wartość `showCountdownBar` dla poziomu — override z
+ * `settings.showCountdownBar[level]` jeśli ustawiony, inaczej `levelDefaults`.
+ */
+export function getEffectiveShowCountdownBar(
+  settings: Settings,
+  level: Level,
+): boolean {
+  return (
+    settings.showCountdownBar?.[level] ?? levelDefaults[level].showCountdownBar
   )
 }
 
