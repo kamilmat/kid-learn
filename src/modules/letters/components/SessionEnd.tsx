@@ -163,24 +163,16 @@ export function SessionEnd({
           marginTop: 16,
         }}
       >
-        <Button
-          size="large"
-          data-testid="restart-button"
-          onClick={() => {
-            void audioBus.play('nav-tap')
-            onRestart()
-          }}
-        >
+        {/* NIE dodajemy nav-tap — to TTS "klik" 1.4s co miesza się
+            z audio następnego ekranu (quiz-intro lub home audio). */}
+        <Button size="large" data-testid="restart-button" onClick={onRestart}>
           Jeszcze raz
         </Button>
         <Button
           size="large"
           variant="secondary"
           data-testid="exit-button"
-          onClick={() => {
-            void audioBus.play('nav-tap')
-            onExit()
-          }}
+          onClick={onExit}
         >
           Wyjdź
         </Button>

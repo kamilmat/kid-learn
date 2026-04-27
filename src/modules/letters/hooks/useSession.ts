@@ -787,10 +787,10 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
 
   const dontKnow = useCallback(() => {
     if (status !== 'playing') return
-    // Natychmiastowy cue na tap — spec "każdy klik mówi co zrobił".
-    // Bez tego dziecko czeka 200-400ms aż handleOutcome ustawi feedback
-    // i nie ma pewności czy "Nie wiem" zarejestrowane.
-    void cfgRef.current.audioBus.play('nav-tap')
+    // NIE dodajemy nav-tap — to TTS "klik" (1.4s) co brzydko miesza się
+    // z `dont-know-X` audio ("spokojnie..."). Sekwencja "klik + spokojnie
+    // + posłuchaj jeszcze raz" była mylna. dont-know-X jest natychmiastowym
+    // (~100ms latency) potwierdzeniem audio.
     handleOutcome('dontKnow', undefined, undefined)
   }, [handleOutcome, status])
 
