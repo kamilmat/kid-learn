@@ -2,8 +2,11 @@
 //
 // "Walidacja: minimum 4 zaznaczone litery (siatka 2×2 wymaga 1 docelowej +
 // 3 dystraktorów). UI nie pozwala zapisać <4."
+//
+// Override musi być podzbiorem PULI POZIOMU (nie całego alfabetu) — dziecko
+// nie może uczyć się liter spoza zakresu poziomu (chroni SRS + dystraktory).
 
-import { POLISH_ALPHABET } from '@/modules/letters/data/alphabet'
+import { levelLetterPools } from './defaults'
 import type { Level, Settings } from './types'
 
 export const MIN_ACTIVE_LETTERS = 4
@@ -44,11 +47,11 @@ export function validateAndApplyOverride(
       error: `Minimum ${MIN_ACTIVE_LETTERS} liter wymagane (wybrano ${unique.length}).`,
     }
   }
-  const validAlphabet = new Set<string>(POLISH_ALPHABET)
-  const invalid = unique.filter((letter) => !validAlphabet.has(letter))
+  const validForLevel = new Set(levelLetterPools[level])
+  const invalid = unique.filter((letter) => !validForLevel.has(letter))
   if (invalid.length > 0) {
     return {
-      error: `Nieprawidłowe litery: ${invalid.join(', ')}.`,
+      error: `Litery spoza puli poziomu: ${invalid.join(', ')}.`,
     }
   }
   return {
