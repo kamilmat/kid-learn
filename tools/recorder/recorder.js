@@ -281,7 +281,7 @@ function stopVuMeter() {
   if (state.vuRafId) cancelAnimationFrame(state.vuRafId);
   state.vuRafId = null;
   if (state.vuContext) {
-    state.vuContext.close();
+    state.vuContext.close().catch(() => {});
     state.vuContext = null;
   }
   state.vuAnalyser = null;
