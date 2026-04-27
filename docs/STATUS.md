@@ -5,6 +5,24 @@
 
 ## Aktualny stan (2026-04-27)
 
+### Audio Recorder zaimplementowany
+
+**Co zrobione:**
+- Standalone narzędzie `tools/recorder/` — vanilla HTML+JS+CSS, MediaRecorder + File System Access API, czyta `audio-source/*.json` i pozwala nagrać per-klucz z VU meterem, klawiaturą (Spacja/Enter/R/strzałki) i auto-skokiem na następny nieskończony
+- Skrypt `scripts/convert-overrides.ts` (`pnpm audio:convert-overrides`) — batch WebM→MP3 przez ffmpeg, idempotentny po mtime, 4/4 testy zielone
+- Skrypty: `pnpm dev:recorder` (HTTP server) + `pnpm audio:convert-overrides`
+- `.gitignore`: `audio-source/manual-overrides/*.webm`
+- README z instrukcją użycia + skrótami klawiaturowymi
+- Memory zaktualizowane: cały audio-stack będzie jednolicie nagrany przez user'a; TTS Zofia tylko fallback dla nowych kluczy
+
+**Co dalej:**
+- User nagrywa wszystkie ~145 kluczy używając recordera (iteracyjnie — najpierw litery, potem reszta)
+- Po pierwszej fali nagrań: `pnpm audio:convert-overrides && pnpm audio:build && pnpm dev` → testowanie jakości w przeglądarce
+- Ewentualne re-nagrania problemowych kluczy
+- Po komplecie: commit MP3 do repo, push, GH Pages PWA gra nowymi nagraniami
+
+---
+
 **Moduł 1 (rozpoznawanie liter)** — działa w produkcji jako PWA. v1.1 → v1.1.1 → polish → CR sweep → audio rebalance → UI control → Kalam font → counters → bug fixes → GH Pages → PWA → 8 kafelków. **Wszystko na main, auto-deploy przez GH Actions.**
 
 ### Build / testy
