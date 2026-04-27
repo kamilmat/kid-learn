@@ -15,8 +15,17 @@ const state = {
   mediaRecorder: null,
   recordedChunks: [],
   currentBlob: null,
+  currentBlobUrl: null,
   isRecording: false,
+  recordingKey: null,
 };
+
+function clearBlobUrl() {
+  if (state.currentBlobUrl) {
+    URL.revokeObjectURL(state.currentBlobUrl);
+    state.currentBlobUrl = null;
+  }
+}
 
 async function loadSources() {
   const all = [];
@@ -84,6 +93,7 @@ function updateProgress() {
 }
 
 function selectKey(key) {
+  clearBlobUrl();
   state.activeKey = key;
   renderKeyList();
   renderActivePane();
@@ -176,6 +186,9 @@ async function toggleRecording() {
 async function startRecording() {
   const stream = await ensureMicAccess();
   if (!stream) return;
+  clearBlobUrl();
+  const recordingKey = state.activeKey;
+  state.recordingKey = recordingKey;
   state.recordedChunks = [];
   state.currentBlob = null;
   state.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
@@ -184,11 +197,13 @@ async function startRecording() {
   };
   state.mediaRecorder.onstop = () => {
     state.currentBlob = new Blob(state.recordedChunks, { type: 'audio/webm' });
+    state.recordingKey = null;
+    setKeyStatus(recordingKey, 'preview');
     showPreview();
   };
   state.mediaRecorder.start();
   state.isRecording = true;
-  setKeyStatus(state.activeKey, 'recording');
+  setKeyStatus(recordingKey, 'recording');
   document.getElementById('btn-rec').textContent = '⏹ Stop (Spacja)';
 }
 
@@ -196,7 +211,7 @@ function stopRecording() {
   if (!state.mediaRecorder) return;
   state.mediaRecorder.stop();
   state.isRecording = false;
-  setKeyStatus(state.activeKey, 'preview');
+  setKeyStatus(state.recordingKey, 'preview');
   document.getElementById('btn-rec').textContent = '🎤 Start (Spacja)';
 }
 
@@ -212,7 +227,9 @@ function showPreview() {
     area.innerHTML = '';
     return;
   }
+  clearBlobUrl();
   const url = URL.createObjectURL(state.currentBlob);
+  state.currentBlobUrl = url;
   area.innerHTML = `
     <audio class="preview" controls src="${url}"></audio>
     <div class="controls" style="margin-top: 12px;">
@@ -222,6 +239,7 @@ function showPreview() {
   `;
   document.getElementById('btn-save').addEventListener('click', saveCurrent);
   document.getElementById('btn-retry').addEventListener('click', () => {
+    clearBlobUrl();
     state.currentBlob = null;
     setKeyStatus(state.activeKey, 'unrecorded');
     renderActivePane();
