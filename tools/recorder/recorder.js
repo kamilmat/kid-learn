@@ -98,6 +98,7 @@ function updateProgress() {
 
 function selectKey(key) {
   clearBlobUrl();
+  state.currentBlob = null;
   state.activeKey = key;
   renderKeyList();
   renderActivePane();
@@ -259,12 +260,16 @@ async function saveCurrent() {
     return;
   }
   const filename = `${state.activeKey}.webm`;
+  let writable;
   try {
     const fileHandle = await state.dirHandle.getFileHandle(filename, { create: true });
-    const writable = await fileHandle.createWritable();
+    writable = await fileHandle.createWritable();
     await writable.write(state.currentBlob);
     await writable.close();
   } catch (err) {
+    if (writable) {
+      try { await writable.abort(); } catch {}
+    }
     alert(`Błąd zapisu: ${err.message}`);
     return;
   }
