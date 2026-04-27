@@ -96,6 +96,12 @@ export type UseSessionApi = {
   questionNumber: number // 1-based, dla UX (np. "5/10")
   totalQuestions: number
   iskierki: number
+  /** Liczba błędnych odpowiedzi w sesji. */
+  wrongCount: number
+  /** Liczba odpowiedzi "Nie wiem" w sesji. */
+  dontKnowCount: number
+  /** Liczba odpowiedzi nieudzielonych w czasie (timeout). */
+  timeoutCount: number
   /** Aktualny streak w sesji (resetowany po dowolnej nie-correct). */
   currentStreak: number
   /** Intensywność mascotki w status barze QuizCard (z streak'a). */
@@ -307,6 +313,10 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   const [status, setStatus] = useState<SessionStatus>('preparing')
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null)
   const [iskierki, setIskierki] = useState(0)
+  // Liczniki per outcome — pokazywane w status barze i podsumowaniu sesji.
+  const [wrongCount, setWrongCount] = useState(0)
+  const [dontKnowCount, setDontKnowCount] = useState(0)
+  const [timeoutCount, setTimeoutCount] = useState(0)
   const [questionNumber, setQuestionNumber] = useState(0)
   const [lastFeedback, setLastFeedback] = useState<FeedbackState | null>(null)
   const [sessionEvents, setSessionEvents] = useState<SessionEvent[]>([])
@@ -328,6 +338,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   const finishedRef = useRef<boolean>(false)
   const eventsRef = useRef<SessionEvent[]>([])
   const iskierkiRef = useRef<number>(0)
+  const wrongCountRef = useRef<number>(0)
+  const dontKnowCountRef = useRef<number>(0)
+  const timeoutCountRef = useRef<number>(0)
   const questionStartedAtRef = useRef<number>(0)
   // Flag: pause został wyzwolony podczas status='feedback' (przerywając
   // pipeline feedback→breath→next-question). Resume rekonstruuje pipeline.
@@ -544,10 +557,19 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       )
       statesRef.current = { ...statesRef.current, [target]: updated }
 
-      // Iskierki
+      // Iskierki + liczniki per outcome
       if (outcome === 'correct') {
         iskierkiRef.current += 1
         setIskierki(iskierkiRef.current)
+      } else if (outcome === 'wrong') {
+        wrongCountRef.current += 1
+        setWrongCount(wrongCountRef.current)
+      } else if (outcome === 'dontKnow') {
+        dontKnowCountRef.current += 1
+        setDontKnowCount(dontKnowCountRef.current)
+      } else if (outcome === 'timeout') {
+        timeoutCountRef.current += 1
+        setTimeoutCount(timeoutCountRef.current)
       }
 
       // Event
@@ -726,6 +748,12 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     setSessionEvents([])
     iskierkiRef.current = 0
     setIskierki(0)
+    wrongCountRef.current = 0
+    setWrongCount(0)
+    dontKnowCountRef.current = 0
+    setDontKnowCount(0)
+    timeoutCountRef.current = 0
+    setTimeoutCount(0)
     questionNumberRef.current = 0
     setQuestionNumber(0)
     lastTargetRef.current = null
@@ -864,6 +892,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     questionNumber: questionNumber + 1,
     totalQuestions,
     iskierki,
+    wrongCount,
+    dontKnowCount,
+    timeoutCount,
     currentStreak,
     mascotIntensity: streakIntensity(currentStreak),
     countdownMs: exposedCountdownMs,

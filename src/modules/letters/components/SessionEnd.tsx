@@ -24,12 +24,62 @@ export type SessionEndProps = {
 
 type LetterStat = { letter: string; correct: number; total: number }
 
+function BreakdownCell({
+  icon,
+  label,
+  value,
+  percent,
+  color,
+  testId,
+}: {
+  icon: string
+  label: string
+  value: number
+  percent?: number
+  color: string
+  testId: string
+}) {
+  return (
+    <div
+      data-testid={testId}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 4,
+        padding: '12px 18px',
+        background: '#ffffff',
+        borderRadius: radii.kid,
+        border: `2px solid ${color}`,
+        minWidth: 100,
+      }}
+    >
+      <div aria-hidden="true" style={{ fontSize: 36, lineHeight: 1 }}>{icon}</div>
+      <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+      {percent !== undefined && (
+        <div style={{ fontSize: 12, color: '#7a7a82' }}>{percent}%</div>
+      )}
+      <div style={{ fontSize: 13, color: '#444' }}>{label}</div>
+    </div>
+  )
+}
+
+type OutcomeCounts = {
+  correct: number
+  wrong: number
+  dontKnow: number
+  timeout: number
+  total: number
+}
+
 function summarize(events: SessionEvent[]): {
   best: string[]
   worst: string[]
   correctRate: number
+  counts: OutcomeCounts
 } {
   const stats = new Map<string, LetterStat>()
+  const counts: OutcomeCounts = { correct: 0, wrong: 0, dontKnow: 0, timeout: 0, total: 0 }
   let lastTarget: string | null = null
   for (const ev of events) {
     if (ev.type === 'question-start') {
@@ -42,6 +92,8 @@ function summarize(events: SessionEvent[]): {
       cur.total += 1
       stats.set(ev.targetLetter, cur)
     } else if (ev.type === 'answer' && lastTarget !== null) {
+      counts[ev.outcome] += 1
+      counts.total += 1
       const cur = stats.get(lastTarget)
       if (cur && ev.outcome === 'correct') {
         cur.correct += 1
@@ -63,7 +115,7 @@ function summarize(events: SessionEvent[]): {
     .filter((s) => s.correct < s.total)
     .slice(-3)
     .map((s) => toUpper(s.letter))
-  return { best, worst, correctRate }
+  return { best, worst, correctRate, counts }
 }
 
 export function SessionEnd({
@@ -75,7 +127,7 @@ export function SessionEnd({
   onExit,
   audioBus = defaultAudioBus,
 }: SessionEndProps) {
-  const { best, worst, correctRate } = useMemo(() => summarize(events), [events])
+  const { best, worst, correctRate, counts } = useMemo(() => summarize(events), [events])
   const suggestLevelUp = correctRate >= 0.8 && totalQuestions > 0
   const isPerfect = useMemo(
     () => detectPerfectSession(events, sessionLength),
@@ -131,6 +183,38 @@ export function SessionEnd({
         }}
       >
         Zebraliśmy razem {iskierki} iskierek!
+      </div>
+      <div
+        data-testid="outcome-breakdown"
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: 14,
+          flexWrap: 'wrap',
+        }}
+      >
+        <BreakdownCell
+          icon="🔥"
+          label="Świetnie"
+          value={counts.correct}
+          percent={counts.total > 0 ? Math.round((counts.correct / counts.total) * 100) : 0}
+          color={colors.accentGreen}
+          testId="breakdown-correct"
+        />
+        <BreakdownCell
+          icon="❌"
+          label="Pomyłki"
+          value={counts.wrong}
+          color={colors.accentOrange}
+          testId="breakdown-wrong"
+        />
+        <BreakdownCell
+          icon="🤷"
+          label="Nie wiem"
+          value={counts.dontKnow + counts.timeout}
+          color="#7a7a82"
+          testId="breakdown-dontknow"
+        />
       </div>
       {best.length > 0 && (
         <div data-testid="best-letters" style={{ fontSize: 18 }}>

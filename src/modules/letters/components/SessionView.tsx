@@ -156,6 +156,8 @@ export function SessionView({
           questionNumber={session.questionNumber}
           totalQuestions={session.totalQuestions}
           iskierki={session.iskierki}
+          wrongCount={session.wrongCount}
+          dontKnowCount={session.dontKnowCount + session.timeoutCount}
           mascotIntensity={session.mascotIntensity}
           lastWrongSlot={session.lastFeedback?.variant === 'wrong' ? session.lastFeedback.chosenSlot ?? null : null}
           countdownMs={session.countdownMs}

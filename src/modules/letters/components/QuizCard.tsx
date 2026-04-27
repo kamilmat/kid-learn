@@ -17,6 +17,10 @@ export type QuizCardProps = {
   questionNumber: number
   totalQuestions: number
   iskierki: number
+  /** Liczba błędnych odpowiedzi — pokazywana w status barze obok ikony ❌. */
+  wrongCount: number
+  /** Liczba "Nie wiem" + timeout — pokazywana w status barze obok ikony 🤷. */
+  dontKnowCount: number
   /** Intensywność małej Iskry w status barze (z useSession, wyliczona ze streak'a). */
   mascotIntensity: IskraIntensity
   /** Litera kliknięta przy wrong — używana do mini-mascotki nad kafelkiem. */
@@ -90,6 +94,8 @@ export function QuizCard({
   questionNumber,
   totalQuestions,
   iskierki,
+  wrongCount,
+  dontKnowCount,
   mascotIntensity,
   lastWrongSlot,
   countdownMs,
@@ -136,13 +142,38 @@ export function QuizCard({
         }}
       >
         <div
-          data-testid="iskierki-counter"
-          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 20 }}
+          data-testid="status-counters"
+          style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 18 }}
         >
-          <div data-testid="status-bar-mascot" style={{ width: 50, height: 50 }}>
-            <IskraMascot size={50} state="idle" intensity={mascotIntensity} />
+          <div
+            data-testid="iskierki-counter"
+            style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+          >
+            <div data-testid="status-bar-mascot" style={{ width: 44, height: 44 }}>
+              <IskraMascot size={44} state="idle" intensity={mascotIntensity} />
+            </div>
+            <span aria-label={`Iskierki: ${iskierki}`} style={{ fontWeight: 700, color: colors.accentGreen, minWidth: 18 }}>
+              {iskierki}
+            </span>
           </div>
-          <span aria-label={`Iskierki: ${iskierki}`}>{iskierki}</span>
+          <div
+            data-testid="wrong-counter"
+            style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+          >
+            <span aria-hidden="true" style={{ fontSize: 22 }}>❌</span>
+            <span aria-label={`Pomyłki: ${wrongCount}`} style={{ fontWeight: 700, color: colors.accentOrange, minWidth: 18 }}>
+              {wrongCount}
+            </span>
+          </div>
+          <div
+            data-testid="dontknow-counter"
+            style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+          >
+            <span aria-hidden="true" style={{ fontSize: 22 }}>🤷</span>
+            <span aria-label={`Nie wiem: ${dontKnowCount}`} style={{ fontWeight: 700, color: '#7a7a82', minWidth: 18 }}>
+              {dontKnowCount}
+            </span>
+          </div>
         </div>
         <div data-testid="progress-dots" style={{ display: 'flex', gap: 6 }}>
           {Array.from({ length: totalQuestions }).map((_, i) => (
