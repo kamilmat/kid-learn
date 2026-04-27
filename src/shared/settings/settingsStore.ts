@@ -120,17 +120,22 @@ export const useSettings = create<SettingsStore>()(
         mathGateState: state.mathGateState,
         parentGateUnlockedUntil: state.parentGateUnlockedUntil,
       }),
-      version: 3,
-      // Migration: v2 miał `showCountdownBar: boolean`. v3 zmienia na
-      // `Partial<Record<Level, boolean>>`. Drop'ujemy stary boolean całkowicie
-      // — biorą się per-level defaults (iskierka/płomyk false, ognik/pochodnia true).
+      version: 4,
+      // Migration:
+      //   v2 → v3: `showCountdownBar` z boolean na Partial<Record<Level, boolean>>.
+      //   v3 → v4: `timeLimit` z prymitywu (TimeLimit) na Partial<Record<Level, TimeLimit>>.
+      // W obu przypadkach drop'ujemy legacy wartość — zostają per-level defaults
+      // (iskierka/płomyk: timeLimit='off', ognik/pochodnia: timeLimit=15).
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<PersistedShape>
         const persistedSettings = (p.settings ?? {}) as Record<string, unknown>
         const sanitizedSettings = { ...persistedSettings }
         if (typeof sanitizedSettings.showCountdownBar === 'boolean') {
-          // Stary boolean — drop'ujemy do {}, weźmie się z defaultu
           delete sanitizedSettings.showCountdownBar
+        }
+        const tl = sanitizedSettings.timeLimit
+        if (tl === 'off' || typeof tl === 'number') {
+          delete sanitizedSettings.timeLimit
         }
         return {
           ...current,

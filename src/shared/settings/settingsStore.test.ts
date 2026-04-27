@@ -67,7 +67,7 @@ describe('useSettings store', () => {
     const { settings, mathGateState, parentGateUnlockedUntil } =
       useSettings.getState()
     expect(settings.sessionLength).toBe(10)
-    expect(settings.timeLimit).toBe(15)
+    expect(settings.timeLimit).toEqual({})
     expect(mathGateState).toEqual({ failedAttempts: 0, cooldownUntil: 0 })
     expect(parentGateUnlockedUntil).toBe(0)
   })
@@ -76,14 +76,14 @@ describe('useSettings store', () => {
     it('updates a single setting and preserves others', () => {
       useSettings.getState().updateSetting('sessionLength', 5)
       expect(useSettings.getState().settings.sessionLength).toBe(5)
-      expect(useSettings.getState().settings.timeLimit).toBe(15)
+      expect(useSettings.getState().settings.timeLimit).toEqual({})
     })
 
     it('updates timeLimit and showCountdownBar independently', () => {
-      useSettings.getState().updateSetting('timeLimit', 'off')
+      useSettings.getState().updateSetting('timeLimit', { iskierka: 25 })
       useSettings.getState().updateSetting('showCountdownBar', { iskierka: true })
       const s = useSettings.getState().settings
-      expect(s.timeLimit).toBe('off')
+      expect(s.timeLimit).toEqual({ iskierka: 25 })
       expect(s.showCountdownBar).toEqual({ iskierka: true })
     })
   })
@@ -224,5 +224,66 @@ describe('showCountdownBar migration (v2 → v3)', () => {
     useSettings.persist.rehydrate()
     const settings = useSettings.getState().settings
     expect(settings.showCountdownBar).toEqual({})
+  })
+})
+
+describe('timeLimit migration (v3 → v4)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSettings.getState()._resetForTests()
+  })
+
+  it('drops legacy primitive timeLimit (number) from persisted state', () => {
+    const legacyPersisted = {
+      state: {
+        settings: {
+          ...defaultSettings,
+          timeLimit: 15 as unknown as (typeof defaultSettings)['timeLimit'],
+        },
+        mathGateState: initialMathGateState,
+        parentGateUnlockedUntil: 0,
+      },
+      version: 3,
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(legacyPersisted))
+    useSettings.persist.rehydrate()
+    const settings = useSettings.getState().settings
+    expect(settings.timeLimit).toEqual({})
+  })
+
+  it('drops legacy primitive timeLimit ("off") from persisted state', () => {
+    const legacyPersisted = {
+      state: {
+        settings: {
+          ...defaultSettings,
+          timeLimit: 'off' as unknown as (typeof defaultSettings)['timeLimit'],
+        },
+        mathGateState: initialMathGateState,
+        parentGateUnlockedUntil: 0,
+      },
+      version: 3,
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(legacyPersisted))
+    useSettings.persist.rehydrate()
+    const settings = useSettings.getState().settings
+    expect(settings.timeLimit).toEqual({})
+  })
+
+  it('preserves per-level timeLimit object when already migrated', () => {
+    const persisted = {
+      state: {
+        settings: {
+          ...defaultSettings,
+          timeLimit: { iskierka: 25 as const, plomyk: 'off' as const },
+        },
+        mathGateState: initialMathGateState,
+        parentGateUnlockedUntil: 0,
+      },
+      version: 4,
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted))
+    useSettings.persist.rehydrate()
+    const settings = useSettings.getState().settings
+    expect(settings.timeLimit).toEqual({ iskierka: 25, plomyk: 'off' })
   })
 })
