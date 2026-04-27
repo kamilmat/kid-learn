@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Iskierki — wybór czcionki pisanej</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Kalam:wght@400;700&family=Patrick+Hand&family=Indie+Flower&family=Architects+Daughter&family=Schoolbell&family=Shadows+Into+Light&family=Gloria+Hallelujah&family=Homemade+Apple&family=Sue+Ellen+Francisco&family=Just+Another+Hand&family=Reenie+Beanie&family=Bilbo&family=Sacramento&family=Itim&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #fef9f2;
+    --text: #2d2d33;
+    --card: #ffffff;
+    --border: #e2e2e8;
+    --accent: #5b8def;
+    --muted: #7a7a82;
+    --line-blue: #9ab8d4;
+    --line-red: #d04a4a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; padding: 24px; max-width: 1200px; margin: 0 auto; }
+  h1 { font-family: 'Caveat', cursive; font-size: 48px; margin: 0 0 8px; }
+  p.intro { color: var(--muted); margin: 0 0 24px; font-size: 16px; line-height: 1.5; }
+  .grid { display: grid; gap: 20px; }
+  .card { background: var(--card); border: 2px solid var(--border); border-radius: 16px; padding: 20px; transition: border-color 120ms ease; }
+  .card.selected { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(91,141,239,0.18); }
+  .card header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .name { font-size: 18px; font-weight: 700; }
+  .pick { font-size: 13px; color: var(--accent); cursor: pointer; padding: 6px 12px; border: 1px solid var(--accent); border-radius: 8px; background: transparent; }
+  .card.selected .pick { background: var(--accent); color: white; }
+  .lined-row { display: block; margin: 8px 0; width: 100%; }
+  .lined-row svg { display: block; width: 100%; height: auto; }
+  .pairs-row { display: flex; gap: 24px; flex-wrap: wrap; margin: 14px 0; align-items: end; }
+  .pair-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .pair-cell svg { display: block; }
+  .pair-label { font-size: 10px; color: var(--muted); }
+  .meta { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .toolbar { position: sticky; top: 0; background: var(--bg); padding: 12px 0; margin-bottom: 16px; z-index: 10; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .toolbar label { font-size: 14px; color: var(--muted); }
+  .toolbar select { font-size: 14px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: white; }
+  .pick-summary { font-size: 14px; padding: 6px 12px; background: white; border-radius: 8px; border: 1px solid var(--border); }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-bottom: 16px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-line { display: inline-block; width: 24px; height: 2px; }
+</style>
+</head>
+<body>
+  <h1>Wybór czcionki pisanej</h1>
+  <p class="intro">
+    Aktualna: <strong>Caveat</strong>. Poniżej 14 alternatyw z Google Fonts (wszystkie OFL, polskie znaki).<br />
+    Litery pokazane <strong>na czterolinii</strong> — tak jak w polskim elementarzu. Sprawdzaj czy ascendery (l, h, ł) sięgają górnej linii, descendery (g, p, y, ą) schodzą do dolnej, x-height (a, e, m) trzyma się między czerwonymi liniami.
+  </p>
+
+  <div class="legend">
+    <span class="legend-item"><span class="legend-line" style="background:var(--line-blue);"></span> linia górna / dolna (ogonki)</span>
+    <span class="legend-item"><span class="legend-line" style="background:var(--line-red);"></span> baseline (na której piszemy)</span>
+    <span class="legend-item"><span class="legend-line" style="background:var(--line-red); border-top:2px dashed var(--line-red); height:0;"></span> górna pomocnicza (x-height)</span>
+  </div>
+
+  <div class="toolbar">
+    <label for="size">Rozmiar próbki:</label>
+    <select id="size">
+      <option value="56">56px</option>
+      <option value="72" selected>72px</option>
+      <option value="96">96px</option>
+      <option value="120">120px</option>
+    </select>
+    <span class="pick-summary" id="picked">Wybrana: — (kliknij "wybierz")</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+<script>
+  const fonts = [
+    { name: 'Caveat', family: "'Caveat', cursive", note: 'AKTUALNA — luźna, casual' },
+    { name: 'Kalam', family: "'Kalam', cursive", note: 'Cursive z połączeniami, szkolna' },
+    { name: 'Patrick Hand', family: "'Patrick Hand', cursive", note: 'Drukowane handwriting, każda litera osobno' },
+    { name: 'Indie Flower', family: "'Indie Flower', cursive", note: 'Handwriting casual, popularna w app dziecięcych' },
+    { name: 'Architects Daughter', family: "'Architects Daughter', cursive", note: 'Drukowane handwriting, technical' },
+    { name: 'Schoolbell', family: "'Schoolbell', cursive", note: 'Szkolne, dziecięce — "tablica w klasie"' },
+    { name: 'Shadows Into Light', family: "'Shadows Into Light', cursive", note: 'Handwriting lekkie' },
+    { name: 'Gloria Hallelujah', family: "'Gloria Hallelujah', cursive", note: 'Mocno handwritten' },
+    { name: 'Homemade Apple', family: "'Homemade Apple', cursive", note: 'Pełna kursywa z połączeniami — najbliżej "szkolnego pisma"' },
+    { name: 'Sue Ellen Francisco', family: "'Sue Ellen Francisco', cursive", note: 'Drukowane handwriting, ciepłe' },
+    { name: 'Just Another Hand', family: "'Just Another Hand', cursive", note: 'Wąska handwriting, długie pociągnięcia' },
+    { name: 'Reenie Beanie', family: "'Reenie Beanie', cursive", note: 'Bardzo casual, "notatka"' },
+    { name: 'Bilbo', family: "'Bilbo', cursive", note: 'Formalna kursywa z pętlami — może trudna dla 7-latka' },
+    { name: 'Sacramento', family: "'Sacramento', cursive", note: 'Script formalny, ozdobny' },
+    { name: 'Itim', family: "'Itim', cursive", note: 'Aktualny fallback — handwriting print' },
+  ]
+
+  // Polski alfabet — wszystkie 32 litery z diakrytykami
+  const ALPHABET_UPPER = 'A Ą B C Ć D E Ę F G H I J K L Ł M N Ń O Ó P R S Ś T U W Y Z Ź Ż'
+  const ALPHABET_LOWER = 'a ą b c ć d e ę f g h i j k l ł m n ń o ó p r s ś t u w y z ź ż'
+  const PAIRS = ['Aa', 'Łł', 'Śś', 'Żż', 'Ćć', 'Ll', 'Mm', 'Pp', 'Rr', 'Ąą']
+
+  // Czterolinia — proporcje takie same jak w shared/ui/HandwrittenLetter.tsx
+  // (TOP=0, UPPER_HELPER=0.3, BASELINE=0.7, BOTTOM=1.0).
+  // Wysokość containera = fontSize / FONT_SIZE_RATIO (0.7) ≈ 1.43 × fontSize.
+  const TOP_RATIO = 0
+  const UPPER_HELPER_RATIO = 0.3
+  const BASELINE_RATIO = 0.7
+  const BOTTOM_RATIO = 1.0
+  const FONT_SIZE_RATIO = 0.7  // font zajmuje 70% wysokości containera (cap-height do baseline)
+
+  function buildLinedSvg(text, fontFamily, fontSize, fillColor, totalWidthHint) {
+    // height containera tak żeby font zajmował 70% wysokości
+    const height = Math.round(fontSize / FONT_SIZE_RATIO)
+    // szerokość: heurystyka dla width-fit text — używamy aspectRatio 0.55 per znak
+    // (różne fonty mają różne szerokości; dajemy zapas przez minWidth)
+    const width = totalWidthHint || Math.max(900, Math.ceil(text.length * fontSize * 0.55))
+
+    const yTop = height * TOP_RATIO
+    const yUpper = height * UPPER_HELPER_RATIO
+    const yBaseline = height * BASELINE_RATIO
+    const yBottom = height * BOTTOM_RATIO
+
+    const lineBlue = '#9ab8d4'
+    const lineRed = '#d04a4a'
+    const stroke = Math.max(1, Math.round(height / 80))
+    const accentStroke = Math.max(1, Math.round(height / 65))
+    const dash = Math.max(4, Math.round(height / 22))
+
+    const padX = 16
+    return `
+      <svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg">
+        <line x1="0" y1="${yTop + stroke / 2}" x2="${width}" y2="${yTop + stroke / 2}" stroke="${lineBlue}" stroke-width="${stroke}" />
+        <line x1="0" y1="${yUpper}" x2="${width}" y2="${yUpper}" stroke="${lineRed}" stroke-width="${stroke}" stroke-dasharray="${dash} ${dash}" />
+        <line x1="0" y1="${yBaseline}" x2="${width}" y2="${yBaseline}" stroke="${lineRed}" stroke-width="${accentStroke}" />
+        <line x1="0" y1="${yBottom - stroke / 2}" x2="${width}" y2="${yBottom - stroke / 2}" stroke="${lineBlue}" stroke-width="${stroke}" />
+        <text x="${padX}" y="${yBaseline}" font-family="${fontFamily}" font-size="${fontSize}" fill="${fillColor}" dominant-baseline="alphabetic" text-anchor="start">${text}</text>
+      </svg>
+    `
+  }
+
+  function buildPairLined(pair, fontFamily, fontSize, fillColor) {
+    // Mała czterolinia z pojedynczą parą "Aa" — dokładnie jak w aplikacji
+    const height = Math.round(fontSize / FONT_SIZE_RATIO)
+    const width = Math.max(140, Math.ceil(fontSize * 1.6))
+    const yTop = height * TOP_RATIO
+    const yUpper = height * UPPER_HELPER_RATIO
+    const yBaseline = height * BASELINE_RATIO
+    const yBottom = height * BOTTOM_RATIO
+    const stroke = Math.max(1, Math.round(height / 80))
+    const accentStroke = Math.max(1, Math.round(height / 65))
+    const dash = Math.max(4, Math.round(height / 22))
+    return `
+      <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+        <line x1="0" y1="${yTop + stroke / 2}" x2="${width}" y2="${yTop + stroke / 2}" stroke="#9ab8d4" stroke-width="${stroke}" />
+        <line x1="0" y1="${yUpper}" x2="${width}" y2="${yUpper}" stroke="#d04a4a" stroke-width="${stroke}" stroke-dasharray="${dash} ${dash}" />
+        <line x1="0" y1="${yBaseline}" x2="${width}" y2="${yBaseline}" stroke="#d04a4a" stroke-width="${accentStroke}" />
+        <line x1="0" y1="${yBottom - stroke / 2}" x2="${width}" y2="${yBottom - stroke / 2}" stroke="#9ab8d4" stroke-width="${stroke}" />
+        <text x="${width / 2}" y="${yBaseline}" font-family="${fontFamily}" font-size="${fontSize}" fill="${fillColor}" dominant-baseline="alphabetic" text-anchor="middle" letter-spacing="${fontSize * 0.18}">${pair}</text>
+      </svg>
+    `
+  }
+
+  const grid = document.getElementById('grid')
+  const sizeSelect = document.getElementById('size')
+  const picked = document.getElementById('picked')
+
+  let currentSize = 72
+  const fillColor = '#2d2d33'
+
+  function renderCards() {
+    grid.innerHTML = ''
+    fonts.forEach((f) => {
+      const card = document.createElement('div')
+      card.className = 'card'
+      card.dataset.name = f.name
+      card.innerHTML = `
+        <header>
+          <span class="name">${f.name}</span>
+          <button class="pick" data-pick="${f.name}">wybierz</button>
+        </header>
+        <div class="lined-row">${buildLinedSvg(ALPHABET_UPPER, f.family, currentSize, fillColor)}</div>
+        <div class="lined-row">${buildLinedSvg(ALPHABET_LOWER, f.family, currentSize - 8, fillColor)}</div>
+        <div class="pairs-row">
+          ${PAIRS.map((p) => `<div class="pair-cell">${buildPairLined(p, f.family, currentSize + 16, fillColor)}<span class="pair-label">${p}</span></div>`).join('')}
+        </div>
+        <div class="meta">${f.note} · CSS: <code>${f.family}</code></div>
+      `
+      grid.appendChild(card)
+    })
+    document.querySelectorAll('.pick').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const name = e.currentTarget.dataset.pick
+        document.querySelectorAll('.card').forEach((c) => c.classList.remove('selected'))
+        e.currentTarget.closest('.card').classList.add('selected')
+        const f = fonts.find((x) => x.name === name)
+        picked.textContent = `Wybrana: ${name} — CSS: ${f.family}`
+        picked.style.background = '#fff4ea'
+        picked.style.borderColor = '#e89a4f'
+      })
+    })
+  }
+
+  sizeSelect.addEventListener('change', (e) => {
+    currentSize = parseInt(e.target.value, 10)
+    renderCards()
+  })
+  renderCards()
+</script>
+</body>
+</html>
