@@ -18,6 +18,10 @@ const state = {
   currentBlobUrl: null,
   isRecording: false,
   recordingKey: null,
+  // vu meter
+  vuContext: null,
+  vuAnalyser: null,
+  vuRafId: null,
 };
 
 function clearBlobUrl() {
@@ -201,6 +205,7 @@ async function startRecording() {
     setKeyStatus(recordingKey, 'preview');
     showPreview();
   };
+  startVuMeter(stream);
   state.mediaRecorder.start();
   state.isRecording = true;
   setKeyStatus(recordingKey, 'recording');
@@ -209,6 +214,7 @@ async function startRecording() {
 
 function stopRecording() {
   if (!state.mediaRecorder) return;
+  stopVuMeter();
   state.mediaRecorder.stop();
   state.isRecording = false;
   setKeyStatus(state.recordingKey, 'preview');
@@ -249,6 +255,38 @@ function showPreview() {
 async function saveCurrent() {
   // implementacja w Task 5
   alert('Zapis zaimplementowany w następnym kroku.');
+}
+
+function startVuMeter(stream) {
+  state.vuContext = new AudioContext();
+  const source = state.vuContext.createMediaStreamSource(stream);
+  state.vuAnalyser = state.vuContext.createAnalyser();
+  state.vuAnalyser.fftSize = 256;
+  source.connect(state.vuAnalyser);
+  const buf = new Uint8Array(state.vuAnalyser.frequencyBinCount);
+  const bar = document.getElementById('vu-bar');
+  function tick() {
+    state.vuAnalyser.getByteFrequencyData(buf);
+    let sum = 0;
+    for (const v of buf) sum += v;
+    const avg = sum / buf.length; // 0..255
+    const pct = Math.min(100, (avg / 128) * 100); // 0..100, próg ~50% przy normalnej mowie
+    if (bar) bar.style.width = pct + '%';
+    state.vuRafId = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+function stopVuMeter() {
+  if (state.vuRafId) cancelAnimationFrame(state.vuRafId);
+  state.vuRafId = null;
+  if (state.vuContext) {
+    state.vuContext.close();
+    state.vuContext = null;
+  }
+  state.vuAnalyser = null;
+  const bar = document.getElementById('vu-bar');
+  if (bar) bar.style.width = '0%';
 }
 
 // init
