@@ -253,8 +253,45 @@ function showPreview() {
 }
 
 async function saveCurrent() {
-  // implementacja w Task 5
-  alert('Zapis zaimplementowany w następnym kroku.');
+  if (!state.currentBlob || !state.activeKey) return;
+  if (!state.dirHandle) {
+    alert('Najpierw wybierz folder docelowy.');
+    return;
+  }
+  const filename = `${state.activeKey}.webm`;
+  try {
+    const fileHandle = await state.dirHandle.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(state.currentBlob);
+    await writable.close();
+  } catch (err) {
+    alert(`Błąd zapisu: ${err.message}`);
+    return;
+  }
+  setKeyStatus(state.activeKey, 'recorded');
+  state.currentBlob = null;
+  // auto-skok na następny nieskończony
+  const nextKey = findNextUnrecorded(state.activeKey);
+  if (nextKey) {
+    selectKey(nextKey);
+  } else {
+    renderActivePane(); // odśwież obecny widok (pokaże "✅ już nagrane")
+  }
+}
+
+function findNextUnrecorded(currentKey) {
+  // Filtrujemy zgodnie z aktualnym filtrem grupy (ale nie "tylko nieskończone" — bo i tak szukamy nieskończonych)
+  const filtered = state.keys.filter((k) => state.filterGroup === 'all' || k.group === state.filterGroup);
+  const idx = filtered.findIndex((k) => k.key === currentKey);
+  if (idx === -1) return null;
+  for (let i = idx + 1; i < filtered.length; i++) {
+    if (filtered[i].status === 'unrecorded') return filtered[i].key;
+  }
+  // Jeśli nie ma dalej, szukamy od początku (wrap)
+  for (let i = 0; i < idx; i++) {
+    if (filtered[i].status === 'unrecorded') return filtered[i].key;
+  }
+  return null;
 }
 
 function startVuMeter(stream) {
