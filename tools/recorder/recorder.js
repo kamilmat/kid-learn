@@ -10,6 +10,12 @@ const state = {
   filterGroup: 'all',
   filterUnrecorded: false,
   dirHandle: null,
+  // recording
+  mediaStream: null,
+  mediaRecorder: null,
+  recordedChunks: [],
+  currentBlob: null,
+  isRecording: false,
 };
 
 async function loadSources() {
@@ -93,8 +99,14 @@ function renderActivePane() {
   pane.innerHTML = `
     <div class="key-name">${item.key}</div>
     <div class="text-prompt">${escapeHtml(item.text)}</div>
-    <div class="source-hint">grupa: ${item.group}</div>
+    <div class="source-hint">grupa: ${item.group}${item.status === 'recorded' ? ' • ✅ już nagrane' : ''}</div>
+    <div class="vu-meter"><div class="vu-bar" id="vu-bar"></div></div>
+    <div class="controls" id="rec-controls">
+      <button id="btn-rec">🎤 Start (Spacja)</button>
+    </div>
+    <div id="preview-area"></div>
   `;
+  document.getElementById('btn-rec').addEventListener('click', toggleRecording);
 }
 
 // filtry
@@ -140,6 +152,86 @@ async function scanFolder() {
 }
 
 document.getElementById('pick-folder').addEventListener('click', pickFolder);
+
+async function ensureMicAccess() {
+  if (state.mediaStream) return state.mediaStream;
+  try {
+    state.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    return state.mediaStream;
+  } catch (err) {
+    alert(`Brak dostępu do mikrofonu: ${err.message}`);
+    return null;
+  }
+}
+
+async function toggleRecording() {
+  if (!state.activeKey) return;
+  if (state.isRecording) {
+    stopRecording();
+  } else {
+    await startRecording();
+  }
+}
+
+async function startRecording() {
+  const stream = await ensureMicAccess();
+  if (!stream) return;
+  state.recordedChunks = [];
+  state.currentBlob = null;
+  state.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+  state.mediaRecorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) state.recordedChunks.push(e.data);
+  };
+  state.mediaRecorder.onstop = () => {
+    state.currentBlob = new Blob(state.recordedChunks, { type: 'audio/webm' });
+    showPreview();
+  };
+  state.mediaRecorder.start();
+  state.isRecording = true;
+  setKeyStatus(state.activeKey, 'recording');
+  document.getElementById('btn-rec').textContent = '⏹ Stop (Spacja)';
+}
+
+function stopRecording() {
+  if (!state.mediaRecorder) return;
+  state.mediaRecorder.stop();
+  state.isRecording = false;
+  setKeyStatus(state.activeKey, 'preview');
+  document.getElementById('btn-rec').textContent = '🎤 Start (Spacja)';
+}
+
+function setKeyStatus(key, status) {
+  const item = state.keys.find((k) => k.key === key);
+  if (item) item.status = status;
+  renderKeyList();
+}
+
+function showPreview() {
+  const area = document.getElementById('preview-area');
+  if (!state.currentBlob) {
+    area.innerHTML = '';
+    return;
+  }
+  const url = URL.createObjectURL(state.currentBlob);
+  area.innerHTML = `
+    <audio class="preview" controls src="${url}"></audio>
+    <div class="controls" style="margin-top: 12px;">
+      <button id="btn-save">✅ Zapisz (Enter)</button>
+      <button id="btn-retry">🔄 Nagraj jeszcze raz (R)</button>
+    </div>
+  `;
+  document.getElementById('btn-save').addEventListener('click', saveCurrent);
+  document.getElementById('btn-retry').addEventListener('click', () => {
+    state.currentBlob = null;
+    setKeyStatus(state.activeKey, 'unrecorded');
+    renderActivePane();
+  });
+}
+
+async function saveCurrent() {
+  // implementacja w Task 5
+  alert('Zapis zaimplementowany w następnym kroku.');
+}
 
 // init
 (async () => {
