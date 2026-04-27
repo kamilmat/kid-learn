@@ -226,12 +226,15 @@ export function LevelSelect({
 
       <section
         data-testid="mastery-wall"
-        aria-label="Ściana osiągnięć"
+        aria-label="Opanowane literki"
         style={masteryWallContainer}
       >
         <h2 style={{ fontSize: 14, margin: 0, color: colors.text }}>
-          Twoje literki
+          Opanowane literki
         </h2>
+        <p style={{ fontSize: 11, margin: '2px 0 0', color: '#7a7a82' }}>
+          Tu pojawią się literki, których się nauczysz
+        </p>
         <div style={masteryGridStyle}>
           {POLISH_ALPHABET.map((letter) => {
             const isMastered = masteredSet.has(letter)
