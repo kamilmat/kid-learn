@@ -14,6 +14,7 @@ import {
 } from '@/modules/letters/data/associations'
 import type { FeedbackState } from '@/modules/letters/types'
 import type { CaseMode, StyleMode } from '@/shared/settings/types'
+import { IskraMascot, type IskraState, type IskraIntensity } from '@/shared/ui/IskraMascot'
 
 export type FeedbackOverlayProps = {
   feedback: FeedbackState
@@ -65,6 +66,22 @@ function headlineFor(variant: FeedbackState['variant']): string {
       return 'Nie szkodzi!'
     case 'timeout':
       return 'Następnym razem szybciej'
+  }
+}
+
+function mascotConfigFor(
+  variant: FeedbackState['variant'],
+): { state: IskraState; intensity: IskraIntensity } | null {
+  switch (variant) {
+    case 'correct':
+      return { state: 'happy', intensity: 'flame' }
+    case 'mastery':
+      return { state: 'dance', intensity: 'torch' }
+    case 'dontKnow':
+    case 'timeout':
+      return { state: 'idle', intensity: 'spark' }
+    case 'wrong':
+      return null // wrong nie renderuje overlayu — mascotka jest w QuizCard
   }
 }
 
@@ -178,15 +195,20 @@ export function FeedbackOverlay({
         padding: 24,
       }}
     >
-      {feedback.variant === 'mastery' && (
-        <div
-          data-testid="iskra-mascot"
-          aria-hidden="true"
-          style={{ fontSize: 96 }}
-        >
-          🔥
-        </div>
-      )}
+      {(() => {
+        const cfg = mascotConfigFor(feedback.variant)
+        if (cfg === null) return null
+        return (
+          <div data-testid="feedback-mascot" aria-hidden="true">
+            <IskraMascot
+              size={feedback.variant === 'mastery' ? 140 : 96}
+              state={cfg.state}
+              intensity={cfg.intensity}
+              oneshotKey={`${feedback.targetLetter}-${feedback.variant}`}
+            />
+          </div>
+        )
+      })()}
       <div data-testid="feedback-headline" style={{ fontSize: 36, fontWeight: 700 }}>
         {headlineFor(feedback.variant)}
       </div>
