@@ -60,11 +60,13 @@ describe('levelDefaults (sekcja 10.2)', () => {
       caseMode: 'para',
       styleMode: 'tylko-drukowane',
       tilesPerQuestion: 4,
+      showCountdownBar: false,
     })
     expect(levelDefaults.plomyk).toEqual({
       caseMode: 'para',
       styleMode: 'tylko-drukowane',
       tilesPerQuestion: 4,
+      showCountdownBar: false,
     })
   })
 
@@ -73,6 +75,7 @@ describe('levelDefaults (sekcja 10.2)', () => {
       caseMode: 'mieszane',
       styleMode: 'mieszane-per-pytanie',
       tilesPerQuestion: 5,
+      showCountdownBar: true,
     })
   })
 
@@ -81,6 +84,7 @@ describe('levelDefaults (sekcja 10.2)', () => {
       caseMode: 'mieszane',
       styleMode: 'oba-na-kafelku',
       tilesPerQuestion: 6,
+      showCountdownBar: true,
     })
   })
 })
@@ -89,7 +93,7 @@ describe('defaultSettings (sekcja 13.2)', () => {
   it('matches the spec defaults', () => {
     expect(defaultSettings.sessionLength).toBe(10)
     expect(defaultSettings.timeLimit).toBe(15)
-    expect(defaultSettings.showCountdownBar).toBe(true)
+    expect(defaultSettings.showCountdownBar).toEqual({})
     expect(defaultSettings.celebrationTempo).toBe('medium')
     expect(defaultSettings.defaultLevel).toBe('last-used')
     expect(defaultSettings.voice).toBe('zofia')
