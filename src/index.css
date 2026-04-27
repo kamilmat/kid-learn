@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Itim&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Caveat:wght@400;700&family=Itim&display=swap');
 @import 'tailwindcss';
 
 @theme {
@@ -11,7 +11,7 @@
 }
 
 :root {
-  --font-handwritten: 'Caveat', 'Itim', cursive;
+  --font-handwritten: 'Kalam', 'Caveat', 'Itim', cursive;
   color-scheme: light;
   background-color: #fef9f2;
   color: #2d2d33;
