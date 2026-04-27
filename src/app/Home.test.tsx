@@ -114,11 +114,13 @@ describe('Home', () => {
     expect(tile.textContent).toContain('Litery')
   })
 
-  it('renders the placeholder "Wkrótce" tile', () => {
+  it('renders the locked placeholder tile (no text — child cannot read)', () => {
     renderHome()
     const placeholder = screen.getByTestId('module-placeholder')
     expect(placeholder).toBeInTheDocument()
-    expect(placeholder.textContent).toContain('Wkrótce')
+    expect(placeholder).toHaveAttribute('aria-label', 'Wkrótce więcej modułów')
+    expect(placeholder).toHaveAttribute('aria-disabled', 'true')
+    expect(placeholder.textContent).toContain('🔒')
   })
 
   it('renders parent zone with settings (⚙) and report (📊) buttons', () => {

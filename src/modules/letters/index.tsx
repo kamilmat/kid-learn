@@ -13,7 +13,7 @@
 // (App już renderuje `<KidNav />` poza `<Routes />`). Zostawiamy hook do
 // mountu lokalnego KidNav tylko gdyby moduł był używany standalone.
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect } from 'react'
 import {
   Navigate,
   Route,
@@ -49,6 +49,12 @@ const VALID_LEVELS: ReadonlySet<Level> = new Set<Level>([
 const LETTERS_INTRO_KEY = 'letters-intro'
 const QUIZ_INTRO_KEY = 'quiz-intro'
 const DONT_KNOW_INTRO_KEY = 'dont-know-intro'
+
+// Module-level flag: czy w tej tab/page-load wykonaliśmy już auto-navigate
+// na defaultLevel. useRef komponentu nie wystarczy bo LettersIndex remountuje
+// się po Wróć z sesji. Reset przy reload strony (intencjonalne — rodzic może
+// chcieć żeby auto-nav zadziałał ponownie po zmianie defaultLevel).
+let autoNavApplied = false
 
 export type LettersModuleProps = {
   /** Wstrzykiwany audioBus — dla testów. */
@@ -95,22 +101,22 @@ function LettersIndex({ audioBus }: LettersIndexProps) {
   const hasSeenIntro = useLetters((s) => s.hasSeenIntro)
   const defaultLevel = useSettings((s) => s.settings.defaultLevel)
   const lastUsedLevel = useLetters((s) => s.lastUsedLevel)
-  const autoNavHandledRef = useRef(false)
 
-  // Auto-navigate do defaultLevel (lub lastUsedLevel) gdy wchodzi się świeżo
-  // na /letters — POMIJAMY gdy user wraca ze sesji przez "Wróć"
-  // (LettersSession nadaje state.fromExit). Jednorazowo per mount, żeby
-  // user mógł wybrać inny poziom z LevelSelect bez przekierowania.
+  // Auto-navigate do defaultLevel (lub lastUsedLevel) tylko raz per
+  // page-load. autoNavApplied (module-level) chroni przed ponownym auto-nav
+  // gdy user wraca z sesji do LevelSelect. fromExit dodatkowo zabezpiecza
+  // przed auto-nav w nawigacji przez Wróć (state inherited przy navigate('..')).
   useEffect(() => {
-    if (autoNavHandledRef.current) return
-    autoNavHandledRef.current = true
+    if (autoNavApplied) return
+    autoNavApplied = true
     const fromExit = (location.state as { fromExit?: boolean } | null)?.fromExit
     if (fromExit) return
     const targetLevel: Level | null =
       defaultLevel === 'last-used' ? lastUsedLevel : defaultLevel
     if (targetLevel) {
       setLastUsedLevel(targetLevel)
-      navigate(`session/${targetLevel}`, { replace: true })
+      // Push (nie replace) — żeby Wróć z sesji wracało do LevelSelect, nie Home.
+      navigate(`session/${targetLevel}`)
     }
   }, [defaultLevel, lastUsedLevel, location.state, navigate, setLastUsedLevel])
 

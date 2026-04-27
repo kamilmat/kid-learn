@@ -140,6 +140,7 @@ export function Home() {
 
         <div
           data-testid="module-placeholder"
+          aria-label="Wkrótce więcej modułów"
           aria-disabled="true"
           style={{
             minHeight: 220,
@@ -151,15 +152,18 @@ export function Home() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 16,
-            opacity: 0.6,
+            gap: 12,
+            opacity: 0.55,
             color: colors.text,
+            filter: 'blur(0.6px)',
           }}
         >
-          <span aria-hidden="true" style={{ fontSize: 64, lineHeight: 1 }}>
+          <span aria-hidden="true" style={{ fontSize: 80, lineHeight: 1 }}>
+            🔒
+          </span>
+          <span aria-hidden="true" style={{ fontSize: 32, lineHeight: 1, opacity: 0.7 }}>
             ✨
           </span>
-          <span style={{ fontSize: 20, fontWeight: 600 }}>Wkrótce więcej!</span>
         </div>
       </div>
 

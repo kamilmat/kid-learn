@@ -58,7 +58,7 @@ export function KidNav({ onBack, onHome }: KidNavProps) {
         onClick={handleBack}
         style={buttonStyle}
       >
-        <span aria-hidden="true">⬅</span>
+        <span aria-hidden="true">⬅️</span>
       </button>
       <button
         type="button"

@@ -163,14 +163,24 @@ export function SessionEnd({
           marginTop: 16,
         }}
       >
-        <Button size="large" data-testid="restart-button" onClick={onRestart}>
+        <Button
+          size="large"
+          data-testid="restart-button"
+          onClick={() => {
+            void audioBus.play('nav-tap')
+            onRestart()
+          }}
+        >
           Jeszcze raz
         </Button>
         <Button
           size="large"
           variant="secondary"
           data-testid="exit-button"
-          onClick={onExit}
+          onClick={() => {
+            void audioBus.play('nav-tap')
+            onExit()
+          }}
         >
           Wyjdź
         </Button>

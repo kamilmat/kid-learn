@@ -45,6 +45,16 @@ const LEVEL_META: LevelMeta[] = [
   },
 ]
 
+// Skalowanie body mascotki per poziom — sama liczba iskier wokół (1/2/4/6)
+// jest dla 7-latka prawie nieczytelna. Wzrost rozmiaru ciała daje wyraźny
+// sygnał wzrostu trudności (Iskierka → Pochodnia).
+const INTENSITY_TO_BODY_SIZE: Record<IskraIntensity, number> = {
+  spark: 44,
+  flame: 60,
+  fire: 76,
+  torch: 92,
+}
+
 const LEVEL_SELECT_INTRO_KEY = 'level-select-intro'
 
 const tileStyle: React.CSSProperties = {
@@ -192,8 +202,8 @@ export function LevelSelect({
               style={tileStyle}
               onClick={() => handleTileClick(meta.level)}
             >
-              <span style={{ display: 'flex', justifyContent: 'center' }} aria-hidden="true">
-                <IskraMascot size={56} state="idle" intensity={meta.intensity} />
+              <span style={{ display: 'flex', justifyContent: 'center', minHeight: 92, alignItems: 'center' }} aria-hidden="true">
+                <IskraMascot size={INTENSITY_TO_BODY_SIZE[meta.intensity]} state="idle" intensity={meta.intensity} />
               </span>
               <span style={{ fontSize: 20 }}>{meta.label}</span>
               <span style={{ fontSize: 13, color: '#7a7a82' }}>

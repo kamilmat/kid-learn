@@ -115,24 +115,28 @@ export type UseSessionApi = {
 
 const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
 
-// Czas trzymania feedback overlay — pokrywa pełny audio sequence + ~300ms buffer.
-// Wartości w komentarzu zmierzone afinfo na public/audio/*.mp3 (Edge TTS PL Zofia).
+// Czas trzymania feedback overlay — pokrywa audio sequence + ~1s buffer "po-audio".
+// Wartości audio zmierzone afinfo na public/audio/*.mp3 (Edge TTS PL Zofia).
 // PILNUJ: każda zmiana w `audio-source/` może wymagać re-pomiaru (komenda:
 // `afinfo public/audio/<key>.mp3 | grep duration`). Audio-driven dismissal
 // (czekanie na koniec kolejki) byłoby porządniejsze, ale sztywny timer jest
 // prostszy i deterministyczny w testach.
-//   - correct:  sfx-ding (1.8s) + praise (~1.5s) + assoc "X jak Y" (~1.9s) ≈ 5.2s → 5500
-//   - wrong:    correction-prefix (~2.1s) + letter (~1.2s) ≈ 3.3s → 5000 (z marginesem)
-//   - dontKnow: dont-know (~1.7s) + correction-prefix (~2.1s) + letter (~1.2s) ≈ 5.0s → 6000
-//   - timeout:  identyczne audio jak dontKnow ≈ 5.0s → 6000 (było 7000 — nadbufor)
-//   - mastery:  sfx-fanfara (2.1s) + mastery-celebration (3.3s) ≈ 5.4s → 5800
+//
+// 7-latek potrzebuje ~1s na uświadomienie sobie pochwały/korekty PO tym
+// jak nagranie skończy mówić. Bez tego buforu ekran zmienia się w środku
+// "wybrzmiewania" — czujemy że za szybko leci.
+//   - correct:  sfx-ding (1.8s) + praise (~1.5s) + assoc "X jak Y" (~1.9s) ≈ 5.2s → 6500
+//   - wrong:    correction-prefix (~2.1s) + letter (~1.2s) ≈ 3.3s → 5500
+//   - dontKnow: dont-know (~1.7s) + correction-prefix (~2.1s) + letter (~1.2s) ≈ 5.0s → 7000
+//   - timeout:  identyczne audio jak dontKnow ≈ 5.0s → 7000
+//   - mastery:  sfx-fanfara (2.1s) + mastery-celebration (3.3s) ≈ 5.4s → 7000
 //               (streak audio dorzucany przez STREAK_AUDIO_DURATION_MS gdy próg)
 const FEEDBACK_DURATION_BASE_MS: Record<FeedbackVariant, number> = {
-  correct: 5500,
-  wrong: 5000,
-  dontKnow: 6000,
-  timeout: 6000,
-  mastery: 5800,
+  correct: 6500,
+  wrong: 5500,
+  dontKnow: 7000,
+  timeout: 7000,
+  mastery: 7000,
 }
 
 const TEMPO_MULTIPLIERS: Record<CelebrationTempo, number> = {
@@ -145,10 +149,12 @@ const COUNTDOWN_TICK_MS = 100
 // Cue "uwaga, mało czasu" leci ~1s; 3s zostawia dziecku ~2s realnej reakcji
 // po skończeniu cue. Wcześniej było 5s — krzyczeło za wcześnie (na 1/3 czasu).
 const COUNTDOWN_3S_WARNING_MS = 3000
-// Krótki "wdech" między feedback overlay a kolejnym pytaniem — daje dziecku
+// "Wdech" między feedback overlay a kolejnym pytaniem — daje dziecku
 // chwilę na reset uwagi. AudioBus.stop() na końcu wdechu czyści ogon
 // poprzedniego audio (np. niedokończony streak audio) przed nowym promptem.
-const POST_FEEDBACK_BREATH_MS = 500
+// Wcześniej 500ms — za szybkie przejście, dziecko nie nadążało reseet uwagi
+// po wybrzmiewaniu pochwały/korekty. 1200ms = wyraźna pauza ale nie nudna.
+const POST_FEEDBACK_BREATH_MS = 1200
 // Górny bound dla najdłuższego streak audio ("ognisty streak!" ~1.6-1.9s
 // w Edge TTS PL Zofia). Dorzucany do feedback duration tylko gdy próg streak
 // osiągnięty — inaczej overlay zniknie przed końcem audio.
@@ -790,6 +796,10 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
 
   const dontKnow = useCallback(() => {
     if (status !== 'playing') return
+    // Natychmiastowy cue na tap — spec "każdy klik mówi co zrobił".
+    // Bez tego dziecko czeka 200-400ms aż handleOutcome ustawi feedback
+    // i nie ma pewności czy "Nie wiem" zarejestrowane.
+    void cfgRef.current.audioBus.play('nav-tap')
     handleOutcome('dontKnow', undefined, undefined)
   }, [handleOutcome, status])
 
