@@ -51,6 +51,16 @@ pnpm audio:build               # kopiuje override mp3 → public/audio/, manifes
 pnpm dev                       # apka brzmi nowymi nagraniami
 ```
 
+**Nie uruchamiaj `pnpm audio:convert-overrides` w trakcie nagrywania** — równoległy odczyt pliku, którego recorder właśnie dopisuje, może dać ucięty MP3. Najpierw zapisz nagrania w recorderze, potem odpalaj konwersję.
+
+## Co commitować do repo
+
+`audio-source/manual-overrides/*.webm` jest w `.gitignore` (źródłowe trzymamy lokalnie). Po `pnpm audio:convert-overrides` powstają **MP3** obok WebM — te MP3 commitujemy do repo. `git status` pokaże je jako untracked po pierwszej konwersji.
+
+## Klucze SFX
+
+Klucze typu `sfx-correct-ding` / `sfx-mastery-fanfara` (z tekstem `_sfx_` w `audio-source/ui-strings.json`) są pomijane przez recorder — to efekty dźwiękowe CC0, nie nagrania głosowe. Pliki MP3 są już w `manual-overrides/`.
+
 ## Re-nagrywanie
 
 Klucz, który chcesz przenagrać:

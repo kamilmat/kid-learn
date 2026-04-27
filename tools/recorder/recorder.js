@@ -38,6 +38,9 @@ async function loadSources() {
     if (!res.ok) throw new Error(`Failed to load ${file}: ${res.status}`);
     const json = await res.json();
     for (const [key, text] of Object.entries(json)) {
+      // SFX keys (_sfx_ placeholder text) — to nie są nagrania głosowe,
+      // pliki istnieją jako CC0 mp3. Pomijamy w recorderze.
+      if (text === '_sfx_') continue;
       // words.json zawiera zarówno word-* jak assoc-* — rozdzielamy
       let g = group;
       if (group === 'Słowa-i-asocjacje') {
