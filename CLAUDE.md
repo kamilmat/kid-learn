@@ -4,11 +4,13 @@ Webowa platforma edukacyjna dla dzieci. Pierwszy moduł: **rozpoznawanie liter p
 
 ## Quick orientation
 
+- **Live (PWA):** https://kamilmat.github.io/kid-learn/ — instalowalne (Add to Home Screen na iPad Safari), działa offline po pierwszym otwarciu
+- **Repo:** https://github.com/kamilmat/kid-learn (public, GH Actions auto-deploy z push do main)
 - **Spec (źródło prawdy):** `docs/superpowers/specs/2026-04-26-iskierki-letters-module-design.md`
 - **Status / co dalej:** `docs/STATUS.md` — czytaj na początku sesji
-- **Stack:** React 19 + Vite + TS strict + Tailwind 4 + Zustand + Vitest
-- **Dev server:** `pnpm dev` (port 5173 lub kolejny wolny). Aktualnie chodzi w tle na 5178.
-- **Audio:** Edge TTS (Python pkg `edge-tts`), generowane do `public/audio/` przy `pnpm audio:build`
+- **Stack:** React 19 + Vite + TS strict + Tailwind 4 + Zustand + Vitest + vite-plugin-pwa
+- **Dev server:** `pnpm dev` (port 5173 lub kolejny wolny)
+- **Audio:** Edge TTS (Python pkg `edge-tts`), generowane do `public/audio/` przy `pnpm audio:build`. Czcionka pisana: **Kalam** (Google Fonts OFL)
 
 ## Struktura
 
@@ -61,11 +63,16 @@ public/audio/              # build artifact: 129 plików mp3 + .manifest.json
 
 ```bash
 pnpm dev              # dev server z HMR
-pnpm build            # production build
+pnpm build            # production build (lokalnie base='/'; CI ustawia VITE_BASE=/kid-learn/)
 pnpm tsc -b           # type check
-pnpm test --run       # testy
+pnpm test --run       # testy (384/384 zielone)
 pnpm audio:build      # generuj/aktualizuj mp3
 pnpm audio:check      # sprawdź czy wszystkie klucze mają plik
+
+# GitHub
+gh run list --repo kamilmat/kid-learn --limit 3      # status ostatnich deploy
+gh run watch                                          # śledź workflow w toku
+git push                                              # auto-deploy ~40s przez GH Actions
 ```
 
 ## Istotne wymagania od user'a (nie tracić)
