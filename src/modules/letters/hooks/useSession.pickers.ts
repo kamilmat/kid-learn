@@ -61,3 +61,41 @@ export function pickCorrectionPrefix(
   const idx = Math.floor(rng() * CORRECTION_PREFIX_KEYS.length)
   return CORRECTION_PREFIX_KEYS[idx] as CorrectionPrefixKey
 }
+
+import type { SessionEvent } from '@/modules/letters/types'
+import type { IskraIntensity } from '@/shared/ui/IskraMascot'
+
+export type StreakAudioKey = 'streak-3' | 'streak-5' | 'streak-7-plus'
+
+/** Mapuje streak count na intensywność mascotki Iskry. */
+export function streakIntensity(streak: number): IskraIntensity {
+  if (streak >= 7) return 'torch'
+  if (streak >= 5) return 'fire'
+  if (streak >= 3) return 'flame'
+  return 'spark'
+}
+
+/**
+ * Zwraca klucz audio dla TRESHOLD streak'a — null jeśli streak nie jest
+ * progiem (3, 5, 7+). Próg 7+ obejmuje wszystkie wartości ≥7 (każda kolejna
+ * correct po 7 leci `streak-7-plus`).
+ */
+export function streakAudioKey(streak: number): StreakAudioKey | null {
+  if (streak === 3) return 'streak-3'
+  if (streak === 5) return 'streak-5'
+  if (streak >= 7) return 'streak-7-plus'
+  return null
+}
+
+/**
+ * Perfect session = wszystkie pytania sesji odpowiedziane (sesja nie przerwana
+ * przez quit) i wszystkie outcome = 'correct'.
+ */
+export function detectPerfectSession(
+  events: readonly SessionEvent[],
+  sessionLength: number,
+): boolean {
+  const answers = events.filter((e) => e.type === 'answer')
+  if (answers.length !== sessionLength) return false
+  return answers.every((e) => e.type === 'answer' && e.outcome === 'correct')
+}
