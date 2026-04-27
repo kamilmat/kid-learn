@@ -114,7 +114,7 @@ describe('SettingsScreen', () => {
     expect(useSettings.getState().settings.celebrationTempo).toBe('short')
   })
 
-  it('toggles time limit and shows countdown bar control conditionally', () => {
+  it('toggles time limit per level and countdown bar is always visible with disabled state', () => {
     unlock(1_000)
     const { rerender } = render(
       <SettingsScreen
@@ -122,20 +122,24 @@ describe('SettingsScreen', () => {
         now={() => 1_000}
       />,
     )
-    // Domyślnie timeLimit=15 → countdown bar widoczny.
+    // Sekcja countdown bar zawsze widoczna.
     expect(screen.getByTestId('section-countdown-bar')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByTestId('time-limit-off'))
-    expect(useSettings.getState().settings.timeLimit).toBe('off')
+    // Ustaw timeLimit na 'off' dla poziomu iskierka (domyślnie już 'off' wg levelDefaults).
+    // Sprawdzamy radio dla ognik — domyślnie 15s, kliknij 'off'.
+    fireEvent.click(screen.getByTestId('time-limit-ognik-off'))
+    expect(useSettings.getState().settings.timeLimit).toMatchObject({ ognik: 'off' })
     rerender(
       <SettingsScreen
         onResetConfirmed={vi.fn()}
         now={() => 1_000}
       />,
     )
-    expect(
-      screen.queryByTestId('section-countdown-bar'),
-    ).not.toBeInTheDocument()
+    // Sekcja countdown bar nadal widoczna — nie znika.
+    expect(screen.getByTestId('section-countdown-bar')).toBeInTheDocument()
+    // Checkbox dla ognik jest disabled (timer wyłączony).
+    const ognikCheckbox = screen.getByTestId('show-countdown-ognik') as HTMLInputElement
+    expect(ognikCheckbox.disabled).toBe(true)
   })
 
   it('reset button triggers a SECOND fresh math gate', () => {

@@ -14,7 +14,7 @@ import { useState } from 'react'
 import { colors, radii } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
 import { useSettings } from '@/shared/settings/settingsStore'
-import { levelLetterPools, levelDefaults, getEffectiveShowCountdownBar } from '@/shared/settings/defaults'
+import { levelLetterPools, levelDefaults, getEffectiveShowCountdownBar, getEffectiveTimeLimit } from '@/shared/settings/defaults'
 import type {
   CaseMode,
   CelebrationTempo,
@@ -412,63 +412,92 @@ export function SettingsScreen({
         })}
       </section>
 
-      {/* Limit czasu */}
+      {/* Limit czasu — per poziom */}
       <section style={sectionStyle} data-testid="section-time-limit">
-        <div style={labelStyle}>Limit czasu na odpowiedź</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {TIME_LIMIT_OPTIONS.map((opt) => (
-            <label
-              key={String(opt)}
+        <div style={labelStyle}>Limit czasu na odpowiedź (per poziom)</div>
+        {LEVELS.map((level) => {
+          const value = getEffectiveTimeLimit(settings, level)
+          return (
+            <div
+              key={level}
               style={{
                 display: 'flex',
-                gap: 4,
-                padding: '6px 12px',
-                borderRadius: 8,
-                border: `1px solid ${
-                  settings.timeLimit === opt ? colors.accentBlue : '#d8d8de'
-                }`,
-                cursor: 'pointer',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 8,
+                flexWrap: 'wrap',
               }}
             >
-              <input
-                type="radio"
-                name="timeLimit"
-                value={String(opt)}
-                checked={settings.timeLimit === opt}
-                onChange={() => updateSetting('timeLimit', opt)}
-                data-testid={`time-limit-${opt}`}
-              />
-              <span>{opt === 'off' ? 'wyłączony' : `${opt}s`}</span>
-            </label>
-          ))}
-        </div>
+              <span>{LEVEL_LABELS[level]}</span>
+              <div
+                style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+                role="radiogroup"
+                aria-label={`Limit czasu dla poziomu ${LEVEL_LABELS[level]}`}
+              >
+                {TIME_LIMIT_OPTIONS.map((opt) => (
+                  <label
+                    key={String(opt)}
+                    style={{
+                      display: 'flex',
+                      gap: 4,
+                      padding: '6px 12px',
+                      borderRadius: 8,
+                      border: `1px solid ${
+                        value === opt ? colors.accentBlue : '#d8d8de'
+                      }`,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name={`time-limit-${level}`}
+                      value={String(opt)}
+                      checked={value === opt}
+                      onChange={() =>
+                        updateSetting('timeLimit', {
+                          ...settings.timeLimit,
+                          [level]: opt,
+                        })
+                      }
+                      data-testid={`time-limit-${level}-${opt}`}
+                    />
+                    <span>{opt === 'off' ? 'wyłączony' : `${opt}s`}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </section>
 
-      {/* Pasek odliczania (visible tylko gdy timeLimit ≠ off) */}
-      {settings.timeLimit !== 'off' && (
-        <section style={sectionStyle} data-testid="section-countdown-bar">
-          <div style={labelStyle}>Pokaż pasek czasu (per poziom)</div>
-          <div data-testid="show-countdown-per-level" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-            {(['iskierka', 'plomyk', 'ognik', 'pochodnia'] as const).map((lvl) => {
-              const effective = getEffectiveShowCountdownBar(settings, lvl)
-              return (
-                <label key={lvl} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input
-                    type="checkbox"
-                    checked={effective}
-                    onChange={(e) => {
-                      const next = { ...settings.showCountdownBar, [lvl]: e.target.checked }
-                      updateSetting('showCountdownBar', next)
-                    }}
-                    data-testid={`show-countdown-${lvl}`}
-                  />
-                  <span>{LEVEL_LABELS[lvl]}</span>
-                </label>
-              )
-            })}
-          </div>
-        </section>
-      )}
+      {/* Pasek odliczania — per poziom; checkbox disabled gdy poziom ma timer off */}
+      <section style={sectionStyle} data-testid="section-countdown-bar">
+        <div style={labelStyle}>Pokaż pasek czasu (per poziom)</div>
+        <div data-testid="show-countdown-per-level" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+          {(['iskierka', 'plomyk', 'ognik', 'pochodnia'] as const).map((lvl) => {
+            const timerOff = getEffectiveTimeLimit(settings, lvl) === 'off'
+            const effective = getEffectiveShowCountdownBar(settings, lvl)
+            return (
+              <label key={lvl} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: timerOff ? 0.5 : 1 }}>
+                <input
+                  type="checkbox"
+                  checked={effective}
+                  disabled={timerOff}
+                  onChange={(e) => {
+                    const next = { ...settings.showCountdownBar, [lvl]: e.target.checked }
+                    updateSetting('showCountdownBar', next)
+                  }}
+                  data-testid={`show-countdown-${lvl}`}
+                />
+                <span>
+                  {LEVEL_LABELS[lvl]}
+                  {timerOff && <span style={{ color: '#7a7a82', marginLeft: 6 }}>(timer wyłączony)</span>}
+                </span>
+              </label>
+            )
+          })}
+        </div>
+      </section>
 
       {/* Tempo celebracji */}
       <section style={sectionStyle} data-testid="section-celebration-tempo">
