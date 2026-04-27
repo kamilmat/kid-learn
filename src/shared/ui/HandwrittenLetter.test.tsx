@@ -31,8 +31,7 @@ describe('HandwrittenLetter', () => {
   it('uses the cursive font-family stack', () => {
     const { container } = render(<HandwrittenLetter letter="b" />)
     const text = getSvg(container).querySelector('text')
-    expect(text?.getAttribute('font-family')).toContain('Caveat')
-    expect(text?.getAttribute('font-family')).toContain('cursive')
+    expect(text?.getAttribute('font-family')).toBe('var(--font-handwritten)')
   })
 
   it('default size=120 yields expected line positions and font-size', () => {

@@ -198,7 +198,7 @@ export function FeedbackOverlay({
           fontSize: 160,
           fontWeight: 800,
           fontFamily: useHandwriting
-            ? '"Caveat", "Itim", cursive'
+            ? 'var(--font-handwritten)'
             : 'system-ui, sans-serif',
           fontStyle: useHandwriting ? 'italic' : 'normal',
           background: '#ffffff22',

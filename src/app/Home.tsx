@@ -76,7 +76,7 @@ export function Home() {
     >
       <h1
         style={{
-          fontFamily: "'Caveat', 'Itim', cursive",
+          fontFamily: "var(--font-handwritten)",
           fontSize: '3em',
           fontWeight: 700,
           margin: 0,
@@ -125,7 +125,7 @@ export function Home() {
           <span
             aria-hidden="true"
             style={{
-              fontFamily: "'Caveat', 'Itim', cursive",
+              fontFamily: "var(--font-handwritten)",
               fontSize: 88,
               lineHeight: 1,
               fontWeight: 700,

@@ -11,6 +11,7 @@
 }
 
 :root {
+  --font-handwritten: 'Caveat', 'Itim', cursive;
   color-scheme: light;
   background-color: #fef9f2;
   color: #2d2d33;

@@ -25,7 +25,7 @@ const DEFAULT_SIZE = 120
 const DEFAULT_LINE_COLOR = '#9ab8d4'
 const DEFAULT_ACCENT_COLOR = '#d04a4a'
 
-const FONT_FAMILY = "'Caveat', 'Itim', cursive"
+const FONT_FAMILY = "var(--font-handwritten)"
 
 type HandwrittenLetterProps = {
   letter: string

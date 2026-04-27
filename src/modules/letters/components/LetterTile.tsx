@@ -74,7 +74,7 @@ function HandwrittenLetter({ text, fontSize }: { text: string; fontSize: number 
   return (
     <span
       data-testid="handwritten-letter"
-      style={{ fontFamily: '"Caveat", "Itim", cursive', fontStyle: 'italic', fontSize, lineHeight: 1 }}
+      style={{ fontFamily: 'var(--font-handwritten)', fontStyle: 'italic', fontSize, lineHeight: 1 }}
     >
       {text}
     </span>
