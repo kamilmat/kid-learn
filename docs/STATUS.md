@@ -2,13 +2,33 @@
 
 ## Aktualny stan
 
-**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. v1.1 UX iteration ukończona (B + A wpięte, D odłożone do v2) — 2026-04-27.
+**Moduł 1 (rozpoznawanie liter)** — działa, przetestowane w przeglądarce. v1.1 UX iteration + v1.1.1 follow-up ukończone na branchu `feat/ux-iteration-v1.1` (29 commitów łącznie, NIEMERGED do main — czeka na decyzję user'a). 2026-04-27.
 
 ### Build / testy
 - `pnpm tsc -b` ✓
-- `pnpm build` ✓ (318 KB JS / 99 KB gzip)
+- `pnpm build` ✓ (319 KB JS / 99 KB gzip)
 - `pnpm audio:check` ✓ (137 plików mp3 zgodnie z manifestem)
-- `pnpm test --run` — 402 testy zielone; 1 failure (pre-existing bug — patrz sekcja "Known pre-existing bugs")
+- `pnpm test --run` — 407 testy zielone; 1 failure (pre-existing bug — patrz sekcja "Known pre-existing bugs")
+
+### Co zrobione w sesji (2026-04-27) — v1.1.1 follow-up
+
+Plan: `docs/superpowers/plans/2026-04-27-iskierki-letters-v1.1.1-followup.md`. 9 tasków, 9 commitów (38ce294..787dcf6). Wykonane subagent-driven (fresh implementer per task + 2-stage review).
+
+**Per-level `timeLimit` (KRYTYCZNY z UX review):**
+- `Settings.timeLimit` z `TimeLimit` (prymityw) → `Partial<Record<Level, TimeLimit>>` analogicznie do `showCountdownBar`. Helper `getEffectiveTimeLimit(settings, level): TimeLimit` w `defaults.ts`. Per-level defaults: `iskierka`/`płomyk`=`'off'` (młodsi: bez presji czasu), `ognik`/`pochodnia`=`15`.
+- Persist migracja v3→v4 w `settingsStore.ts`: drop legacy `timeLimit` (guard `typeof !== 'object'` — odporny na przyszłe rozszerzenia `TimeLimit` union). Stary `showCountdownBar` v2→v3 guard zachowany. 3 nowe testy migracji + zaktualizowane stale assertions.
+- Konsumenci: `SessionView` przekazuje `getEffectiveTimeLimit(settings, level)` do `useSession`. `exporter.ts` (raport rodzica) sekcja "Limit czasu" rozszerzona na per-level breakdown (4 wiersze, jeden per poziom z `LEVEL_LABEL`).
+- `SettingsScreen` UI: sekcja "Limit czasu" przepisana na 4 wiersze per-level radiogroup (5 opcji 'wyłączony'/10s/15s/20s/25s). Sekcja "Pasek czasu" zawsze widoczna; checkbox dla poziomów z `timeLimit==='off'` jest `disabled` + opacity 0.5 + label "(timer wyłączony)". `data-testid` schema `time-limit-${level}-${opt}`.
+- **Acceptance**: Iskierka session bez kliknięć przez 30s NIE przejdzie do następnego pytania (timer 'off' z defaultu poziomu, ignorując legacy `Settings.timeLimit=15`).
+
+**Headline timeout fix:**
+- `FeedbackOverlay.headlineFor('timeout')`: `'Następnym razem szybciej'` → `'Posłuchaj jeszcze raz'`. Spójność tonalna z dontKnow audio (scalone). Test FeedbackOverlay zaktualizowany.
+
+**LevelSelect IskraMascot (kosmetyka, ale spójność wizualna):**
+- `LEVEL_META.flame: string` → `intensity: IskraIntensity`. Render `<IskraMascot size={56} state="idle" intensity={meta.intensity} />` zamiast emoji `🔥`. Per poziom: spark / flame / fire / torch.
+
+**Cleanup:**
+- `SessionView.test.tsx` fixture `timeLimit: 'off'` (prymityw — działający przez przypadek bo runtime ignorował i fallback do levelDefaults) → per-level shape. Test files są excluded z tsc, więc TS nie wykrył.
 
 ### Co zrobione w sesji (2026-04-27) — v1.1 UX iteration
 
@@ -63,28 +83,23 @@ Strona testowa do odsłuchu: była w `public/audio-test.html` ale **została usu
 
 ## Najbliższe rzeczy do zrobienia (jeśli user wróci)
 
-### Decyzja przed innymi rzeczami: merge `feat/ux-iteration-v1.1` do main?
+### TOP: merge `feat/ux-iteration-v1.1` do main?
 
-Branch ma 20 commitów, build/testy przechodzą, ale UX review w przeglądarce wykrył 2 issues — patrz "v1.1.1 follow-up" niżej. Opcje:
-- **(a)** Merge teraz, follow-up issues w osobnym branchu v1.1.1
-- **(b)** Najpierw fix follow-up issues na tym samym branchu, potem merge
-- **(c)** Zapytać user'a co preferuje
+Branch ma 29 commitów, build/testy/audio zielone, wszystkie 3 v1.1.1 follow-up issues z UX review zaadresowane. Opcje:
+- **(a)** Squash merge (jeden commit "v1.1 + v1.1.1 — UX iteration") — czystsza historia, łatwiej rollback
+- **(b)** Merge commit zachowujący wszystkie 29 commitów — pełna granularność, łatwiejszy bisect
+- **(c)** Rebase + fast-forward — historia liniowa bez merge commita
 
-### v1.1.1 follow-up (z UX review w przeglądarce, 2026-04-27)
+### Smoke checklist do user'a (manual w przeglądarce)
 
-**Wykryte podczas testowania flow Iskierka → sesja w Chrome DevTools:**
+Przed merge warto przelecieć ręcznie 3 scenariusze (testy automatyczne nie pokrywają wszystkiego):
 
-1. **KRYTYCZNY: Timer 15s leci dla Iskierki MIMO schowanego paska.** Per-level `showCountdownBar=false` ukrywa pasek wizualny, ale timer odlicza dalej w tle. Dziecko nie widzi, że tyka odliczanie — nagle pojawia się kolejne pytanie (cichy timeout). Zaobserwowane w przeglądarce: progress dots skoczyły 1→4 bez kliknięcia, network pokazał `dont-know-X` audio (timeout audio scalony z dontKnow).
-   - **Fix:** Per-level `timeLimit` analogicznie do `showCountdownBar`. `Settings.timeLimit` rozszerzyć z `TimeLimit` na `Partial<Record<Level, TimeLimit>>` z helperem `getEffectiveTimeLimit(settings, level)`. Per-level defaults: `iskierka`/`płomyk`=`'off'` (młodsi: bez presji czasu), `ognik`/`pochodnia`=`15`. Migracja w `settingsStore` (drop legacy single value, podobnie jak showCountdownBar v2→v3).
-   - Plus UI w SettingsScreen — analogicznie do per-level showCountdownBar checkboxów.
-   - **Acceptance:** Iskierka session bez kliknięć przez 30s nie powinna przejść do następnego pytania (chyba że math gate timeout = `'off'`).
+1. **Wyczyść localStorage** (DevTools → Application → Storage → Clear site data) → odpal Iskierkę → przeczekaj 30s na pytaniu BEZ klikania → nic się nie zmienia (timer 'off' z per-level defaultu). Pre-fix: progress dots skakały 1→4 same.
+2. **Settings → Limit czasu** → 4 wiersze per-level z radiami 'wyłączony'/10s/15s/20s/25s. **Pasek czasu**: dla Iskierki/Płomyk checkbox wyszarzony "(timer wyłączony)", dla Ognik/Pochodnia aktywny.
+3. **Timeout flow** w Ognik/Pochodnia: przeczekaj timer → headline mówi "Posłuchaj jeszcze raz" (NIE "Następnym razem szybciej"), audio mówi `dont-know-X` + `correction-prefix-N` + `letter-X`.
+4. **LevelSelect**: zamiast gołych `🔥` widoczne są animowane mascotki Iskry o rosnącej intensywności (spark→flame→fire→torch).
 
-2. **Headline "Następnym razem szybciej" niespójny z audio scalonym z dontKnow.** Audio mówi ciepłe "nie szkodzi" / "spokojnie posłuchaj jeszcze raz", ale wizualny headline w `FeedbackOverlay` strofuje dziecko. Visual-audio mismatch.
-   - **Fix:** W `FeedbackOverlay.tsx::headlineFor('timeout')` zmienić `'Następnym razem szybciej'` na neutralne wspierające: `'Posłuchaj jeszcze raz'` lub `'Spokojnie, słuchamy'` (spójne tonalnie z dontKnow który ma `'Nie szkodzi!'`).
-   - Pomyśleć też czy timeout headline w ogóle ma sens skoro audio scalone z dontKnow — może użyć tego samego headlinu co dontKnow.
-   - **Acceptance:** Test `FeedbackOverlay.test.tsx::renders timeout variant headline` zaktualizować na nowy tekst.
-
-3. **(Niski priorytet) Level select używa gołych emoji 🔥 1-4 zamiast IskraMascot.** Wizualna niespójność z home (mascotka). Może na v1.2 lub przy okazji innych zmian level select.
+Migracja persist v3→v4 zadziała automatycznie — jeśli localStorage z v1.1 trzymał `timeLimit: 15` jako prymityw, merge() drop'uje go i bierze per-level defaults.
 
 ### Średnioterminowe (v2)
 1. **Audio iteracja** — user może chcieć dalej testować różne tekstu w letters.json. Jeśli tak — odtworzyć stronę testową `public/audio-test.html` i symlink `public/audio-source` → `audio-source` (była, usunęliśmy w cleanup).
