@@ -1,0 +1,17 @@
+node_modules
+dist
+dist-ssr
+.superpowers/
+.DS_Store
+coverage
+*.local
+.vite
+.env
+.env.*
+!.env.example
+
+# Piper TTS local models (large, downloaded on demand)
+.piper-models/
+
+# tsbuildinfo (regenerable)
+*.tsbuildinfo

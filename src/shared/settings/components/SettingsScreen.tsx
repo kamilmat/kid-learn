@@ -1,0 +1,558 @@
+// SettingsScreen — ekran ustawień (sekcja 13.2 spec).
+//
+// Nie renderuje sam siebie bez przejścia bramy: jeśli `!isUnlocked(now)` —
+// pokazuje <MathGate>. Po unlocku — lista ustawień, zmiany od razu zapisywane
+// przez `useSettings().updateSetting(...)`.
+//
+// Reset postępów wymaga **drugiej, świeżej** bramy + potwierdzenia. Reset jest
+// eksponowany jako prop `onResetConfirmed` — parent realizuje sam reset
+// (letters store + settings store).
+//
+// To NIE jest kid-friendly screen — może mieć normalny rozmiar inputów.
+
+import { useState } from 'react'
+import { colors, radii } from '@/app/theme'
+import { Button } from '@/shared/ui/Button'
+import { useSettings } from '@/shared/settings/settingsStore'
+import { levelLetterPools, levelDefaults } from '@/shared/settings/defaults'
+import type {
+  CaseMode,
+  CelebrationTempo,
+  DefaultLevelSetting,
+  Level,
+  SessionLength,
+  StyleMode,
+  TilesPerQuestion,
+  TimeLimit,
+} from '@/shared/settings/types'
+import { ActiveLettersEditor } from './ActiveLettersEditor'
+import { MathGate } from './MathGate'
+
+export type SettingsScreenProps = {
+  /**
+   * Wywoływane po przejściu **drugiej**, świeżej bramy + potwierdzeniu.
+   * Parent powinien tu zrealizować reset stanu liter (i ewentualnie settingsów).
+   */
+  onResetConfirmed: () => void
+  /** Opcjonalne źródło czasu — pomocne w testach. */
+  now?: () => number
+}
+
+const LEVELS: Level[] = ['iskierka', 'plomyk', 'ognik', 'pochodnia']
+
+const LEVEL_LABELS: Record<Level, string> = {
+  iskierka: 'Iskierka',
+  plomyk: 'Płomyk',
+  ognik: 'Ognik',
+  pochodnia: 'Pochodnia',
+}
+
+const CASE_LABELS: Record<CaseMode, string> = {
+  'tylko-duze': 'tylko duże',
+  'tylko-male': 'tylko małe',
+  para: 'para Aa',
+  mieszane: 'mieszane',
+}
+const CASE_OPTIONS: CaseMode[] = ['tylko-duze', 'tylko-male', 'para', 'mieszane']
+
+const STYLE_LABELS: Record<StyleMode, string> = {
+  'tylko-drukowane': 'tylko drukowane',
+  'tylko-pisane': 'tylko pisane',
+  'mieszane-per-pytanie': 'mieszane (per pytanie)',
+  'oba-na-kafelku': 'oba na kafelku',
+}
+const STYLE_OPTIONS: StyleMode[] = [
+  'tylko-drukowane',
+  'tylko-pisane',
+  'mieszane-per-pytanie',
+  'oba-na-kafelku',
+]
+
+const SESSION_LENGTH_OPTIONS: SessionLength[] = [5, 10, 15]
+const TIME_LIMIT_OPTIONS: TimeLimit[] = ['off', 10, 15, 20]
+const TILES_PER_QUESTION_OPTIONS: TilesPerQuestion[] = [3, 4, 5, 6]
+const CELEBRATION_OPTIONS: CelebrationTempo[] = ['short', 'medium', 'long']
+const CELEBRATION_LABELS: Record<CelebrationTempo, string> = {
+  short: 'krótka',
+  medium: 'średnia',
+  long: 'długa',
+}
+const DEFAULT_LEVEL_OPTIONS: DefaultLevelSetting[] = [
+  'iskierka',
+  'plomyk',
+  'ognik',
+  'pochodnia',
+  'last-used',
+]
+const DEFAULT_LEVEL_LABELS: Record<DefaultLevelSetting, string> = {
+  iskierka: 'Iskierka',
+  plomyk: 'Płomyk',
+  ognik: 'Ognik',
+  pochodnia: 'Pochodnia',
+  'last-used': 'ostatnio użyty',
+}
+
+const sectionStyle = {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  gap: 8,
+  padding: 16,
+  background: '#ffffff',
+  border: '1px solid #e2e2e8',
+  borderRadius: radii.kid,
+}
+
+const labelStyle = {
+  fontSize: 16,
+  fontWeight: 600,
+}
+
+const selectStyle = {
+  fontSize: 16,
+  padding: 8,
+  borderRadius: 8,
+  border: '1px solid #d8d8de',
+  background: '#ffffff',
+}
+
+export function SettingsScreen({
+  onResetConfirmed,
+  now = () => Date.now(),
+}: SettingsScreenProps) {
+  const isUnlocked = useSettings((s) => s.isUnlocked)
+  const lockGate = useSettings((s) => s.lockGate)
+  const settings = useSettings((s) => s.settings)
+  const updateSetting = useSettings((s) => s.updateSetting)
+
+  const [, setUnlockTick] = useState(0)
+  const [editingLevel, setEditingLevel] = useState<Level | null>(null)
+
+  // Reset flow — wymaga drugiej, świeżej bramy + potwierdzenia.
+  const [resetStage, setResetStage] = useState<
+    'idle' | 'gate' | 'confirm'
+  >('idle')
+
+  // Reset gate ma priorytet nad zwykłą bramą: kiedy user klika Reset,
+  // lockGate() wymusza świeżą bramę. Bez tego priorytetu wpadlibyśmy w
+  // guard `!isUnlocked` i pokazali bramę "aby otworzyć ustawienia",
+  // a po jej przejściu rendowali bramę resetową — czyli 2× zamiast 1× po
+  // już otwartym ustawieniu. Reset gate widoczny od razu po kliknięciu.
+  if (resetStage === 'gate') {
+    return (
+      <MathGate
+        reason="aby zresetować postępy"
+        onSuccess={() => setResetStage('confirm')}
+        onCancel={() => setResetStage('idle')}
+        now={now}
+      />
+    )
+  }
+
+  if (!isUnlocked(now())) {
+    return (
+      <MathGate
+        reason="aby otworzyć ustawienia"
+        onSuccess={() => {
+          // Trigger re-render — selector na isUnlocked nie zmienia się sam,
+          // bo `now()` jest zewnętrzne. Inkrementujemy tick, żeby wymusić
+          // re-render, albo polegamy na zmianie parentGateUnlockedUntil.
+          setUnlockTick((t) => t + 1)
+        }}
+        onCancel={() => {
+          // brak unlock-u — parent powinien zamknąć screen; my po prostu
+          // pozostajemy. Konsument ma zarządzać nawigacją.
+          setUnlockTick((t) => t + 1)
+        }}
+        now={now}
+      />
+    )
+  }
+
+  if (editingLevel) {
+    return (
+      <ActiveLettersEditor
+        level={editingLevel}
+        onSave={() => setEditingLevel(null)}
+        onCancel={() => setEditingLevel(null)}
+      />
+    )
+  }
+
+  const handleResetClick = () => {
+    // Wymagamy świeżej bramy — locknij wcześniejszą sesję żeby nie reusować
+    // już rozgrzanego unlocku z otwierania ustawień.
+    lockGate()
+    setUnlockTick((t) => t + 1)
+    setResetStage('gate')
+  }
+
+  return (
+    <div
+      data-testid="settings-screen"
+      style={{
+        padding: 16,
+        maxWidth: 720,
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+      }}
+    >
+      <h1 style={{ fontSize: 24, margin: 0 }}>Ustawienia</h1>
+
+      {/* Aktywne litery per poziom */}
+      <section style={sectionStyle} data-testid="section-active-letters">
+        <div style={labelStyle}>Aktywne litery</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {LEVELS.map((level) => {
+            const override = settings.activeLettersOverride[level]
+            const count = override
+              ? override.length
+              : levelLetterPools[level].length
+            const isOverridden = override !== undefined
+            return (
+              <button
+                key={level}
+                type="button"
+                data-testid={`active-letters-tile-${level}`}
+                onClick={() => setEditingLevel(level)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: 12,
+                  borderRadius: 8,
+                  border: '1px solid #d8d8de',
+                  background: '#fafaff',
+                  cursor: 'pointer',
+                  fontSize: 16,
+                }}
+              >
+                <span>{LEVEL_LABELS[level]}</span>
+                <span style={{ color: '#6a6a72' }}>
+                  {count} {isOverridden ? '(custom)' : '(domyślne)'}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* Wielkość liter — per poziom */}
+      <section style={sectionStyle} data-testid="section-case-mode">
+        <div style={labelStyle}>Wielkość liter (per poziom)</div>
+        {LEVELS.map((level) => {
+          const value =
+            settings.caseMode[level] ?? levelDefaults[level].caseMode
+          return (
+            <label
+              key={level}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <span>{LEVEL_LABELS[level]}</span>
+              <select
+                data-testid={`case-mode-${level}`}
+                value={value}
+                onChange={(e) => {
+                  updateSetting('caseMode', {
+                    ...settings.caseMode,
+                    [level]: e.target.value as CaseMode,
+                  })
+                }}
+                style={selectStyle}
+              >
+                {CASE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {CASE_LABELS[opt]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )
+        })}
+      </section>
+
+      {/* Styl pisma — per poziom */}
+      <section style={sectionStyle} data-testid="section-style-mode">
+        <div style={labelStyle}>Styl pisma (per poziom)</div>
+        {LEVELS.map((level) => {
+          const value =
+            settings.styleMode[level] ?? levelDefaults[level].styleMode
+          return (
+            <label
+              key={level}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <span>{LEVEL_LABELS[level]}</span>
+              <select
+                data-testid={`style-mode-${level}`}
+                value={value}
+                onChange={(e) => {
+                  updateSetting('styleMode', {
+                    ...settings.styleMode,
+                    [level]: e.target.value as StyleMode,
+                  })
+                }}
+                style={selectStyle}
+              >
+                {STYLE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {STYLE_LABELS[opt]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )
+        })}
+      </section>
+
+      {/* Długość sesji */}
+      <section style={sectionStyle} data-testid="section-session-length">
+        <div style={labelStyle}>Długość sesji</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {SESSION_LENGTH_OPTIONS.map((opt) => (
+            <label
+              key={opt}
+              style={{
+                display: 'flex',
+                gap: 4,
+                padding: '6px 12px',
+                borderRadius: 8,
+                border: `1px solid ${
+                  settings.sessionLength === opt
+                    ? colors.accentBlue
+                    : '#d8d8de'
+                }`,
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="radio"
+                name="sessionLength"
+                value={opt}
+                checked={settings.sessionLength === opt}
+                onChange={() => updateSetting('sessionLength', opt)}
+                data-testid={`session-length-${opt}`}
+              />
+              <span>{opt}</span>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      {/* Liczba kafelków na pytanie — per poziom */}
+      <section
+        style={sectionStyle}
+        data-testid="section-tiles-per-question"
+      >
+        <div style={labelStyle}>Liczba kafelków na pytanie (per poziom)</div>
+        {LEVELS.map((level) => {
+          const value =
+            settings.tilesPerQuestion[level] ??
+            levelDefaults[level].tilesPerQuestion
+          return (
+            <div
+              key={level}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 8,
+                flexWrap: 'wrap',
+              }}
+            >
+              <span>{LEVEL_LABELS[level]}</span>
+              <div
+                style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+                role="radiogroup"
+                aria-label={`Liczba kafelków na pytanie dla poziomu ${LEVEL_LABELS[level]}`}
+              >
+                {TILES_PER_QUESTION_OPTIONS.map((opt) => (
+                  <label
+                    key={opt}
+                    style={{
+                      display: 'flex',
+                      gap: 4,
+                      padding: '6px 12px',
+                      borderRadius: 8,
+                      border: `1px solid ${
+                        value === opt ? colors.accentBlue : '#d8d8de'
+                      }`,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name={`tilesPerQuestion-${level}`}
+                      value={opt}
+                      checked={value === opt}
+                      onChange={() =>
+                        updateSetting('tilesPerQuestion', {
+                          ...settings.tilesPerQuestion,
+                          [level]: opt,
+                        })
+                      }
+                      data-testid={`tiles-per-question-${level}-${opt}`}
+                    />
+                    <span>{opt}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </section>
+
+      {/* Limit czasu */}
+      <section style={sectionStyle} data-testid="section-time-limit">
+        <div style={labelStyle}>Limit czasu na odpowiedź</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {TIME_LIMIT_OPTIONS.map((opt) => (
+            <label
+              key={String(opt)}
+              style={{
+                display: 'flex',
+                gap: 4,
+                padding: '6px 12px',
+                borderRadius: 8,
+                border: `1px solid ${
+                  settings.timeLimit === opt ? colors.accentBlue : '#d8d8de'
+                }`,
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="radio"
+                name="timeLimit"
+                value={String(opt)}
+                checked={settings.timeLimit === opt}
+                onChange={() => updateSetting('timeLimit', opt)}
+                data-testid={`time-limit-${opt}`}
+              />
+              <span>{opt === 'off' ? 'wyłączony' : `${opt}s`}</span>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      {/* Pasek odliczania (visible tylko gdy timeLimit ≠ off) */}
+      {settings.timeLimit !== 'off' && (
+        <section style={sectionStyle} data-testid="section-countdown-bar">
+          <label
+            style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}
+          >
+            <span style={labelStyle}>Pasek odliczania</span>
+            <input
+              type="checkbox"
+              checked={settings.showCountdownBar}
+              data-testid="countdown-bar-toggle"
+              onChange={(e) =>
+                updateSetting('showCountdownBar', e.target.checked)
+              }
+            />
+          </label>
+        </section>
+      )}
+
+      {/* Tempo celebracji */}
+      <section style={sectionStyle} data-testid="section-celebration-tempo">
+        <div style={labelStyle}>Tempo celebracji</div>
+        <select
+          data-testid="celebration-tempo"
+          value={settings.celebrationTempo}
+          onChange={(e) =>
+            updateSetting('celebrationTempo', e.target.value as CelebrationTempo)
+          }
+          style={selectStyle}
+        >
+          {CELEBRATION_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {CELEBRATION_LABELS[opt]}
+            </option>
+          ))}
+        </select>
+      </section>
+
+      {/* Domyślny poziom */}
+      <section style={sectionStyle} data-testid="section-default-level">
+        <div style={labelStyle}>Domyślny poziom</div>
+        <select
+          data-testid="default-level"
+          value={settings.defaultLevel}
+          onChange={(e) =>
+            updateSetting(
+              'defaultLevel',
+              e.target.value as DefaultLevelSetting,
+            )
+          }
+          style={selectStyle}
+        >
+          {DEFAULT_LEVEL_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {DEFAULT_LEVEL_LABELS[opt]}
+            </option>
+          ))}
+        </select>
+      </section>
+
+      {/* Reset postępów */}
+      <section style={sectionStyle} data-testid="section-reset">
+        <div style={labelStyle}>Reset postępów</div>
+        {resetStage === 'confirm' ? (
+          <div
+            data-testid="reset-confirm"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              padding: 12,
+              border: `2px solid ${colors.accentOrange}`,
+              borderRadius: 8,
+              background: '#fff4ea',
+            }}
+          >
+            <div>Na pewno wszystko skasować?</div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <Button
+                variant="secondary"
+                onClick={() => setResetStage('idle')}
+                data-testid="reset-cancel"
+              >
+                Anuluj
+              </Button>
+              <Button
+                variant="primary"
+                data-testid="reset-confirm-button"
+                style={{ background: colors.accentOrange, borderColor: colors.accentOrange }}
+                onClick={() => {
+                  onResetConfirmed()
+                  setResetStage('idle')
+                }}
+              >
+                Tak, skasuj
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            variant="primary"
+            onClick={handleResetClick}
+            data-testid="reset-button"
+            style={{ background: colors.accentOrange, borderColor: colors.accentOrange }}
+          >
+            Resetuj postępy
+          </Button>
+        )}
+      </section>
+    </div>
+  )
+}
