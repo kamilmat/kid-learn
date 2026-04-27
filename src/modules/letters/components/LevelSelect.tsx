@@ -12,6 +12,7 @@ import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import { levelLetterPools } from '@/shared/settings/defaults'
 import type { Level } from '@/shared/settings/types'
+import { IskraMascot, type IskraIntensity } from '@/shared/ui/IskraMascot'
 import { POLISH_ALPHABET, toUpper } from '@/modules/letters/data/alphabet'
 import {
   selectMasteredLetters,
@@ -28,18 +29,18 @@ export type LevelSelectProps = {
 type LevelMeta = {
   level: Level
   label: string
-  flame: string
+  intensity: IskraIntensity
   description: string
 }
 
 const LEVEL_META: LevelMeta[] = [
-  { level: 'iskierka', label: 'Iskierka', flame: '🔥', description: 'najłatwiejszy — 6 literek' },
-  { level: 'plomyk', label: 'Płomyk', flame: '🔥🔥', description: 'łatwy — 14 literek' },
-  { level: 'ognik', label: 'Ognik', flame: '🔥🔥🔥', description: 'średni — 24 literki' },
+  { level: 'iskierka', label: 'Iskierka', intensity: 'spark', description: 'najłatwiejszy — 6 literek' },
+  { level: 'plomyk', label: 'Płomyk', intensity: 'flame', description: 'łatwy — 14 literek' },
+  { level: 'ognik', label: 'Ognik', intensity: 'fire', description: 'średni — 24 literki' },
   {
     level: 'pochodnia',
     label: 'Pochodnia',
-    flame: '🔥🔥🔥🔥',
+    intensity: 'torch',
     description: 'pełen alfabet — 32 literki',
   },
 ]
@@ -191,8 +192,8 @@ export function LevelSelect({
               style={tileStyle}
               onClick={() => handleTileClick(meta.level)}
             >
-              <span style={{ fontSize: 28, lineHeight: 1 }} aria-hidden="true">
-                {meta.flame}
+              <span style={{ display: 'flex', justifyContent: 'center' }} aria-hidden="true">
+                <IskraMascot size={56} state="idle" intensity={meta.intensity} />
               </span>
               <span style={{ fontSize: 20 }}>{meta.label}</span>
               <span style={{ fontSize: 13, color: '#7a7a82' }}>
