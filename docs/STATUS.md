@@ -3,7 +3,33 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
-## Aktualny stan (2026-04-28 — fix audio case-sensitivity na GH Pages)
+## Aktualny stan (2026-04-28 — kolory sylab + drag fix + audio case-sensitivity)
+
+### QA pass module 2 (2026-04-28, post deploy)
+
+**Manualne chrome-devtools-mcp** — Home, ReadingLevelSelect, Iskierka (poprawna odpowiedź → "Brawo!"), Płomyk (drag programowy działa, slot przyjmuje correct syl), Ognik (kafelki kolorowane: SZA-FA, PA-RA-SOL, CHŁO-PIEC, LI-ZAK), Pochodnia (KSIĘ-?-ŻYC z gap, kolory pozycji), Album (5/67 unlocked, MAMA i MASZYNA pokazują kolorowe sylaby), Settings (po math gate 9+2-9=2), Raport rodzica (sylaby 0/23, słowa 5/67, heatmapa). Console: 0 errors, 1 warn (meta tag deprecation — fixed).
+
+**Drag-drop test:** programowy drag z chrome devtools nie symuluje pełnych pointermove (over=null). Architektura poprawna (DIV+touch-action:none), wymaga real iPad test.
+
+### Feature: kolorowanie sylab (commits `e692f3d`, `91d2244`)
+
+Sylaby kolorowane wg pozycji (paleta polskich elementarzy: niebieski → czerwony → zielony → fioletowy):
+- **Ognik** (WordTile): MA-SZY-NA, TE-LE-FON, SA-MO-CHÓD każda sylaba w innym kolorze
+- **Pochodnia** (SyllableFillExercise): widoczne sylaby kolorowane wg pozycji, gap szary (nie zdradzaj)
+- **Płomyk** (DropSlot): filled slot pokazuje kolor pozycji po poprawnym ułożeniu
+- **Album** (AlbumCard): label słowa pod emoji koloruje sylaby
+- **SessionEnd** (Nowe słowa pille): koloruje sylaby
+- Shared `SyllableText` component, util `getSyllableColor(index)`
+
+### Drag-drop fix: SyllableTile na DIV (commit `91d2244`)
+
+**Problem:** native `<button>` w `DraggableSyllable` capturował pointer events przed @dnd-kit's PointerSensor — drag nie startował na iPad/Pencil.
+
+**Fix:**
+- `DraggableSyllable` renderuje plain `<div>` zamiast wrappować `<SyllableTile>` button
+- `touch-action: none` (krytyczne dla iPad — bez tego touch scroll wygrywa z drag)
+- `cursor: grab/grabbing` wg `isDragging`, `zIndex` podczas drag
+- `SyllableTile` (button + useTapHandler) zostaje dla SyllableFill / SyllableMatch (tap-only)
 
 ### Critical fix: lowercase audio keys w module 2 (commit `5e04130`)
 
