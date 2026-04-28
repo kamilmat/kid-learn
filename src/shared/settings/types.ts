@@ -34,6 +34,10 @@ export type Settings = {
   voice: Voice
   // override per poziom; brak klucza = używaj domyślnej liczby kafelków poziomu
   tilesPerQuestion: Partial<Record<Level, TilesPerQuestion>>
+  // Ustawienia modułu czytania — opcjonalne (Phase 11 doda pełną migrację + UI)
+  reading?: {
+    wildCelebrationFreq?: number
+  }
 }
 
 // Math gate / parent gate state — sekcja 13.1.
