@@ -11,10 +11,12 @@ export function exerciseTypeForFact(fact: Fact, level: Level): ExerciseType {
   }
   switch (fact.conceptId) {
     case 'iskierka-counting-5':
-    case 'iskierka-counting-10':
     case 'iskierka-subitizing-6':
-      // Counting + subitizing — używamy subitize-flash dla CPA (rozpoznawanie ilości)
+      // Subitizing 1-6: flash dice patterns (perceptual subitizing)
       return 'subitize-flash'
+    case 'iskierka-counting-10':
+      // Liczenie 7-10: ten frame statyczny (conceptual subitizing)
+      return 'match-digit-dots'
     case 'iskierka-rhythm':
       return 'number-rhythm'
     case 'iskierka-adding-concrete':

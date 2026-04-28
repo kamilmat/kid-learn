@@ -158,6 +158,12 @@ export const useSettings = create<SettingsStore>()(
             timeLimit: {},
           }
         }
+        // v5: uzupełnij brakujące pola modułu 3 (numbers).
+        const persistedNumbers = sanitizedSettings.numbers as Record<string, unknown> | undefined
+        sanitizedSettings.numbers = {
+          ...defaultSettings.numbers,
+          ...(persistedNumbers ?? {}),
+        }
         return {
           ...current,
           ...p,

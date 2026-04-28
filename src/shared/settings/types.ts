@@ -20,6 +20,21 @@ export type Voice = 'zofia' // tylko Zofia w MVP — sekcja 13.2
 export type TilesPerQuestion = 3 | 4 | 5 | 6 | 8 | 10
 export type HumorMode = 'on' | 'off'
 export type WordAnimations = 'on' | 'off'
+export type SkipCountStep = 2 | 5 | 10 | 'mixed'
+
+// Ustawienia modułu 3 (matematyka) — sekcja 12 spec
+export type NumbersSettings = {
+  // Iskra "thinking aloud" — competent other (Wygotski). Default true.
+  iskraThinkingAloud: boolean
+  // Liczba pytań w sesji (microlearning < 10 min). Default 8.
+  questionCount: 6 | 8 | 10
+  // Drzewko Mistrzostwa — głosowe celebracje przy mastery. Default true.
+  treeCelebrationsOn: boolean
+  // Pochodnia: po jakim kroku skip count (2/5/10) lub mieszane. Default 'mixed'.
+  skipCountStep: SkipCountStep
+  // Worked example intros per koncept (Renkl/Sweller). Default true.
+  conceptIntros: boolean
+}
 
 export type Settings = {
   // override per poziom; brak klucza = używaj domyślnej puli poziomu
@@ -45,6 +60,8 @@ export type Settings = {
     questionsPerSession: Partial<Record<Level, number>>  // default 8 dla wszystkich poziomów
     timeLimit: Partial<Record<Level, TimeLimit>>         // default 'off' dla czytania
   }
+  // Ustawienia modułu matematyki (moduł 3)
+  numbers: NumbersSettings
 }
 
 // Math gate / parent gate state — sekcja 13.1.

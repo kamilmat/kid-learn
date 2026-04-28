@@ -101,11 +101,12 @@ export function useNumbersSession({
     if (!fact) return
 
     const exerciseType = exerciseTypeForFact(fact, level)
+    const op: '+' | '-' = fact.id.startsWith('sub-') ? '-' : '+'
     setCurrentQuestion({
       factId,
       conceptId: fact.conceptId,
       exerciseType,
-      payload: { args: fact.args },
+      payload: { args: fact.args, op },
     })
     questionStartedAtRef.current = now()
   }, [facts, levelFacts, level, now, rng])

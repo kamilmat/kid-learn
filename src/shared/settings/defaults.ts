@@ -4,12 +4,22 @@ import type {
   CaseMode,
   HumorMode,
   Level,
+  NumbersSettings,
   Settings,
   StyleMode,
   TilesPerQuestion,
   TimeLimit,
   WordAnimations,
 } from './types'
+
+// Sekcja 12 spec: defaulty modułu 3 (matematyka)
+export const NUMBERS_DEFAULTS: NumbersSettings = {
+  iskraThinkingAloud: true,
+  questionCount: 8,
+  treeCelebrationsOn: true,
+  skipCountStep: 'mixed',
+  conceptIntros: true,
+}
 
 // Lista wszystkich poziomów w kolejności rosnącej trudności. Single source of truth
 // dla iteracji per-level (settings UI, persistence, raporty, testy).
@@ -118,6 +128,7 @@ export const defaultSettings: Settings = {
     questionsPerSession: {},
     timeLimit: {},
   },
+  numbers: NUMBERS_DEFAULTS,
 }
 
 /**
