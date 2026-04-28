@@ -3,11 +3,77 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
-## Aktualny stan (2026-04-28 — sesja UX polish)
+## Aktualny stan (2026-04-28 — moduł 3 cyferki ukończony)
 
-### 🎯 Następna sesja: **moduł 3 — cyferki** (dodawanie / odejmowanie / mnożenie)
+### 🎯 Moduł 3 (Matematyka) — **wszystkie 11 faz wdrożone** ✅
 
-Decyzja user'a 2026-04-28. Start od brainstormingu (poziomy, typy ćwiczeń, scope), spec do `docs/superpowers/specs/`, potem implementacja w `src/modules/numbers/` (lub `math/`) reużywająca `shared/`. Memory: `project_next_session_module3_math.md`.
+3 passy researchu + spec + plan + implementacja w jednej sesji. Live po push:
+- 4 poziomy (Iskierka/Płomyk/Ognik/Pochodnia) × 4 typy ćwiczeń = **15 unikalnych komponentów** (FactFamilyTriangle reuse Płomyk+Ognik)
+- Polska podstawa programowa MEiN: zerówka 1-10, kl.1 +/− do 20 z przekraczaniem progu, propedeutyka mnożenia (skip count, equal groups, arrays)
+- **Bez wkuwania tabliczki, bez timera** (research: math anxiety u 1/3 dzieci, Boaler Stanford 2013)
+- 3 reprezentacje wizualne CPA: TenFrame (Singapore Math), DotPattern dice 1-6, ConcreteIcons (10 zestawów emoji), DigitTile drag/tap
+- **Drzewko Mistrzostwa** (20 konceptów) zamiast albumu (Lepper overjustification effect)
+- 121 nowych mp3 (TTS Zofia + Marek), 340 plików total
+- ConceptIntro: worked examples per koncept (Renkl/Sweller fading)
+- Hypercorrection feedback: krótka korekta + correct-show-N po 900ms (Butterfield/Metcalfe)
+- Pochodnia: 18% interleaving sub- maintenance (Bjork & Bjork 1994)
+- 7 nowych testów (numbersStore 6, facts 8, useNumbersSession 5, TenFrame 4) — total 551/551 ✓
+
+**Spec**: `docs/superpowers/specs/2026-04-28-iskierki-math-module-design.md` (commit `ab11a48`)
+**Plan**: `docs/superpowers/plans/2026-04-28-iskierki-math-module.md` (commit `8af4084`)
+
+**Sources** w speckach:
+- Polska: Gruszczyk-Kolczyńska "Dziecięca matematyka", Klus-Stańska, Filipiak (Wygotski)
+- INT: Singapore MOE, Common Core, NCETM Mastering Number, Eureka Math, White Rose Y1
+- Research: Bruner CPA 1966, Hannula-Sormunen 2015 (subitizing predictor), Roediger/Karpicke retrieval, Rohrer 2019 interleaving, Renkl/Sweller worked examples, Kirschner/Sweller/Clark 2006 (direct > discovery), Boaler "Fluency Without Fear", Dweck growth mindset, Cowan 2017 working memory, Lepper 1973 overjustification, Butterfield/Metcalfe hypercorrection, Mayer multimedia, Jansen 2024 (drag > tap), APA 2025 finger counting
+
+### Moduł 3 — pliki
+
+```
+src/modules/numbers/
+├── types.ts (Question, AnswerOutcome, ConceptId×20, ExerciseType×15)
+├── store/numbersStore.ts (Zustand persist iskierki-numbers-v1)
+├── data/concepts.ts (20 ConceptDef + mastery thresholds)
+├── data/facts.ts (generator faktów per koncept)
+├── data/concreteSets.ts (10 emoji ikon)
+├── hooks/useNumbersSession.ts (orchestrator + interleaving 18%)
+├── hooks/exerciseRouter.ts (fact → ExerciseType switch)
+├── components/representations/ (TenFrame, DotPattern, ConcreteIcons, DigitTile, NumberBondShape)
+├── components/exercises/ (15 unikatów ćwiczeń)
+├── components/intros/ConceptIntro.tsx (worked examples)
+├── components/SessionView.tsx (orchestrator + StatusBar + FeedbackOverlay)
+├── components/SessionEnd.tsx, PauseOverlay.tsx, MasteryTree.tsx
+└── index.tsx (routing /numbers/* — index, session/:level, tree)
+```
+
+### Settings rozszerzone
+
+`src/shared/settings/types.ts` + `defaults.ts` + `settingsStore.ts` (merge v4→v5):
+- `numbers.iskraThinkingAloud: boolean` (default true)
+- `numbers.questionCount: 6 | 8 | 10` (default 8 — microlearning < 10 min)
+- `numbers.treeCelebrationsOn: boolean` (default true)
+- `numbers.skipCountStep: 2 | 5 | 10 | 'mixed'` (default 'mixed')
+- `numbers.conceptIntros: boolean` (default true)
+
+### QA pass (2026-04-28, post-implementacja)
+
+**Manualne chrome-devtools-mcp**: Home (3 kafelki), `/numbers` LevelSelect (4 poziomy + drzewko), Iskierka (ConcreteAdd: "1 gwiazdka + 1 gwiazdka = ?" + drag DigitTiles 9/2/5/8), Płomyk (ConcreteAddSubtract z `−` `=` `?` + drag), Drzewko (0/20, 🌱 sadzonka, wszystkie 20 konceptów z labels). Console: 2 promise rejections (audio bez user interaction — typowe iOS Safari, nie bug).
+
+**Bug naprawiony**: useNumbersSession race condition — pierwszy start() rzucał `pickNextItem: no states for active pool` bo useEffect-init nie zdążył przed pickAndSetQuestion. Fix: inline ensureFactInitialized w pickAndSetQuestion + `useNumbers.getState().facts` zamiast subscribed closure (commit `1ddae4f`).
+
+### TODO przed v3 (poza scope tej sesji)
+
+- **Raport rodzica** rozszerzony o sekcję matematyki (per koncept mastery, heatmapa faktów). Drzewko już dostępne przez `/numbers/tree` — widoczne dla dziecka.
+- **SettingsScreen UI** dla numbers.* (typ jest, defaults, merge — brakuje toggles/selects w komponencie). Można edytować przez DevTools localStorage.
+- **NumberBlocks-style intros** — ConceptIntro pokazuje tylko 💡 emoji + button. Dedicated animacje per koncept (TenFrame fillujący się, NumberBondShape budujący się) w v3.1.
+- **iPad user-test**: drag-drop palcem + Apple Pencil w Płomyk/Pochodnia — chrome-devtools-mcp nie symuluje pełnych pointermove'ów (drag startuje, but `over` może być null). User test po deploy.
+- **Build size**: 504 kB JS warning. Dla v3.1 rozważyć code-splitting moduł-per-route (lazy import `LettersModule`/`ReadingModule`/`NumbersModule`).
+
+---
+
+## Poprzedni stan (2026-04-28 — sesja UX polish)
+
+### Następna sesja: ~~moduł 3 cyferki~~ ✅ ZROBIONE
 
 ### Sesja podsumowanie (commits dziś, w kolejności):
 
