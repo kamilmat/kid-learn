@@ -19,14 +19,121 @@ import type {
   CaseMode,
   CelebrationTempo,
   DefaultLevelSetting,
+  HumorMode,
   Level,
   SessionLength,
   StyleMode,
   TilesPerQuestion,
   TimeLimit,
+  WordAnimations,
 } from '@/shared/settings/types'
 import { ActiveLettersEditor } from './ActiveLettersEditor'
 import { MathGate } from './MathGate'
+
+function ToggleField({
+  label,
+  description,
+  value,
+  onChange,
+  testId,
+}: {
+  label: string
+  description?: string
+  value: boolean
+  onChange: (v: boolean) => void
+  testId?: string
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '12px 0',
+        borderBottom: '1px solid #e5e7eb',
+      }}
+    >
+      <div style={{ flex: 1, paddingRight: 16 }}>
+        <div style={{ fontWeight: 600, fontSize: 16 }}>{label}</div>
+        {description && (
+          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+            {description}
+          </div>
+        )}
+      </div>
+      <button
+        data-testid={testId}
+        onClick={() => onChange(!value)}
+        aria-checked={value}
+        role="switch"
+        style={{
+          width: 48,
+          height: 28,
+          borderRadius: 14,
+          border: 'none',
+          cursor: 'pointer',
+          background: value ? '#10b981' : '#d1d5db',
+          position: 'relative',
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: value ? 22 : 2,
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            background: 'white',
+            transition: 'left 0.18s',
+          }}
+        />
+      </button>
+    </div>
+  )
+}
+
+function SliderField({
+  label,
+  description,
+  min,
+  max,
+  value,
+  onChange,
+  testId,
+}: {
+  label: string
+  description?: string
+  min: number
+  max: number
+  value: number
+  onChange: (v: number) => void
+  testId?: string
+}) {
+  return (
+    <div style={{ padding: '12px 0', borderBottom: '1px solid #e5e7eb' }}>
+      <div style={{ fontWeight: 600, fontSize: 16 }}>
+        {label}:{' '}
+        <span style={{ color: '#f59e0b' }}>{value}</span>
+      </div>
+      {description && (
+        <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+          {description}
+        </div>
+      )}
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        data-testid={testId}
+        onChange={(e) => onChange(parseInt(e.target.value, 10))}
+        style={{ width: '100%', marginTop: 8 }}
+      />
+    </div>
+  )
+}
 
 export type SettingsScreenProps = {
   /**
@@ -535,6 +642,46 @@ export function SettingsScreen({
             </option>
           ))}
         </select>
+      </section>
+
+      {/* Czytanie (moduł 2) */}
+      <section style={sectionStyle} data-testid="section-reading">
+        <div style={labelStyle}>Czytanie (moduł 2)</div>
+        <ToggleField
+          label="Animacje słów"
+          description="Mini-scenki po poprawnej odpowiedzi (słonie, rakiety, tańczące litery)"
+          value={settings.reading.wordAnimations !== 'off'}
+          onChange={(v) =>
+            updateSetting('reading', {
+              ...settings.reading,
+              wordAnimations: (v ? 'on' : 'off') as WordAnimations,
+            })
+          }
+          testId="reading-word-animations"
+        />
+        <ToggleField
+          label="Humor (apsik, czkawka, beknięcie)"
+          description="Śmieszne reakcje Iskry przy błędach i easter-eggach"
+          value={settings.humorMode !== 'off'}
+          onChange={(v) =>
+            updateSetting('humorMode', (v ? 'on' : 'off') as HumorMode)
+          }
+          testId="reading-humor-mode"
+        />
+        <SliderField
+          label="Częstotliwość wielkich celebracji"
+          description="Co ile poprawnych odpowiedzi pojawia się wielka celebracja (3 = często, 15 = rzadko)"
+          min={3}
+          max={15}
+          value={settings.reading.wildCelebrationFreq}
+          onChange={(v) =>
+            updateSetting('reading', {
+              ...settings.reading,
+              wildCelebrationFreq: v,
+            })
+          }
+          testId="reading-wild-celebration-freq"
+        />
       </section>
 
       {/* Reset postępów */}
