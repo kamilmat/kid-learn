@@ -298,6 +298,54 @@ describe('useReadingSession', () => {
     expect(positions.has('first')).toBe(false)
   })
 
+  it('iskierkiEarned starts at 0 and increments on correct answer', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+    expect(result.current.iskierkiEarned).toBe(0)
+    const target = result.current.currentQuestion?.type === 'syllable-match' ? result.current.currentQuestion.targetSyllable : null
+    if (target) {
+      act(() => result.current.submitAnswer(target))
+      expect(result.current.iskierkiEarned).toBe(1)
+    }
+  })
+
+  it('iskierkiEarned does not increment on wrong answer', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+    act(() => result.current.submitAnswer('NIE-ISTNIEJE'))
+    expect(result.current.iskierkiEarned).toBe(0)
+  })
+
+  it('questionOutcomes starts empty and gains entry after skipFeedback', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+    expect(result.current.questionOutcomes).toHaveLength(0)
+    const target = result.current.currentQuestion?.type === 'syllable-match' ? result.current.currentQuestion.targetSyllable : null
+    if (target) {
+      act(() => result.current.submitAnswer(target))
+      expect(result.current.questionOutcomes).toHaveLength(0)  // nie pushowane przed skipFeedback
+      act(() => result.current.skipFeedback())
+      expect(result.current.questionOutcomes).toHaveLength(1)
+      expect(result.current.questionOutcomes[0]).toBe('correct')
+    }
+  })
+
+  it('questionOutcomes records wrong outcome correctly', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+    act(() => result.current.submitAnswer('NIE-ISTNIEJE'))
+    act(() => result.current.skipFeedback())
+    expect(result.current.questionOutcomes[0]).toBe('wrong')
+  })
+
+  it('questionOutcomes records dontKnow outcome correctly', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+    act(() => result.current.submitDontKnow())
+    act(() => result.current.skipFeedback())
+    expect(result.current.questionOutcomes[0]).toBe('dontKnow')
+  })
+
   it('pause during feedback → resume → skipFeedback advances to next question', () => {
     const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
     act(() => result.current.start())
