@@ -1,4 +1,4 @@
-import type { Box, LetterState } from './types'
+import type { BaseItemState, Box, LetterState } from './types'
 
 const BOX_WEIGHTS: Record<Box, number> = {
   1: 5.0,
@@ -15,7 +15,8 @@ export function boxWeight(box: Box): number {
   return BOX_WEIGHTS[box]
 }
 
-export function scoreLetter(state: LetterState, now: number): number {
+// Generic scorer — works on any item with box/lastSeen/recentWrong fields.
+export function scoreItem<T extends BaseItemState>(state: T, now: number): number {
   const recency =
     state.lastSeen <= 0
       ? 1.0
@@ -23,3 +24,7 @@ export function scoreLetter(state: LetterState, now: number): number {
   const recentWrongBoost = 1 + state.recentWrong * 2.0
   return boxWeight(state.box) * recency * recentWrongBoost
 }
+
+// Backward-compat alias — letter module keeps calling scoreLetter.
+export const scoreLetter = (state: LetterState, now: number): number =>
+  scoreItem(state, now)
