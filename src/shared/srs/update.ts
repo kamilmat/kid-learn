@@ -14,7 +14,7 @@ function clampBox(value: number): Box {
   return value as Box
 }
 
-function nextBox(current: Box, outcome: Outcome): Box {
+export function nextBox(current: Box, outcome: Outcome): Box {
   switch (outcome) {
     case 'correct':
       return clampBox(current + 1)
@@ -27,7 +27,7 @@ function nextBox(current: Box, outcome: Outcome): Box {
   }
 }
 
-function nextRecentWrong(current: number, outcome: Outcome): number {
+export function nextRecentWrong(current: number, outcome: Outcome): number {
   if (outcome === 'correct') {
     return Math.max(current - RECENT_WRONG_DECAY, 0)
   }
