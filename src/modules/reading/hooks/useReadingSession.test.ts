@@ -367,4 +367,26 @@ describe('useReadingSession', () => {
     expect(result.current.currentQuestionIndex).toBe(1)
     expect(result.current.status).toBe('asking')
   })
+
+  it('Pochodnia distractors match target syllable length within ±2', () => {
+    // Weryfikuje że dystraktorzy nie są drastycznie krótsi/dłużsi od brakującej sylaby
+    // (fix buga: MA/TA nie powinny być dystraktorami dla DŹWIEDŹ/NIĄDZ)
+    for (let seed = 0; seed < 30; seed++) {
+      const { result } = renderHook(() => useReadingSession({
+        level: 'pochodnia',
+        audioBus: mockAudioBus,
+        settings: mockSettings,
+        rng: () => (seed * 0.137) % 1,
+      }))
+      act(() => result.current.start())
+      if (result.current.currentQuestion?.type === 'syllable-fill') {
+        const q = result.current.currentQuestion
+        const targetLen = q.missingSyllable.length
+        const distractors = q.choices.filter((c) => c !== q.missingSyllable)
+        for (const d of distractors) {
+          expect(Math.abs(d.length - targetLen)).toBeLessThanOrEqual(2)
+        }
+      }
+    }
+  })
 })

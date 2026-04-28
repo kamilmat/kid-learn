@@ -207,6 +207,47 @@ function generateWordChoice(
   return { type: 'word-choice', targetWord: word.text, choices }
 }
 
+// Pula unikalnych sylab ze wszystkich słów (wszystkie poziomy) — bogatsza niż ALL_SYLLABLES.
+// Obliczana raz przy załadowaniu modułu — używana do dopasowania długości dystraktorów.
+const ALL_WORD_SYLLABLES: string[] = (() => {
+  const set = new Set<string>()
+  for (const word of ALL_WORDS) {
+    for (const syl of word.syllables) {
+      set.add(syl)
+    }
+  }
+  return Array.from(set)
+})()
+
+// Wybiera N dystraktorów dla syllable-fill preferując sylaby o długości zbliżonej do targetu (±1).
+// Jeśli za mało kandydatów ±1, rozszerza tolerancję do ±2, a na końcu bierze całą pulę.
+function pickSyllableFillDistractors(
+  missingSyllable: string,
+  count: number,
+  rng: () => number,
+): string[] {
+  const targetLen = missingSyllable.length
+
+  const byTolerance = (tol: number) =>
+    ALL_WORD_SYLLABLES.filter(
+      (s) => s !== missingSyllable && Math.abs(s.length - targetLen) <= tol,
+    )
+
+  const preferred1 = byTolerance(1)
+  const preferred2 = byTolerance(2)
+  const fallback = ALL_WORD_SYLLABLES.filter((s) => s !== missingSyllable)
+
+  const pool =
+    preferred1.length >= count
+      ? preferred1
+      : preferred2.length >= count
+        ? preferred2
+        : fallback
+
+  const shuffled = [...pool].sort(() => rng() - 0.5)
+  return shuffled.slice(0, count)
+}
+
 // Generuje pytanie syllable-fill (Pochodnia)
 function generateSyllableFill(
   statesMap: Record<string, WordState>,
@@ -250,11 +291,10 @@ function generateSyllableFill(
   const missingSyllable = syllablesArr[missingIndex] ?? syllablesArr[0] ?? ''
   const visibleSyllables = syllablesArr.filter((_, i) => i !== missingIndex)
 
-  // Dystraktorzy sylab z puli Iskierka
-  const missingId = getSyllableAudioKey(missingSyllable)
-  const distractors = pickRandomDistinct(ALL_SYLLABLES, CHOICE_COUNT - 1, [missingId], rng)
+  // Dystraktorzy dobrani z bogatej puli z dopasowaniem długości (bug-fix: nie MA/TA dla DŹWIEDŹ)
+  const distractorTexts = pickSyllableFillDistractors(missingSyllable, CHOICE_COUNT - 1, rng)
   const choices = shuffleArray(
-    [missingSyllable, ...distractors.map((d) => d.text)],
+    [missingSyllable, ...distractorTexts],
     rng,
   )
 
