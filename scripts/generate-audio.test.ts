@@ -108,6 +108,17 @@ describe('loadSources', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+
+  it('throws on invalid _voice value', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'iskierki-audio-'))
+    try {
+      const a = join(dir, 'invalid.json')
+      writeFileSync(a, JSON.stringify({ _voice: 'unknown-voice', 'test-key': 'value' }))
+      expect(() => loadSources([a])).toThrow(/Unknown voice/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('decideAction', () => {
