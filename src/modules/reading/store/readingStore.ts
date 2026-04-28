@@ -136,7 +136,19 @@ export const useReading = create<ReadingState>()(
     {
       name: 'iskierki-reading-v1',
       version: 1,
-      merge: (persisted, current) => ({ ...current, ...(persisted as object) }) as ReadingState,
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<ReadingState>
+        return {
+          ...current,
+          syllables: (p.syllables && typeof p.syllables === 'object' && !Array.isArray(p.syllables)) ? p.syllables : {},
+          words: (p.words && typeof p.words === 'object' && !Array.isArray(p.words)) ? p.words : {},
+          sessions: Array.isArray(p.sessions) ? p.sessions : [],
+          seenIntros: Array.isArray(p.seenIntros) ? p.seenIntros : [],
+          albumUnlocked: Array.isArray(p.albumUnlocked) ? p.albumUnlocked : [],
+          lastUsedLevel: p.lastUsedLevel ?? null,
+          wildCelebrationCounter: typeof p.wildCelebrationCounter === 'number' ? p.wildCelebrationCounter : 0,
+        } as ReadingState
+      },
     },
   ),
 )
