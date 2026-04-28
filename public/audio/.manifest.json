@@ -1,4 +1,159 @@
 {
+  "ask-build-bond": {
+    "hash": "c8c682dfeb4e4cccc780c3c05604e5e8ec7b1251866389b795d1f061759fe7b5",
+    "updatedAt": 1777412380538,
+    "source": "tts"
+  },
+  "ask-howmany": {
+    "hash": "5ea886c5284f535e2e19c2550799b3a742c76340053bc732ee519a136601edc8",
+    "updatedAt": 1777412377488,
+    "source": "tts"
+  },
+  "ask-howmany-left": {
+    "hash": "6d940ed31a2af4138eca9286838eab54d44716d8d0d083e62c384504a973dd2d",
+    "updatedAt": 1777412378644,
+    "source": "tts"
+  },
+  "ask-howmany-missing": {
+    "hash": "100cd765a843200429898fd9a5f3ab5b93801c8e13991e2315aab7d27ea62ca5",
+    "updatedAt": 1777412379782,
+    "source": "tts"
+  },
+  "ask-howmany-total": {
+    "hash": "4a548ee9786ce350961630d1faed30c6b2ee211c4380a00054eb626072b020cd",
+    "updatedAt": 1777412378037,
+    "source": "tts"
+  },
+  "ask-skip-count-10": {
+    "hash": "8833f1abc0ef12370c942d314f033f0ba629c9bd1968ed1def022e7fddec592b",
+    "updatedAt": 1777412382216,
+    "source": "tts"
+  },
+  "ask-skip-count-2": {
+    "hash": "b27f03ca5e5f619e80cb5a4e837b18b3a7f4107c3a6144ca255f7e49c64d19a2",
+    "updatedAt": 1777412381108,
+    "source": "tts"
+  },
+  "ask-skip-count-5": {
+    "hash": "f7902fd4ee3d83268530302eac78cb9ffeab1361fb1c5016766a6a4cf4fd32e0",
+    "updatedAt": 1777412381672,
+    "source": "tts"
+  },
+  "ask-whats-next": {
+    "hash": "d63e8a3b27ca17bf428f53ff8339d5839a53259fcbf737494ba3f531f09ca231",
+    "updatedAt": 1777412379176,
+    "source": "tts"
+  },
+  "correct-make10-prefix": {
+    "hash": "277574a4e9c443f1fa030b6b9d99d73cd2f97af7c735cd008426463f0fdb76bc",
+    "updatedAt": 1777412376898,
+    "source": "tts"
+  },
+  "correct-show-0": {
+    "hash": "198093074c49ef21a45299dc51a312717f45c37e9a0d89c49dc2cec83c5ff7c4",
+    "updatedAt": 1777412395600,
+    "source": "tts"
+  },
+  "correct-show-1": {
+    "hash": "0a049d1d6bc5dca4caa1efa7c6f943023caeb9c6a084c87da0a5ce986bf8a159",
+    "updatedAt": 1777412396296,
+    "source": "tts"
+  },
+  "correct-show-10": {
+    "hash": "245cba5f6861036f8206da481a607b4c265b73c38fd3b4bc165b664c765ec667",
+    "updatedAt": 1777412401377,
+    "source": "tts"
+  },
+  "correct-show-11": {
+    "hash": "daa22d0377d72d935dffde7a3157bf5ab861c844f88d6fbf16d95c5ee9c59868",
+    "updatedAt": 1777412402032,
+    "source": "tts"
+  },
+  "correct-show-12": {
+    "hash": "d8f523f9af269ca384401115f3719956d5ee1c13c183ce06ad926970d0075b3d",
+    "updatedAt": 1777412402592,
+    "source": "tts"
+  },
+  "correct-show-13": {
+    "hash": "35150a32f630d43b48bee10b2edcf95dc2d7fe1c17ee09a7f3e8b04cd9132e75",
+    "updatedAt": 1777412403166,
+    "source": "tts"
+  },
+  "correct-show-14": {
+    "hash": "6c63accf22e2f0776a179ff49bbbde7c9da85e7bcb0e809edfb304a052bda4c0",
+    "updatedAt": 1777412403732,
+    "source": "tts"
+  },
+  "correct-show-15": {
+    "hash": "d6e91c555363174ababddf8ca6945567cb6635fe7afb3d6ab1d1ceb31fc4139d",
+    "updatedAt": 1777412404389,
+    "source": "tts"
+  },
+  "correct-show-16": {
+    "hash": "4518e896f90566bbdeaae16c38f0c8e42fca3e208f8a92ae3d08634587f86e14",
+    "updatedAt": 1777412405197,
+    "source": "tts"
+  },
+  "correct-show-17": {
+    "hash": "5672e6314d09f5e9f025abe86cf0241a92204bcc8e9d609e31ca724e05542f16",
+    "updatedAt": 1777412405810,
+    "source": "tts"
+  },
+  "correct-show-18": {
+    "hash": "6dbb4cff18955b018ddafe04d0c03ebffc3bbfdd7c3f0d3bf08e05efa9004de4",
+    "updatedAt": 1777412406361,
+    "source": "tts"
+  },
+  "correct-show-19": {
+    "hash": "f4b2ce017e6d72f6bc9de9cf38d09509777c5eeba26cc71fd24319953370ff2d",
+    "updatedAt": 1777412407019,
+    "source": "tts"
+  },
+  "correct-show-2": {
+    "hash": "44cd8d8798ae2e913d11b8dade5f48d82014c7260c48b939b2ccbbaa3f2d8e92",
+    "updatedAt": 1777412396824,
+    "source": "tts"
+  },
+  "correct-show-20": {
+    "hash": "fa20ead02ab0809c07134ffaccb620093af85b5619b69f77993d9b0484aa183e",
+    "updatedAt": 1777412407792,
+    "source": "tts"
+  },
+  "correct-show-3": {
+    "hash": "98986621e79e3737e72b8f332ea65f186e90a068274682d409c4084b183d7afe",
+    "updatedAt": 1777412397387,
+    "source": "tts"
+  },
+  "correct-show-4": {
+    "hash": "b6050f562931a2b7fa9af68a22f54432abd49c90ae718c9ece46910ddf5948a0",
+    "updatedAt": 1777412397924,
+    "source": "tts"
+  },
+  "correct-show-5": {
+    "hash": "562907c40cb0b92cdda33f622eed2400f52463d6097fd4eaa9108a4044f58fe9",
+    "updatedAt": 1777412398447,
+    "source": "tts"
+  },
+  "correct-show-6": {
+    "hash": "c30c1addc3140f097057635b2a8c6bb6e911f8c8bd07e21a2abdcbe2f1230cd4",
+    "updatedAt": 1777412398988,
+    "source": "tts"
+  },
+  "correct-show-7": {
+    "hash": "8e00b16e7ecd9eb9642dd773c7be7fab04141cb8b1937edfd60a8b87b9999da2",
+    "updatedAt": 1777412399586,
+    "source": "tts"
+  },
+  "correct-show-8": {
+    "hash": "f5495e43ecaabda295be863cae6419a18c5511feb434238ef12c717537f708d7",
+    "updatedAt": 1777412400187,
+    "source": "tts"
+  },
+  "correct-show-9": {
+    "hash": "d330f2b45643809ee2a9bc5005b8aae05ec1d15d7a36530671d721383beba2f0",
+    "updatedAt": 1777412400807,
+    "source": "tts"
+  },
   "correction-prefix": {
     "hash": "7be705ab2fecda6c1da97c6a87fcbc6c785eef0d23b0698b59e0573e81d9cd90",
     "updatedAt": 1777240371296,
@@ -22,6 +177,21 @@
   "correction-prefix-contrastive": {
     "hash": "4f065a5e09bc8767163707aecfdf570af7253e0eaf2c5821cb604786be4e2dce",
     "updatedAt": 1777360534020,
+    "source": "tts"
+  },
+  "count-10by10": {
+    "hash": "46746acc6c3f9998290073d7b7740ee79a38e1708b8369c59539db55ba352aa3",
+    "updatedAt": 1777412423268,
+    "source": "tts"
+  },
+  "count-2by2": {
+    "hash": "eb2ad40d84e7fb81287dbb72ad99021dba3221c4b9b42b0a48341820bc25f898",
+    "updatedAt": 1777412421946,
+    "source": "tts"
+  },
+  "count-5by5": {
+    "hash": "9bf73a473c78ac57e36cdf12e9c130010ef4ba7b047099a714ac11f94631273d",
+    "updatedAt": 1777412422564,
     "source": "tts"
   },
   "cue-warning-3s": {
@@ -69,14 +239,124 @@
     "updatedAt": 1777360498751,
     "source": "tts"
   },
+  "home-numbers-intro": {
+    "hash": "4dfe0524f9c19a0c636502804315b88ffadd2ef94e8d2278a30be0f61fbdb544",
+    "updatedAt": 1777412351976,
+    "source": "tts"
+  },
   "home-reading-intro": {
     "hash": "c3091f9fe961a678092c9f87a3a3c81d814ad61fc55ae81e62db56b42073f735",
     "updatedAt": 1777360499494,
     "source": "tts"
   },
+  "intro-iskierka-adding-concrete": {
+    "hash": "f206425ad3934701d607e915f915dd7eb32e97233afe01c7fd92c345ddcef61e",
+    "updatedAt": 1777412358356,
+    "source": "tts"
+  },
+  "intro-iskierka-counting-10": {
+    "hash": "9886afdeb055cbd2efbb87ecda22244a94434712a30e39bbe59cff26951da4cf",
+    "updatedAt": 1777412356021,
+    "source": "tts"
+  },
+  "intro-iskierka-counting-5": {
+    "hash": "e3182bbb89fcf9a22aeff1f6f28b09abae2f6cb4f1700805df8a784a91ff6915",
+    "updatedAt": 1777412355451,
+    "source": "tts"
+  },
+  "intro-iskierka-rhythm": {
+    "hash": "047cf7e1431ae8e95fb61bb613da456802f73e6cc149728ee384e786a8101d94",
+    "updatedAt": 1777412357466,
+    "source": "tts"
+  },
+  "intro-iskierka-subitizing-6": {
+    "hash": "6d3d01ec59f5a031ffc050ca6fd3dd24d2f16dcc479fe067856d089d68714295",
+    "updatedAt": 1777412356687,
+    "source": "tts"
+  },
+  "intro-ognik-doubles": {
+    "hash": "de884fa7d44070c0e1f0e744d6c873a314e18073b396f919a24401fbb83330eb",
+    "updatedAt": 1777412362939,
+    "source": "tts"
+  },
+  "intro-ognik-factfamily-20": {
+    "hash": "bd547a655aeed853941eb0569393890f03b0efddc3c1dc0225cf0567c88c1c59",
+    "updatedAt": 1777412365463,
+    "source": "tts"
+  },
+  "intro-ognik-make10": {
+    "hash": "0e392e587082a0164abdbf36efc6aad3225c0155fc1cb051c3f014d39d366343",
+    "updatedAt": 1777412364519,
+    "source": "tts"
+  },
+  "intro-ognik-neardoubles": {
+    "hash": "b6ce671f4a6d3652e29a1a0487e4de4c0fb861cec916e62c0fa40aeb04320ee2",
+    "updatedAt": 1777412363754,
+    "source": "tts"
+  },
+  "intro-plomyk-addsub-10": {
+    "hash": "c13a5db7e889f8843ec1657e470088db3a9d623a24550d1c874dfa062a1e9fa9",
+    "updatedAt": 1777412361492,
+    "source": "tts"
+  },
+  "intro-plomyk-bonds-10": {
+    "hash": "701e600226ff7579ea4cb45812736e2184478e04be357da786636efb3b1f1857",
+    "updatedAt": 1777412359953,
+    "source": "tts"
+  },
+  "intro-plomyk-bonds-5": {
+    "hash": "58140408900165ac447791ab2103a49f5697dd529151734ff9871b268d651f25",
+    "updatedAt": 1777412359075,
+    "source": "tts"
+  },
+  "intro-plomyk-factfamily": {
+    "hash": "f24e817e33f54c4142d73049f3b69d11c1e551e0d832a9e6bede6f51f4068ae1",
+    "updatedAt": 1777412362188,
+    "source": "tts"
+  },
+  "intro-plomyk-tenframe": {
+    "hash": "438611fe26fe498f2818b57351b8dfdc88a771331d1a3052bcda818ea6c2e966",
+    "updatedAt": 1777412360693,
+    "source": "tts"
+  },
+  "intro-pochodnia-arrays": {
+    "hash": "85cc4e577b9a4777a4507fffab852ee7531c2579dac83ea49874179c644b9a74",
+    "updatedAt": 1777412369412,
+    "source": "tts"
+  },
+  "intro-pochodnia-commutativity": {
+    "hash": "e7d7c59ed14cfd8d211a8a17de3eba685a12730e7846463e54c36b6a78eb75f7",
+    "updatedAt": 1777412370082,
+    "source": "tts"
+  },
+  "intro-pochodnia-equalgroups": {
+    "hash": "02b7505a3ff7b13307093fd7beb765b2e2540819a21175b138c4360721dc9062",
+    "updatedAt": 1777412366236,
+    "source": "tts"
+  },
+  "intro-pochodnia-skipcount-10": {
+    "hash": "88b928b1d265c9439421253b86a5099f3478947dae210e79a57b5437ce66e2a7",
+    "updatedAt": 1777412368522,
+    "source": "tts"
+  },
+  "intro-pochodnia-skipcount-2": {
+    "hash": "4d43c596db46179703b0555315c7933dbf7427343f3a6434b49c7af7b9e71652",
+    "updatedAt": 1777412366933,
+    "source": "tts"
+  },
+  "intro-pochodnia-skipcount-5": {
+    "hash": "6bd54d25c7bcbd2dedd9609e722b89600ec66642905438806cc80ba4b13b5d01",
+    "updatedAt": 1777412367681,
+    "source": "tts"
+  },
   "iskra-apsik": {
     "hash": "0ead86521f7086a8d1e3f230a0fb2b855c4b0f1690d2f470ad6159e271064db9",
     "updatedAt": 1777363849440,
+    "source": "tts"
+  },
+  "iskra-bond-discovery": {
+    "hash": "e8ca1473bbe0aadaeff9318627bdaee13a3a0a0165435959e9b99170dd6ac45c",
+    "updatedAt": 1777412350303,
     "source": "tts"
   },
   "iskra-brrr": {
@@ -134,6 +414,31 @@
     "updatedAt": 1777360495104,
     "source": "tts"
   },
+  "iskra-skipcount-singing": {
+    "hash": "c3f375264e724a6e0ecf253f470e98558a71bcf8b4ef95390dce3c819a6b2643",
+    "updatedAt": 1777412349075,
+    "source": "tts"
+  },
+  "iskra-tenframe-fill": {
+    "hash": "fc989b540043618b580d47e73a67f6f6bb221ed3fa3852fd54ff8a6011e868b3",
+    "updatedAt": 1777412351315,
+    "source": "tts"
+  },
+  "iskra-thinking-aloud-doubles": {
+    "hash": "906f8eb0b795aaac72bad78e1bc6fa9bf2b5a57961dd581c4189a9eb8b1be63a",
+    "updatedAt": 1777412347150,
+    "source": "tts"
+  },
+  "iskra-thinking-aloud-fingers": {
+    "hash": "bd76361b18481934b75907918ae0006d33e0e79896de869cb9dc744e509fed9d",
+    "updatedAt": 1777412344946,
+    "source": "tts"
+  },
+  "iskra-thinking-aloud-tenframe": {
+    "hash": "2789ebe0d660fab2e32b322904f9e1fecdf2c1c6acfb58d741aeb22a920b8de2",
+    "updatedAt": 1777412346072,
+    "source": "tts"
+  },
   "iskra-uuu-super": {
     "hash": "1af43b2b88b43ff68e7800d068d2ae480e25ee3c3f3200dbd2bb50fc0960f3a4",
     "updatedAt": 1777360488681,
@@ -146,162 +451,162 @@
   },
   "letter-a": {
     "hash": "fb69ea8e637560ba4984134c44fb5d8f3bff8c474004a18d394b18fdbb0f10fc",
-    "updatedAt": 1777383078925,
+    "updatedAt": 1777412351316,
     "source": "override"
   },
   "letter-b": {
     "hash": "5220db829be69c2f0c9b81cc302c54d31158d10d619e790ec61816cacec5b97e",
-    "updatedAt": 1777383078926,
+    "updatedAt": 1777412351317,
     "source": "override"
   },
   "letter-c": {
     "hash": "b6e1b6c1dbe361df0b14c63ce0e3f6f02ca42d3c5095d7c663a1eee504b9232a",
-    "updatedAt": 1777383078926,
+    "updatedAt": 1777412351318,
     "source": "override"
   },
   "letter-d": {
     "hash": "70353bedc02a4ab6f55456ee2981e38231c6719da77a082275cc00ec1a2d026e",
-    "updatedAt": 1777383078927,
+    "updatedAt": 1777412351319,
     "source": "override"
   },
   "letter-e": {
     "hash": "accda38ac9eafd5b426c5d36ad553dd628b452dfb2629aa09fc09c9023b6a71d",
-    "updatedAt": 1777383078927,
+    "updatedAt": 1777412351319,
     "source": "override"
   },
   "letter-f": {
     "hash": "e97f6029e0fd8f93d8821d37d31a8c7cd8fb6703e49fe766107b189adcd12ec1",
-    "updatedAt": 1777383078928,
+    "updatedAt": 1777412351320,
     "source": "override"
   },
   "letter-g": {
     "hash": "2dbe40023f6b4c133e8e95734f0593b733ac44aad81d6511258ac3b17f5dfe5c",
-    "updatedAt": 1777383078928,
+    "updatedAt": 1777412351321,
     "source": "override"
   },
   "letter-h": {
     "hash": "bdcdff6ebbe3df91fadd95d8d1f359b5b6e4f867efdb5f95ed8fc5536e9a6019",
-    "updatedAt": 1777383078928,
+    "updatedAt": 1777412351321,
     "source": "override"
   },
   "letter-i": {
     "hash": "92741134d35787e90570061dcf0b369f980dd4d959bae0a63709e9d8f806e029",
-    "updatedAt": 1777383078928,
+    "updatedAt": 1777412351321,
     "source": "override"
   },
   "letter-j": {
     "hash": "57a9e94704a8a8198601e1e92dbd14a1bfd3a02500ac505bdde129258a9ddb0d",
-    "updatedAt": 1777383078929,
+    "updatedAt": 1777412351322,
     "source": "override"
   },
   "letter-k": {
     "hash": "817c50de94658db78398fa45d5fd220c2985fc7b2b5f8c1396824b03d6417096",
-    "updatedAt": 1777383078929,
+    "updatedAt": 1777412351322,
     "source": "override"
   },
   "letter-l": {
     "hash": "2ecce3a4a53ec5960c290be7f67ee9aba8479b1c1e12a8d6a9da13fd883c33ae",
-    "updatedAt": 1777383078929,
+    "updatedAt": 1777412351323,
     "source": "override"
   },
   "letter-m": {
     "hash": "2d1a987920509fa68e188cdabe1361909c19faa6127d135ea752f0025021ebe7",
-    "updatedAt": 1777383078930,
+    "updatedAt": 1777412351323,
     "source": "override"
   },
   "letter-n": {
     "hash": "739eaa58a9bcef332a12052b80776a4814dfaa06a1391a585d1c4f25570721e7",
-    "updatedAt": 1777383078930,
+    "updatedAt": 1777412351324,
     "source": "override"
   },
   "letter-o": {
     "hash": "86c10a918ff03e5535aafacdff80b4545450e676db4d956f23e3cd609d87cf86",
-    "updatedAt": 1777383078931,
+    "updatedAt": 1777412351324,
     "source": "override"
   },
   "letter-p": {
     "hash": "d3b5b2065b4dac6a73ac67afafd5a8c9b2010c48a96ab3493f8eaec185acb19b",
-    "updatedAt": 1777383078931,
+    "updatedAt": 1777412351325,
     "source": "override"
   },
   "letter-r": {
     "hash": "f5b0aba7f01e075422f513202561340d66b6921c73ca1d7a0a0aa7d93a98af28",
-    "updatedAt": 1777383078932,
+    "updatedAt": 1777412351325,
     "source": "override"
   },
   "letter-s": {
     "hash": "1bb7a0384b5f55cf262839c21b8bfa579decccfc7ef054b5a364de95d8fa1ad2",
-    "updatedAt": 1777383078932,
+    "updatedAt": 1777412351326,
     "source": "override"
   },
   "letter-t": {
     "hash": "52ed58df616562bbc1f18744330cfdc2981801939e090440edbb070578b52e9c",
-    "updatedAt": 1777383078932,
+    "updatedAt": 1777412351327,
     "source": "override"
   },
   "letter-u": {
     "hash": "efee902eddb3c90d1332bbff628a94b37ebb69f544f34bbc8577c9cfb4f115a5",
-    "updatedAt": 1777383078932,
+    "updatedAt": 1777412351327,
     "source": "override"
   },
   "letter-w": {
     "hash": "ee21d785527c8b09309d888ef898cb8bc203646b6ca2606e493c8d7d3616b517",
-    "updatedAt": 1777383078933,
+    "updatedAt": 1777412351327,
     "source": "override"
   },
   "letter-y": {
     "hash": "d3f722c63c0725e99e5ab5075421a0693ed564dba8d3fb4969fadb76aeb7f374",
-    "updatedAt": 1777383078933,
+    "updatedAt": 1777412351328,
     "source": "override"
   },
   "letter-z": {
     "hash": "ed72a30d16e84cfbf46a98d23dea4ba39359ebb7ff1666db15cc5ffcd2272c46",
-    "updatedAt": 1777383078933,
+    "updatedAt": 1777412351328,
     "source": "override"
   },
   "letter-ó": {
     "hash": "8768c687e075c34cfcb1c2551cf14a37a29bba31294b045bac67925b01c18585",
-    "updatedAt": 1777383078931,
+    "updatedAt": 1777412351325,
     "source": "override"
   },
   "letter-ą": {
     "hash": "4e7f62fc418ce36fc36ece88ba9b67e13bae34ad30d6bb0c3c0d69d644fc90fe",
-    "updatedAt": 1777383078926,
+    "updatedAt": 1777412351317,
     "source": "override"
   },
   "letter-ć": {
     "hash": "d0a5cba23fc07e7c3d7b22653415e590e6875e8dfbd6145e30c84d9e595f8c64",
-    "updatedAt": 1777383078926,
+    "updatedAt": 1777412351318,
     "source": "override"
   },
   "letter-ę": {
     "hash": "3bf8827c2b71c00339452317a3be2a96f89966f03fd3f7a7f55fa74cc85aa75b",
-    "updatedAt": 1777383078927,
+    "updatedAt": 1777412351320,
     "source": "override"
   },
   "letter-ł": {
     "hash": "1a2531ef4d07474e665f1d560fdd0bff2e5267ba3f1ca922ebcb196eefc104ad",
-    "updatedAt": 1777383078930,
+    "updatedAt": 1777412351323,
     "source": "override"
   },
   "letter-ń": {
     "hash": "53e1ab538c3eff545a181b0630c91d189f45c64efbcbb950f1622b446841a4a1",
-    "updatedAt": 1777383078930,
+    "updatedAt": 1777412351324,
     "source": "override"
   },
   "letter-ś": {
     "hash": "d37f0d79960f4466b237a9bd33c9f5d4a5e0152d43d3407f9ed2f557da09c674",
-    "updatedAt": 1777383078932,
+    "updatedAt": 1777412351326,
     "source": "override"
   },
   "letter-ź": {
     "hash": "51b7c4d9bd7faed54cd6eba7e6a4dc012881349b7dadad8d57a5b4e49eb2686e",
-    "updatedAt": 1777383078934,
+    "updatedAt": 1777412351329,
     "source": "override"
   },
   "letter-ż": {
     "hash": "7b0b9b64cdf4b86f7434d56c114709942d850a28101b01a4d847e3f1014f2d19",
-    "updatedAt": 1777383078934,
+    "updatedAt": 1777412351329,
     "source": "override"
   },
   "letters-intro": {
@@ -319,9 +624,104 @@
     "updatedAt": 1777360544546,
     "source": "tts"
   },
+  "mastery-adding-concrete": {
+    "hash": "4ddc5154fa982d18183e742488f95cb1148741314310690fc70b2a60896f4e11",
+    "updatedAt": 1777412386409,
+    "source": "tts"
+  },
+  "mastery-addsub-10": {
+    "hash": "61bc9067c7a856ced0b150a1791a1ac417714acf632e6dd52ba593e94c2592e6",
+    "updatedAt": 1777412388959,
+    "source": "tts"
+  },
+  "mastery-arrays": {
+    "hash": "5e3f2da77fd4bea0aa97fa58274e1655b199cfc73eaa7a97042d396e1583bc18",
+    "updatedAt": 1777412394571,
+    "source": "tts"
+  },
+  "mastery-bonds-10": {
+    "hash": "87ffbcab13f4ec666e680738cc9800cfba5dcdc73b9e8cd495a2e13aa8d494af",
+    "updatedAt": 1777412387614,
+    "source": "tts"
+  },
+  "mastery-bonds-5": {
+    "hash": "36fa7bfaae67c3582d1333ffada6019404a3a560018d8ddc26a84c4679537eb2",
+    "updatedAt": 1777412386965,
+    "source": "tts"
+  },
   "mastery-celebration": {
     "hash": "ead2163e4de756bdbf2ad33cb3b46d03ac23332d7fe2a4452abc99f678eb44c7",
     "updatedAt": 1777360544041,
+    "source": "tts"
+  },
+  "mastery-commutativity": {
+    "hash": "e7d7c59ed14cfd8d211a8a17de3eba685a12730e7846463e54c36b6a78eb75f7",
+    "updatedAt": 1777412395021,
+    "source": "tts"
+  },
+  "mastery-counting-10": {
+    "hash": "243398bf1f1429b180ce2486f24953bb2f7a9409add0140bfa529dcdd86e3dd6",
+    "updatedAt": 1777412384581,
+    "source": "tts"
+  },
+  "mastery-counting-5": {
+    "hash": "e55789c2df0c8991dfcd54aefe759091d714828da0148d3ad96626fdd45cce17",
+    "updatedAt": 1777412384024,
+    "source": "tts"
+  },
+  "mastery-doubles": {
+    "hash": "a753d5f7f8d815c42d3c5450e03866b1e4b02cffcf6696671092a5283a34d690",
+    "updatedAt": 1777412390198,
+    "source": "tts"
+  },
+  "mastery-equalgroups": {
+    "hash": "e99f3667d7e2c7fa23d7b424ea0884d9dc9b41da3212a8c9117f237e2f80b221",
+    "updatedAt": 1777412394011,
+    "source": "tts"
+  },
+  "mastery-factfamily": {
+    "hash": "3f8d765c40b770584f096e4c6d4df0fd325006b534600002281c7ae41f17a0b7",
+    "updatedAt": 1777412389595,
+    "source": "tts"
+  },
+  "mastery-make10": {
+    "hash": "661e657658a3d591a15d2f92430866ca598080ba659e34e3572b32c71efb75f1",
+    "updatedAt": 1777412391384,
+    "source": "tts"
+  },
+  "mastery-neardoubles": {
+    "hash": "ef2c43c89af1fa292378e456ae64ae5968a0fe4617d382421cfc9acd60724ddb",
+    "updatedAt": 1777412390740,
+    "source": "tts"
+  },
+  "mastery-rhythm": {
+    "hash": "3cd76ae1cb7bf935588998ed01399a5f540c72f94283d0c20636b947a136d53f",
+    "updatedAt": 1777412385811,
+    "source": "tts"
+  },
+  "mastery-skipcount-10": {
+    "hash": "068de0318d7199716efa5ffccdd4ad2b651d1f23c6b4a8e2989251fd7d4b5599",
+    "updatedAt": 1777412393387,
+    "source": "tts"
+  },
+  "mastery-skipcount-2": {
+    "hash": "d494a5055647e4dd0604451f434f078cf33d3de434a5c6febcae770aeda9a928",
+    "updatedAt": 1777412392073,
+    "source": "tts"
+  },
+  "mastery-skipcount-5": {
+    "hash": "278409781c3323f89cb859f6a60593436c2f9540000490a5eb1c066da7ef817b",
+    "updatedAt": 1777412392771,
+    "source": "tts"
+  },
+  "mastery-subitizing": {
+    "hash": "ecc96fff398540de48774aa692e8a45204269b8437bf34ebd13dd145f1cd255d",
+    "updatedAt": 1777412385254,
+    "source": "tts"
+  },
+  "mastery-tenframe": {
+    "hash": "5c446c97c5931e73c798dacacedaae8c6d6e46e9fbfd771a08c8fda465f280c4",
+    "updatedAt": 1777412388311,
     "source": "tts"
   },
   "nav-back": {
@@ -347,6 +747,131 @@
   "nav-tap": {
     "hash": "2f8a683133174579c6abe6402a0cfdf79c422678e6311fef75782f2f71aecc9d",
     "updatedAt": 1777360539293,
+    "source": "tts"
+  },
+  "number-0": {
+    "hash": "da5f7098480bf06bb44d2d2d9300f4f050bb96b34c30040c8d190bfc741f99ac",
+    "updatedAt": 1777412408363,
+    "source": "tts"
+  },
+  "number-1": {
+    "hash": "f799f28921d0f127c4a47ebba885fb43eb97de06baa70723f2ee0174e255d18f",
+    "updatedAt": 1777412408877,
+    "source": "tts"
+  },
+  "number-10": {
+    "hash": "efedf26f340488de0f52bff9413f6f0cb3614cccadebcbccf91979d0eb63e874",
+    "updatedAt": 1777412413612,
+    "source": "tts"
+  },
+  "number-11": {
+    "hash": "002a97e41db77e1039cf246e19ca60f57f86878ef31ad5a165edc68ceb7b6af3",
+    "updatedAt": 1777412414110,
+    "source": "tts"
+  },
+  "number-12": {
+    "hash": "58c6fe813971264827b4abd4d5c43870ad286b230056196cc88215d37e5d582d",
+    "updatedAt": 1777412414647,
+    "source": "tts"
+  },
+  "number-13": {
+    "hash": "de85d9e727e377a7f8509c6f65044d3800f9e21f5109f9eb17e330c00a97acf6",
+    "updatedAt": 1777412415174,
+    "source": "tts"
+  },
+  "number-14": {
+    "hash": "16b117ad5f97eaa7025ab3732bd92ae37d560660976a388db3152abd68ef1bda",
+    "updatedAt": 1777412415695,
+    "source": "tts"
+  },
+  "number-15": {
+    "hash": "f344f91dc76c84d137b07c7ce75f7b7bc6347ead7fa5e7dc9413a7afd120752b",
+    "updatedAt": 1777412416248,
+    "source": "tts"
+  },
+  "number-16": {
+    "hash": "982f1d5f84aaa1e033b339e5fbde5c60c94cc5291875f9c8d982c9acbe6abc61",
+    "updatedAt": 1777412416744,
+    "source": "tts"
+  },
+  "number-17": {
+    "hash": "75677b9cd0d963d1f43b17eaad964c44dcf00773a862b54dba6f09b1585bd4e2",
+    "updatedAt": 1777412417268,
+    "source": "tts"
+  },
+  "number-18": {
+    "hash": "4713f68e7f4374c118beaf5008ebffe982bb56f7d26e72ebab237939b77ec9a0",
+    "updatedAt": 1777412417844,
+    "source": "tts"
+  },
+  "number-19": {
+    "hash": "116850230c005ae322dbe100ba99d680f953cf8aacc0ce1294e83a2e72a038fe",
+    "updatedAt": 1777412418308,
+    "source": "tts"
+  },
+  "number-2": {
+    "hash": "1b166e1b162057c6a0042c8f9cfaf5ff0803021b5e0eb5d6203f6956f774e697",
+    "updatedAt": 1777412409406,
+    "source": "tts"
+  },
+  "number-20": {
+    "hash": "419d9e0608b075638404793f71aaee11ea3a083ed448636d4055c0461641fd13",
+    "updatedAt": 1777412418845,
+    "source": "tts"
+  },
+  "number-3": {
+    "hash": "fd481c42fe13c5fd6370fda81c74659059cd1d82252f04b393e0db649d9c5f7a",
+    "updatedAt": 1777412409934,
+    "source": "tts"
+  },
+  "number-4": {
+    "hash": "70fa51ee891ae02a664035125b910fb0378707d92c9d401d824ba697b9e32adc",
+    "updatedAt": 1777412410456,
+    "source": "tts"
+  },
+  "number-5": {
+    "hash": "5109b6a54987a899df3cc82f37e19f9a16614aa40e9b88c397e1bb4a6c738a62",
+    "updatedAt": 1777412410983,
+    "source": "tts"
+  },
+  "number-6": {
+    "hash": "38fe35798dabb1c383f653a03384cad7e593d8c065dfbf0a0e57fdd9bf9125f4",
+    "updatedAt": 1777412411499,
+    "source": "tts"
+  },
+  "number-7": {
+    "hash": "df4f94168adf281ad42893be87d51398bf7ef1e7b967edd6ba9b8e40d049a583",
+    "updatedAt": 1777412412024,
+    "source": "tts"
+  },
+  "number-8": {
+    "hash": "8f3fa70f343c813cedc7448e131e14c3f3f2f1bfce4cb808070ecb6d2f0cf730",
+    "updatedAt": 1777412412546,
+    "source": "tts"
+  },
+  "number-9": {
+    "hash": "6e8137eb67f63510e7d8f4536c8863c35a8c4effe8562be0181cf1fdeea57d44",
+    "updatedAt": 1777412413079,
+    "source": "tts"
+  },
+  "op-equals": {
+    "hash": "40c9fc09fb5899c16658fc04f358a336f218449de0cbe0937d1bcbda95b13d2e",
+    "updatedAt": 1777412420963,
+    "source": "tts"
+  },
+  "op-minus": {
+    "hash": "cdaf459bca361bb62aed5d886b7968e39999c3baca71040b32dccb2cadadfd1a",
+    "updatedAt": 1777412419957,
+    "source": "tts"
+  },
+  "op-plus": {
+    "hash": "4d0f7cc3e4f163305d6b33d09bd2852f1c31627436f252985fce056fac6d32a7",
+    "updatedAt": 1777412419386,
+    "source": "tts"
+  },
+  "op-times": {
+    "hash": "408107461a6f157a8025834211970acc0bfd88c5aad3c65beb78331441a98a44",
+    "updatedAt": 1777412420457,
     "source": "tts"
   },
   "praise-1": {
@@ -407,6 +932,46 @@
   "praise-9": {
     "hash": "a0bfa5dfa8a7d3f098e3d568fa0b051e099f8d68225e0b824946e1cffed3df82",
     "updatedAt": 1777360528833,
+    "source": "tts"
+  },
+  "praise-brawo": {
+    "hash": "5749cfe7b973bf834a081cc7ee66b7687cd86ae774415dac5d14f7cdf5598d50",
+    "updatedAt": 1777412373717,
+    "source": "tts"
+  },
+  "praise-effort": {
+    "hash": "f0d4cc71a84707e397f36f055ffe03aaefa9e597e8ce42aff162d9dafc6697c0",
+    "updatedAt": 1777412370760,
+    "source": "tts"
+  },
+  "praise-mastery": {
+    "hash": "85089ba0158bc8b125a721911df0251d921f561a3a98bcc10808419f224c53f9",
+    "updatedAt": 1777412372540,
+    "source": "tts"
+  },
+  "praise-precision": {
+    "hash": "63453b96869630a40a24224187c08834828ab708e17639d574e473fba6532947",
+    "updatedAt": 1777412372021,
+    "source": "tts"
+  },
+  "praise-strategy": {
+    "hash": "bbc2e4400028cb878cbf7a8f75ffa544b102c6497f30bbbb17421f274ec3083a",
+    "updatedAt": 1777412371354,
+    "source": "tts"
+  },
+  "praise-super": {
+    "hash": "b59f6ad4d7edd0ec5584a04fb35b8ee75383e2b10a0ce6b7343961831a175eb3",
+    "updatedAt": 1777412374418,
+    "source": "tts"
+  },
+  "praise-tak-jest": {
+    "hash": "e4df4c2013cfc3e48778acaa41665f7f63fc21a6197f654f3fdfd873e0593201",
+    "updatedAt": 1777412374960,
+    "source": "tts"
+  },
+  "praise-think": {
+    "hash": "c8b1f3dfca4464b8a8778e580200bea494afa2ccfcb1a33ba505ab2139875b8f",
+    "updatedAt": 1777412373180,
     "source": "tts"
   },
   "quiz-intro": {
@@ -499,19 +1064,44 @@
     "updatedAt": 1777360543423,
     "source": "tts"
   },
+  "session-end-good": {
+    "hash": "8ebe48e9e5feef7d92722d9c911d68c8fdeb63a3197992347a81562962169f38",
+    "updatedAt": 1777412382847,
+    "source": "tts"
+  },
   "session-end-perfect": {
     "hash": "17f688607453d9d3b50053bdc117150165cc9cca9f5e8f84702994b2fdeea841",
     "updatedAt": 1777360536107,
     "source": "tts"
   },
+  "session-start-iskierka": {
+    "hash": "0274830207303ca0812cfdb8bf4e30235d97668c5d12d926847cd4a46778db7e",
+    "updatedAt": 1777412352778,
+    "source": "tts"
+  },
+  "session-start-ognik": {
+    "hash": "9a5ed49d7f28bc6a5e26f7bb40a09c0e6d2a962efa9bd218152c62a3da0c0f07",
+    "updatedAt": 1777412354150,
+    "source": "tts"
+  },
+  "session-start-plomyk": {
+    "hash": "8ba634046a0c1090c352f327febeca169a90af3054aeed14c784a2d1338c9609",
+    "updatedAt": 1777412353409,
+    "source": "tts"
+  },
+  "session-start-pochodnia": {
+    "hash": "7a85009ee2f0538606da9b82c1eb1ce59b56d6d5a36a7a316c8e2601607f0f77",
+    "updatedAt": 1777412354841,
+    "source": "tts"
+  },
   "sfx-correct-ding": {
     "hash": "259e7d1db1c6ec76366bd1fa0e50b1e58f401f43386f38d58906844dd2af7fd7",
-    "updatedAt": 1777383078935,
+    "updatedAt": 1777412423270,
     "source": "override"
   },
   "sfx-mastery-fanfara": {
     "hash": "259e7d1db1c6ec76366bd1fa0e50b1e58f401f43386f38d58906844dd2af7fd7",
-    "updatedAt": 1777383078936,
+    "updatedAt": 1777412423270,
     "source": "override"
   },
   "start-prompt": {
@@ -669,9 +1259,19 @@
     "updatedAt": 1777240100472,
     "source": "tts"
   },
+  "tree-grow": {
+    "hash": "09cba8a41d427ed5038b8da3cad769cb64dbee227cf36323c4a58a049a72641f",
+    "updatedAt": 1777412383429,
+    "source": "tts"
+  },
   "try-again": {
-    "hash": "d9c42aa2c488448b8b7e0e4abff61016b453c5d46fa5259217a8ad049dcf8be4",
-    "updatedAt": 1777231137103,
+    "hash": "486281984c8da72ea7f5c355bb1f77f3f52d4db25c5861f92af626cdc8bf0f2c",
+    "updatedAt": 1777412375451,
+    "source": "tts"
+  },
+  "try-again-soft": {
+    "hash": "4a0b969d76466e8333b8d57059ecd5f541a5972fd8ebcc140226bcf1022a589b",
+    "updatedAt": 1777412376200,
     "source": "tts"
   },
   "welcome": {
@@ -681,7 +1281,7 @@
   },
   "word-arbuz": {
     "hash": "570ff78a6bb758cd58983464741a8388fd8f4909174b1a16417faca6fce683fa",
-    "updatedAt": 1777383078936,
+    "updatedAt": 1777412423271,
     "source": "override"
   },
   "word-auto": {
@@ -696,7 +1296,7 @@
   },
   "word-balon": {
     "hash": "27d3a2766ccb785ef0ea071b2720e7c91eeb8807469a093eba8b16f154e1f444",
-    "updatedAt": 1777383078937,
+    "updatedAt": 1777412423272,
     "source": "override"
   },
   "word-banan": {
@@ -716,7 +1316,7 @@
   },
   "word-cebula": {
     "hash": "fb71c651145b3e274e09c6fd70ef680368a17b247e8aad21a7c49b823d1a3cf3",
-    "updatedAt": 1777383078937,
+    "updatedAt": 1777412423273,
     "source": "override"
   },
   "word-chłopiec": {
@@ -756,7 +1356,7 @@
   },
   "word-dym": {
     "hash": "b82844a326cb766a74194e6a653034353c247ebb162dbbc85d35e5c133b8df0f",
-    "updatedAt": 1777383078943,
+    "updatedAt": 1777412423281,
     "source": "override"
   },
   "word-dziecko": {
@@ -766,42 +1366,42 @@
   },
   "word-dąb": {
     "hash": "42b196c6086c178609d3069f50ce55d9b8349164adc7b33f7dd7913cd63f0b52",
-    "updatedAt": 1777383078937,
+    "updatedAt": 1777412423272,
     "source": "override"
   },
   "word-ekran": {
     "hash": "af6e275838fb759dae1c6d4f83a09684802ff193b7dfac9098794cefb8f6c35d",
-    "updatedAt": 1777383078938,
+    "updatedAt": 1777412423274,
     "source": "override"
   },
   "word-foka": {
     "hash": "630bdc2fc1ea14a76081d67f5a8d9cdeb95b48d3c10b9a48041cfebb9e508e8b",
-    "updatedAt": 1777383078938,
+    "updatedAt": 1777412423274,
     "source": "override"
   },
   "word-góra": {
     "hash": "9fbe85dd5f45ab3456753a629675812751a6749488f08839e128ab87f064b004",
-    "updatedAt": 1777383078938,
+    "updatedAt": 1777412423275,
     "source": "override"
   },
   "word-gęś": {
     "hash": "f4cb1756c774d3dbea76dda6f71462e5997b9cdf30ef8ff38d042a09e2829874",
-    "updatedAt": 1777383078938,
+    "updatedAt": 1777412423274,
     "source": "override"
   },
   "word-hak": {
     "hash": "d5a6b595363c4db00a4d57f7f3c99dfb7d3291c7dba9328dfa773847ca113b32",
-    "updatedAt": 1777383078939,
+    "updatedAt": 1777412423275,
     "source": "override"
   },
   "word-iskra": {
     "hash": "d786959265a9d9862ab995ee2fb717992d5fcfdeccad4667ad99186eb08f9d49",
-    "updatedAt": 1777383078939,
+    "updatedAt": 1777412423275,
     "source": "override"
   },
   "word-jabłko": {
     "hash": "ebd2a4ccc9009b4d031ace773fd1cf1ae8628e592a65526f9cd75213a9e74d9d",
-    "updatedAt": 1777383078939,
+    "updatedAt": 1777412423275,
     "source": "override"
   },
   "word-kapelusz": {
@@ -846,7 +1446,7 @@
   },
   "word-kot": {
     "hash": "7e5d96fd70055dcd140d3f300eae1a7575b96e855b238632860db2bac6ea1ceb",
-    "updatedAt": 1777383078939,
+    "updatedAt": 1777412423276,
     "source": "override"
   },
   "word-kotek": {
@@ -861,7 +1461,7 @@
   },
   "word-koń": {
     "hash": "45d0b8cd12ac181b59c908050aee1a4b8b82c5f7a00910b3cdd43a588dd046aa",
-    "updatedAt": 1777383078940,
+    "updatedAt": 1777412423278,
     "source": "override"
   },
   "word-księżyc": {
@@ -886,7 +1486,7 @@
   },
   "word-lampa": {
     "hash": "9de17fa8ab5c67815b5d24d7e91ae04aaea0328e03b192b9fa7534987e844827",
-    "updatedAt": 1777383078939,
+    "updatedAt": 1777412423276,
     "source": "override"
   },
   "word-lato": {
@@ -931,7 +1531,7 @@
   },
   "word-miś": {
     "hash": "a9273f979e50184e22292df03c0591c6433d9a9114a5341305550bf8abc10f74",
-    "updatedAt": 1777383078940,
+    "updatedAt": 1777412423277,
     "source": "override"
   },
   "word-muszka": {
@@ -951,7 +1551,7 @@
   },
   "word-nos": {
     "hash": "6e092668baaa359f9bcd1b865eb52be77e2b98425da7a6fab25202976c9a87bc",
-    "updatedAt": 1777383078940,
+    "updatedAt": 1777412423277,
     "source": "override"
   },
   "word-nuta": {
@@ -966,7 +1566,7 @@
   },
   "word-osa": {
     "hash": "d1ac7017035e1623633fcfa550dd2a43c32f44eb70d2c79e5cede186c8285f88",
-    "updatedAt": 1777383078941,
+    "updatedAt": 1777412423278,
     "source": "override"
   },
   "word-parasol": {
@@ -981,7 +1581,7 @@
   },
   "word-piłka": {
     "hash": "ba2e0b50220e456171c7393903e3f40756b25ecaf0174274c85297cb75e5644f",
-    "updatedAt": 1777383078941,
+    "updatedAt": 1777412423279,
     "source": "override"
   },
   "word-pomidor": {
@@ -1006,7 +1606,7 @@
   },
   "word-ryba": {
     "hash": "b72e39fbb92c27e522d38493794c3261faf58dee6145339d139c45e1a9815fbd",
-    "updatedAt": 1777383078941,
+    "updatedAt": 1777412423279,
     "source": "override"
   },
   "word-rybka": {
@@ -1051,7 +1651,7 @@
   },
   "word-słońce": {
     "hash": "6a56896c3040ec007cad8d07f7d865b38110c6330dbb25ce4a6a91e4005357b1",
-    "updatedAt": 1777383078942,
+    "updatedAt": 1777412423279,
     "source": "override"
   },
   "word-tama": {
@@ -1071,17 +1671,17 @@
   },
   "word-tort": {
     "hash": "cd4e300207ecb3cde196f9d977dc1a04f5dce293f2f106c8ce68e4c421568f92",
-    "updatedAt": 1777383078942,
+    "updatedAt": 1777412423280,
     "source": "override"
   },
   "word-ucho": {
     "hash": "ca1719f04974d8fb3934140de076778092b11e66b6c8f79694e3d03eef9d3910",
-    "updatedAt": 1777383078943,
+    "updatedAt": 1777412423280,
     "source": "override"
   },
   "word-woda": {
     "hash": "110b0248e443552739cd3ed123942c2018ff90342284df06106b3238c379f67e",
-    "updatedAt": 1777383078943,
+    "updatedAt": 1777412423281,
     "source": "override"
   },
   "word-zabawka": {
@@ -1091,7 +1691,7 @@
   },
   "word-zegar": {
     "hash": "32256f4917648fbe24e64d8c24792bd7eeddde1290bf02de93dc84d7462d66ac",
-    "updatedAt": 1777383078943,
+    "updatedAt": 1777412423281,
     "source": "override"
   },
   "word-zielony": {
@@ -1106,32 +1706,32 @@
   },
   "word-ósemka": {
     "hash": "2047a2f083a77d6beb189a74d1c56e4fdcabe1163112c5448d3e9de3ffcba9d5",
-    "updatedAt": 1777383078941,
+    "updatedAt": 1777412423278,
     "source": "override"
   },
   "word-ćma": {
     "hash": "39ef813c5cb14eb403c6512216d29c87d3563032098a2f022e1ccae7ff3747d9",
-    "updatedAt": 1777383078938,
+    "updatedAt": 1777412423273,
     "source": "override"
   },
   "word-łyżwa": {
     "hash": "023fecf6d1006c1182bf6daa97b63072c1687a7f3c481603161a747f1aa523f0",
-    "updatedAt": 1777383078940,
+    "updatedAt": 1777412423277,
     "source": "override"
   },
   "word-śliwka": {
     "hash": "62315d70c3eb2eb599e1581824d97aa6f69695aea9e233f3200028a02e22db9f",
-    "updatedAt": 1777383078942,
+    "updatedAt": 1777412423280,
     "source": "override"
   },
   "word-źrebak": {
     "hash": "701fe3bb056a5f0898425fa832d09212504b1f19d8a118a6524f913cf2bbb605",
-    "updatedAt": 1777383078943,
+    "updatedAt": 1777412423282,
     "source": "override"
   },
   "word-żaba": {
     "hash": "16767a53102e8ea3bd1daf5b14971ebb7802a7a28fdaeee2c1f20f3e1076fff8",
-    "updatedAt": 1777383078944,
+    "updatedAt": 1777412423282,
     "source": "override"
   }
 }
