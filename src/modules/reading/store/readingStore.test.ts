@@ -77,4 +77,16 @@ describe('readingStore', () => {
     state.resetWildCounter()
     expect(useReading.getState().wildCelebrationCounter).toBe(0)
   })
+
+  it('markSceneSeen tracks scene variant', () => {
+    useReading.getState().markSceneSeen('MAMA', 'mama-v1')
+    expect(useReading.getState().seenSceneVariants['MAMA']).toContain('mama-v1')
+  })
+
+  it('markSceneSeen is idempotent', () => {
+    const state = useReading.getState()
+    state.markSceneSeen('MAMA', 'mama-v1')
+    state.markSceneSeen('MAMA', 'mama-v1')
+    expect(useReading.getState().seenSceneVariants['MAMA']).toHaveLength(1)
+  })
 })
