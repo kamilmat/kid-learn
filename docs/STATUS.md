@@ -3,7 +3,33 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
-## Aktualny stan (2026-04-27 — moduł 2 czytania ukończony)
+## Aktualny stan (2026-04-28 — fix audio case-sensitivity na GH Pages)
+
+### Critical fix: lowercase audio keys w module 2 (commit `5e04130`)
+
+**Problem:** Module 2 używał uppercase audio keys (`word-MAMA`, `word-ARBUZ`). Na macOS APFS (case-insensitive) działało lokalnie, ale na **GitHub Pages (Linux, case-sensitive) → 404 dla 8 słów** kolidujących z module 1 (arbuz/cebula/gęś/koń/lampa/miś/śliwka/żaba — fizycznie 1 plik widziany jako 2 nazwy). `audio:check` nie złapał — widział lookup po dowolnym case'u.
+
+**Fix:**
+- `getWordAudioKey(text)` lowercase'uje (1 funkcja, 6 wywołań w `useReadingSession.ts` + `WordAlbum.tsx`)
+- 25 unikatowych `'word-X'` w `scenes.ts` → lowercase (~50 wystąpień)
+- `audio-source/words.json`: 67 uppercase → 59 lowercase (8 deduped z module 1 — TTS audio identyczne dla "arbuz" niezależnie od case)
+- 59 mp3 zregenerowanych (TTS Zofia) + 59 git renames uppercase→lowercase (2-step przez tmp, bo `core.ignorecase=true`)
+- Manifest oczyszczony (294→227 wpisów; orphany usunięte)
+
+**Live verify (po deploy):**
+- `https://kamilmat.github.io/kid-learn/audio/word-mama.mp3` → 200 ✓
+- `https://kamilmat.github.io/kid-learn/audio/word-arbuz.mp3` → 200 ✓
+- `https://kamilmat.github.io/kid-learn/audio/word-ARBUZ.mp3` → 404 (oczekiwane — uppercase już nie istnieje)
+
+**Build / testy po fixie:**
+- `pnpm tsc -b` ✓
+- `pnpm test --run` — **528/528 zielone**
+- `pnpm build` ✓ (242 precache entries, 3.42 MB)
+- `pnpm audio:check` ✓ (219 plików — był 227, -8 duplikatów)
+
+---
+
+## Stan z 2026-04-27 — moduł 2 czytania ukończony
 
 ### Module 2 (Czytanie) — wszystkie 13 faz wdrożone
 
@@ -23,7 +49,7 @@
 - Raport rodzica: sylaby (opanowane/trudne) + słowa per-level + heatmapa polskich fonemów (SZ/CZ/RZ/CH/Ś/Ć/Ź/Ń/Ó/Ż)
 
 **Audio:**
-- 227 plików MP3 w `public/audio/`
+- 219 plików MP3 w `public/audio/` (po fix 2026-04-28 — wszystkie `word-*` keys lowercase, 8 słów modułu 2 reużywa pliki modułu 1)
 - TTS Zofia (lektor: sylaby, słowa, intros, prefiksy, pochwały) + TTS Marek (Iskra: reakcje, easter eggs werbalne)
 - SFX biblioteka: placeholder (manual download from mixkit/freesound — nie blokuje funkcjonalności, używamy istniejących module-1 SFX gdzie potrzeba)
 
