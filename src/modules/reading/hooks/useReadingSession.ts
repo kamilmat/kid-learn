@@ -319,6 +319,9 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   // Wild celebration jitter — obliczany raz na sesję
   const wildJitterRef = useRef(0)
 
+  // Zapamiętuje status sprzed pauzy (asking lub feedback) — potrzebne do prawidłowego resume
+  const prePauseStatusRef = useRef<Status>('idle')
+
   // Synchronizuj ref ze stanem
   statusRef.current = status
   currentQuestionRef.current = currentQuestion
@@ -513,7 +516,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
         const readingStore = useReading.getState()
         readingStore.incrementWildCounter()
         const currentCounter = useReading.getState().wildCelebrationCounter
-        const freq = (settings as Record<string, unknown> & { reading?: { wildCelebrationFreq?: number } }).reading?.wildCelebrationFreq ?? 8
+        const freq = settings.reading?.wildCelebrationFreq ?? 8
         const threshold = freq + wildJitterRef.current
         if (currentCounter >= threshold) {
           // Trigger wild celebration — ustawiamy status=feedback z wariantem 'wild'
@@ -522,7 +525,8 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
           setStatus('feedback')
           statusRef.current = 'feedback'
           useReading.getState().resetWildCounter()
-          void audioBus.play('sfx-fanfara-special')
+          // sfx-mastery-fanfara is the existing fanfara key (sfx-fanfara-special deferred to SFX library)
+          void audioBus.play('sfx-mastery-fanfara')
           return
         }
         void audioBus.play('sfx-correct-ding')
@@ -665,8 +669,8 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   const recordDropError = useCallback((): void => {
     if (statusRef.current !== 'asking') return
     // Inkrementuj counter błędów (nie ma efektu na status)
-    // Odgraj dźwięk błędnego droppa
-    void audioBus.play('sfx-drop-error')
+    // correction-prefix jako zastępnik sfx-drop-error (SFX library deferred)
+    void audioBus.play('correction-prefix')
   }, [audioBus])
 
   const skipFeedback = useCallback((): void => {
@@ -677,6 +681,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
 
   const pause = useCallback((): void => {
     if (statusRef.current === 'asking' || statusRef.current === 'feedback') {
+      prePauseStatusRef.current = statusRef.current
       setPaused(true)
       setStatus('paused')
       statusRef.current = 'paused'
@@ -687,8 +692,10 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   const resume = useCallback((): void => {
     if (statusRef.current === 'paused') {
       setPaused(false)
-      setStatus('asking')
-      statusRef.current = 'asking'
+      // Przywróć status sprzed pauzy (asking lub feedback) — inaczej skipFeedback() guard nie przejdzie
+      const restored = prePauseStatusRef.current
+      setStatus(restored)
+      statusRef.current = restored
       void audioBus.play('nav-resume')
     }
   }, [audioBus])

@@ -297,4 +297,26 @@ describe('useReadingSession', () => {
     // Expect 'first' NOT to appear when low-box (box=1) for 3+syl words
     expect(positions.has('first')).toBe(false)
   })
+
+  it('pause during feedback → resume → skipFeedback advances to next question', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+
+    // Wywołaj odpowiedź żeby wejść w feedback
+    act(() => result.current.submitAnswer('NIE-ISTNIEJE'))
+    expect(result.current.status).toBe('feedback')
+
+    // Pauza podczas feedback
+    act(() => result.current.pause())
+    expect(result.current.status).toBe('paused')
+
+    // Resume powinien przywrócić 'feedback' (nie 'asking')
+    act(() => result.current.resume())
+    expect(result.current.status).toBe('feedback')
+
+    // skipFeedback powinno zadziałać (nie zgubić się z powodu złego statusu)
+    act(() => result.current.skipFeedback())
+    expect(result.current.currentQuestionIndex).toBe(1)
+    expect(result.current.status).toBe('asking')
+  })
 })
