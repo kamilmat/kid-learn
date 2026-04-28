@@ -3,7 +3,47 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
-## Aktualny stan (2026-04-27)
+## Aktualny stan (2026-04-27 — moduł 2 czytania ukończony)
+
+### Module 2 (Czytanie) — wszystkie 13 faz wdrożone
+
+**Live:** https://kamilmat.github.io/kid-learn/ (PWA, instalowalna). Home pokazuje 2 kafelki — Litery (moduł 1) + Czytanie (moduł 2).
+
+**Co działa:**
+- 4 typy ćwiczeń per poziom: Iskierka (audio→sylaba), Płomyk (drag-drop sylab w słowo), Ognik (audio→słowo), Pochodnia (uzupełnij sylabę)
+- 23 sylaby + 67 słów (3 poziomy: Płomyk 20 / Ognik 25 / Pochodnia 22) z polskim kanonem elementarzowym
+- Mini-scenki słów: 55 scenek dla 25 słów (premiera tier — Płomyk + 5 Ognik favourites), CSS keyframes + emoji + audio. Pozostałe słowa fallback do standard celebration.
+- Iskra ożywiona: 8 easter eggs (apsik, czkawka, beknięcie, salto, gibberish + 2 silly z humorMode), komiczny fail przy błędach
+- 5 wild celebrations (rakieta, spadające frukty, ekran-salto, tańczący awokado, tęcza) co `wildCelebrationFreq ± 2 jitter` (default 8)
+- Album słów (67 kart): kolekcjonerstwo, scenka po tap, ceremony co 10. odblokowane
+- Status bar: licznik iskierek 💎 + 8 kropek postępu + pauza
+- Onboarding głosowy intros (1× per `seenIntros`) na home + 4 poziomy + album
+- Anti-cheat: idle 20s + page visibility → auto-pauza (reuse z modułu 1)
+- Settings: humorMode (silly easter eggs toggle), reading.wordAnimations, reading.wildCelebrationFreq slider
+- Raport rodzica: sylaby (opanowane/trudne) + słowa per-level + heatmapa polskich fonemów (SZ/CZ/RZ/CH/Ś/Ć/Ź/Ń/Ó/Ż)
+
+**Audio:**
+- 227 plików MP3 w `public/audio/`
+- TTS Zofia (lektor: sylaby, słowa, intros, prefiksy, pochwały) + TTS Marek (Iskra: reakcje, easter eggs werbalne)
+- SFX biblioteka: placeholder (manual download from mixkit/freesound — nie blokuje funkcjonalności, używamy istniejących module-1 SFX gdzie potrzeba)
+
+**Dependencies:** @dnd-kit/core 6.3.1 + @dnd-kit/sortable 10.0.0 (drag-drop dla Płomyk), Lexend (Google Fonts OFL, early-reader font dla kafelków).
+
+**Persistence:**
+- `iskierki-state-v4` — settings (rozszerzone o humorMode + reading.* — backward-compat merge, brak version bump)
+- `iskierki-letters-v1` — moduł 1 progres (bez zmian)
+- `iskierki-reading-v1` — moduł 2 progres (sylaby/słowa SRS + albumUnlocked + seenIntros + seenSceneVariants + wildCelebrationCounter + pendingCeremonyMilestone)
+
+### Build / testy
+
+- `pnpm tsc -b` ✓
+- `pnpm test --run` — **527/527 zielone**
+- `pnpm build` ✓ (242 precache entries, 3.42 MB — JS + CSS + HTML + 227 audio MP3 + manifest + icons)
+- `pnpm audio:check` ✓ (227 plików, idempotentny)
+
+---
+
+## Poprzedni stan (2026-04-27)
 
 ### iPad audio + tap fixy + cleanup `assoc-*`
 
