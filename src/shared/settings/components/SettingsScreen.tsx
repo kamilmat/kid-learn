@@ -649,7 +649,7 @@ export function SettingsScreen({
         <div style={labelStyle}>Czytanie (moduł 2)</div>
         <ToggleField
           label="Animacje słów"
-          description="Mini-scenki po poprawnej odpowiedzi (słonie, rakiety, tańczące litery)"
+          description="Mini-scenki po poprawnej odpowiedzi pokazujące znaczenie słowa"
           value={settings.reading.wordAnimations !== 'off'}
           onChange={(v) =>
             updateSetting('reading', {
