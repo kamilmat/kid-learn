@@ -3,9 +3,35 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
-## Aktualny stan (2026-04-28 — kolory sylab + drag fix + audio case-sensitivity)
+## Aktualny stan (2026-04-28 — sesja UX polish)
 
-### QA pass module 2 (2026-04-28, post deploy)
+### Sesja podsumowanie (commits dziś, w kolejności):
+
+| Commit | Krótko |
+|---|---|
+| `5e04130` | fix audio case-sensitivity (8 słów module 2 → 404 na GH Pages) |
+| `abdaa39` | docs STATUS audio fix |
+| `e692f3d` | feat kolorowanie sylab (Ognik / Pochodnia / Płomyk DropSlot) |
+| `91d2244` | fix drag-drop sylab + kolory w album/SessionEnd |
+| `26b6d29` | PWA meta + STATUS QA log |
+| `f8fb6b4` | fix Anuluj na bramie + ikony modułów Home + bez "klik" |
+
+### Ostatnia zmiana — UX polish (commit `f8fb6b4`)
+
+**Anuluj na MathGate:**
+- `SettingsScreen` → nowy prop `onExit` (opcjonalny). MathGate.onCancel woła `onExit()` jeśli podany.
+- `App.tsx SettingsPage` przekazuje `() => navigate('/')`. Bez tego Anuluj robił tylko rerender (komentarz "konsument zarządza nawigacją" + nikt nie zarządzał = bug).
+- `ReportScreen` już miał poprawny `onExit` flow.
+
+**Home — ikony modułów dla nieczytających:**
+- Wcześniej: oba kafelki miały identyczny `IskraMascot` + label "Litery"/"Czytanie" → dziecko nieczytające nie odróżniało.
+- Teraz: **Litery** = duże kolorowe `A B C` (niebieski/czerwony/zielony, var(--font-block)). **Czytanie** = `📖` + przykład `MAMA` z kolorowanymi sylabami. Mascot usunięty z kafelków (nie pomagał).
+- Symetria: oba kafelki bez mascota, każdy z dystynktywną ikoną + krótkim labelem.
+
+**Bez "klik" przy Litery/Czytanie:**
+- Usunięte `audioBus.play('nav-tap')` z `handleLetters` / `handleReading` w `Home.tsx`. User: "klik" jest bez sensu na poziomie nav. Moduł sam zagra własne intro audio przy pierwszym wejściu.
+
+### QA pass module 2 (2026-04-28, post-deploy)
 
 **Manualne chrome-devtools-mcp** — Home, ReadingLevelSelect, Iskierka (poprawna odpowiedź → "Brawo!"), Płomyk (drag programowy działa, slot przyjmuje correct syl), Ognik (kafelki kolorowane: SZA-FA, PA-RA-SOL, CHŁO-PIEC, LI-ZAK), Pochodnia (KSIĘ-?-ŻYC z gap, kolory pozycji), Album (5/67 unlocked, MAMA i MASZYNA pokazują kolorowe sylaby), Settings (po math gate 9+2-9=2), Raport rodzica (sylaby 0/23, słowa 5/67, heatmapa). Console: 0 errors, 1 warn (meta tag deprecation — fixed).
 
