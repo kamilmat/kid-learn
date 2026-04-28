@@ -17,13 +17,16 @@ import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { useLetters } from '@/modules/letters/store/lettersStore'
 import { useReading } from '@/modules/reading/store/readingStore'
+import { useNumbers } from '@/modules/numbers/store/numbersStore'
 
 export function Home() {
   const navigate = useNavigate()
   const lettersIntroSeen = useLetters((s) => s.hasSeenIntro('home-letters-intro'))
   const readingIntroSeen = useReading((s) => s.hasSeenIntro('home-reading-intro'))
+  const numbersIntroSeen = useNumbers((s) => s.hasSeenIntro('home-numbers-intro'))
   const markLettersIntro = useLetters((s) => s.markIntroSeen)
   const markReadingIntro = useReading((s) => s.markIntroSeen)
+  const markNumbersIntro = useNumbers((s) => s.markIntroSeen)
 
   // Onboarding głosowy — pierwsze odwiedzenie home wymaga jednego z intro
   useEffect(() => {
@@ -33,6 +36,9 @@ export function Home() {
     } else if (!readingIntroSeen) {
       void audioBus.play('home-reading-intro')
       markReadingIntro('home-reading-intro')
+    } else if (!numbersIntroSeen) {
+      void audioBus.play('home-numbers-intro')
+      markNumbersIntro('home-numbers-intro')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -48,8 +54,14 @@ export function Home() {
     navigate('/reading')
   }, [navigate])
 
+  const handleNumbers = useCallback(() => {
+    audioBus.stop()
+    navigate('/numbers')
+  }, [navigate])
+
   const lettersTap = useTapHandler({ onTap: handleLetters })
   const readingTap = useTapHandler({ onTap: handleReading })
+  const numbersTap = useTapHandler({ onTap: handleNumbers })
   const settingsTap = useTapHandler({ onTap: () => navigate('/settings') })
   const reportTap = useTapHandler({ onTap: () => navigate('/report') })
 
@@ -191,6 +203,58 @@ export function Home() {
             }}
           >
             Czytanie
+          </span>
+        </button>
+
+        {/* Kafelek: Cyferki (moduł 3) — wizualnie kolorowe 1 2 3 */}
+        <button
+          type="button"
+          data-testid="module-numbers"
+          aria-label="Cyferki"
+          {...numbersTap}
+          style={{
+            minHeight: 280,
+            padding: 24,
+            borderRadius: radii.kid * 1.5,
+            background: '#dcfce7',
+            border: '4px solid #16a34a',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            color: '#166534',
+            touchAction: 'manipulation',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <div
+            aria-hidden="true"
+            style={{
+              fontFamily: 'var(--font-block)',
+              fontSize: 96,
+              fontWeight: 800,
+              letterSpacing: '0.08em',
+              lineHeight: 1,
+              display: 'flex',
+              gap: 4,
+            }}
+          >
+            <span style={{ color: '#1d4ed8' }}>1</span>
+            <span style={{ color: '#dc2626' }}>2</span>
+            <span style={{ color: '#16a34a' }}>3</span>
+          </div>
+          <span
+            style={{
+              fontFamily: 'var(--font-handwritten)',
+              fontSize: 32,
+              fontWeight: 700,
+            }}
+          >
+            Cyferki
           </span>
         </button>
       </div>
