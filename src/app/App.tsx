@@ -19,6 +19,7 @@ function SettingsPage() {
         resetReading()
         navigate('/')
       }}
+      onExit={() => navigate('/')}
     />
   )
 }

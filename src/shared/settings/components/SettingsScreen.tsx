@@ -141,6 +141,8 @@ export type SettingsScreenProps = {
    * Parent powinien tu zrealizować reset stanu liter (i ewentualnie settingsów).
    */
   onResetConfirmed: () => void
+  /** Wywoływane gdy user kliknie Anuluj na bramie rodzica — parent powinien tu nawigować z dala. */
+  onExit?: () => void
   /** Opcjonalne źródło czasu — pomocne w testach. */
   now?: () => number
 }
@@ -215,6 +217,7 @@ const selectStyle = {
 
 export function SettingsScreen({
   onResetConfirmed,
+  onExit,
   now = () => Date.now(),
 }: SettingsScreenProps) {
   const isUnlocked = useSettings((s) => s.isUnlocked)
@@ -257,9 +260,10 @@ export function SettingsScreen({
           setUnlockTick((t) => t + 1)
         }}
         onCancel={() => {
-          // brak unlock-u — parent powinien zamknąć screen; my po prostu
-          // pozostajemy. Konsument ma zarządzać nawigacją.
-          setUnlockTick((t) => t + 1)
+          // Konsument zarządza nawigacją (App.tsx → navigate('/')).
+          // Fallback: rerender, gdyby konsument nie podał handlera.
+          if (onExit) onExit()
+          else setUnlockTick((t) => t + 1)
         }}
         now={now}
       />

@@ -13,7 +13,6 @@
 import { useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { audioBus } from '@/shared/audio/AudioBus'
-import { IskraMascot } from '@/shared/ui/IskraMascot'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { useLetters } from '@/modules/letters/store/lettersStore'
@@ -39,14 +38,13 @@ export function Home() {
   }, [])
 
   const handleLetters = useCallback(() => {
+    // Bez nav-tap "klik" — moduł sam zagra swoje intro/audio.
     audioBus.stop()
-    void audioBus.play('nav-tap')
     navigate('/letters')
   }, [navigate])
 
   const handleReading = useCallback(() => {
     audioBus.stop()
-    void audioBus.play('nav-tap')
     navigate('/reading')
   }, [navigate])
 
@@ -94,7 +92,7 @@ export function Home() {
           marginTop: 16,
         }}
       >
-        {/* Kafelek: Litery (moduł 1) */}
+        {/* Kafelek: Litery (moduł 1) — wizualnie kolorowe ABC dla nieczytających */}
         <button
           type="button"
           data-testid="module-letters"
@@ -111,7 +109,7 @@ export function Home() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 16,
+            gap: 12,
             color: '#92400e',
             touchAction: 'manipulation',
             userSelect: 'none',
@@ -119,11 +117,26 @@ export function Home() {
             WebkitTapHighlightColor: 'transparent',
           }}
         >
-          <IskraMascot size={96} state="idle" intensity="flame" />
+          <div
+            aria-hidden="true"
+            style={{
+              fontFamily: 'var(--font-block)',
+              fontSize: 96,
+              fontWeight: 800,
+              letterSpacing: '0.08em',
+              lineHeight: 1,
+              display: 'flex',
+              gap: 4,
+            }}
+          >
+            <span style={{ color: '#1d4ed8' }}>A</span>
+            <span style={{ color: '#dc2626' }}>B</span>
+            <span style={{ color: '#16a34a' }}>C</span>
+          </div>
           <span
             style={{
               fontFamily: 'var(--font-handwritten)',
-              fontSize: 36,
+              fontSize: 32,
               fontWeight: 700,
             }}
           >
@@ -131,7 +144,7 @@ export function Home() {
           </span>
         </button>
 
-        {/* Kafelek: Czytanie (moduł 2) */}
+        {/* Kafelek: Czytanie (moduł 2) — wizualnie książka + przykład sylab */}
         <button
           type="button"
           data-testid="module-reading"
@@ -148,7 +161,7 @@ export function Home() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 16,
+            gap: 12,
             color: '#1e40af',
             touchAction: 'manipulation',
             userSelect: 'none',
@@ -156,11 +169,24 @@ export function Home() {
             WebkitTapHighlightColor: 'transparent',
           }}
         >
-          <IskraMascot size={96} state="idle" intensity="spark" />
+          <div aria-hidden="true" style={{ fontSize: 96, lineHeight: 1 }}>📖</div>
+          <div
+            aria-hidden="true"
+            style={{
+              fontFamily: 'var(--font-block)',
+              fontSize: 28,
+              fontWeight: 800,
+              letterSpacing: '0.06em',
+              lineHeight: 1,
+            }}
+          >
+            <span style={{ color: '#1d4ed8' }}>MA</span>
+            <span style={{ color: '#dc2626' }}>MA</span>
+          </div>
           <span
             style={{
               fontFamily: 'var(--font-handwritten)',
-              fontSize: 36,
+              fontSize: 32,
               fontWeight: 700,
             }}
           >
