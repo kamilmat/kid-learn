@@ -7,6 +7,8 @@ import { colors, radii } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
 import { IskraMascot } from '@/shared/ui/IskraMascot'
 import { useReading } from '../store/readingStore'
+import { ALL_WORDS } from '../data/words'
+import { SyllableText } from './SyllableText'
 import type { SessionResult } from '../hooks/useReadingSession'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 
@@ -255,22 +257,26 @@ export function SessionEnd({ results, onExit, onAlbum, audioBus }: SessionEndPro
             Nowe słowa w albumie! 📚
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {results.newAlbumWords.map((wordId) => (
-              <span
-                key={wordId}
-                style={{
-                  background: '#ffffff',
-                  borderRadius: 8,
-                  padding: '4px 12px',
-                  fontSize: 18,
-                  fontWeight: 700,
-                  border: `2px solid ${colors.accentBlue}`,
-                  fontFamily: 'var(--font-block)',
-                }}
-              >
-                {wordId.replace(/^word-/, '')}
-              </span>
-            ))}
+            {results.newAlbumWords.map((wordId) => {
+              const word = ALL_WORDS.find((w) => w.id === wordId)
+              const text = word?.text ?? wordId.replace(/^word-/, '')
+              return (
+                <span
+                  key={wordId}
+                  style={{
+                    background: '#ffffff',
+                    borderRadius: 8,
+                    padding: '4px 12px',
+                    fontSize: 18,
+                    fontWeight: 700,
+                    border: `2px solid ${colors.accentBlue}`,
+                    fontFamily: 'var(--font-block)',
+                  }}
+                >
+                  <SyllableText word={text} {...(word?.syllables ? { syllables: word.syllables } : {})} />
+                </span>
+              )
+            })}
           </div>
         </div>
       )}

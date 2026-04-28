@@ -4,7 +4,7 @@
 
 import type { CSSProperties } from 'react'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
-import { getSyllableColor } from '../utils/syllableColors'
+import { SyllableText } from './SyllableText'
 
 export type WordTileState = 'idle' | 'correct' | 'wrong' | 'highlighted'
 
@@ -68,17 +68,7 @@ export function WordTile({ word, syllables, state = 'idle', onTap }: WordTilePro
       style={{ ...baseStyle, ...stateStyle(state) }}
       {...(onTap ? handlers : {})}
     >
-      {showSyllableColors ? (
-        <span aria-hidden="true">
-          {syllables.map((syl, i) => (
-            <span key={i} style={{ color: getSyllableColor(i) }}>
-              {syl}
-            </span>
-          ))}
-        </span>
-      ) : (
-        word
-      )}
+      {showSyllableColors ? <SyllableText word={word} syllables={syllables} /> : word}
     </button>
   )
 }

@@ -8,6 +8,7 @@ import { pickRandomScene } from '../data/scenes'
 import { WordScene } from './WordScene'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { IskraMascotAnimated } from './IskraMascotAnimated'
+import { SyllableText } from './SyllableText'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import type { Level } from '@/shared/settings/types'
 import type { WordData } from '../data/words'
@@ -173,8 +174,8 @@ function AlbumCard({ word, unlocked, onTap }: { word: WordData; unlocked: boolea
       }}
     >
       <div style={{ fontSize: 36 }}>{unlocked ? word.albumEmoji : '?'}</div>
-      <div style={{ fontFamily: 'var(--font-handwritten)', fontSize: 14, fontWeight: 700, color: '#2d2d33' }}>
-        {unlocked ? word.text : ''}
+      <div style={{ fontFamily: 'var(--font-block)', fontSize: 14, fontWeight: 700, color: '#2d2d33' }}>
+        {unlocked ? <SyllableText word={word.text} syllables={word.syllables} /> : ''}
       </div>
     </button>
   )

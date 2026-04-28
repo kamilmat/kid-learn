@@ -13,7 +13,6 @@ import {
 } from '@dnd-kit/core'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { useDragSyllable } from '../../hooks/useDragSyllable'
-import { SyllableTile } from '../SyllableTile'
 import { DropSlot } from '../DropSlot'
 
 export type WordAssemblyExerciseProps = {
@@ -59,18 +58,55 @@ type DraggableSyllableProps = {
   idSuffix: number
 }
 
+// Drag draggable: plain div (NIE button) żeby <button>'owy pointer-capture
+// nie zjadał drag eventów. touch-action: none krytyczne dla iPada — bez
+// tego touch scroll wygrywa z drag. Apple Pencil = pointerType 'pen',
+// PointerSensor obsługuje wszystkie typy pointera.
+const draggableTileStyle: React.CSSProperties = {
+  minWidth: 100,
+  minHeight: 80,
+  border: '3px solid #d1d5db',
+  borderRadius: 12,
+  background: '#fef9f2',
+  fontFamily: 'var(--font-block)',
+  fontWeight: 700,
+  fontSize: 32,
+  letterSpacing: '0.05em',
+  color: '#2d2d33',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '8px 16px',
+  userSelect: 'none',
+  WebkitUserSelect: 'none',
+  WebkitTapHighlightColor: 'transparent',
+  touchAction: 'none',
+  cursor: 'grab',
+}
+
 function DraggableSyllable({ syllable, idSuffix }: DraggableSyllableProps) {
   const id = `syl-${syllable}-${idSuffix}`
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id,
     data: { syllable },
   })
-  const style: React.CSSProperties | undefined = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined
+  const style: React.CSSProperties = {
+    ...draggableTileStyle,
+    ...(transform
+      ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+      : {}),
+    cursor: isDragging ? 'grabbing' : 'grab',
+    zIndex: isDragging ? 10 : 1,
+  }
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
-      <SyllableTile syllable={syllable} />
+    <div
+      ref={setNodeRef}
+      style={style}
+      aria-label={`sylaba ${syllable}`}
+      {...listeners}
+      {...attributes}
+    >
+      {syllable}
     </div>
   )
 }
