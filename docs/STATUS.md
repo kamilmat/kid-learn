@@ -12,7 +12,7 @@
 **Co działa:**
 - 4 typy ćwiczeń per poziom: Iskierka (audio→sylaba), Płomyk (drag-drop sylab w słowo), Ognik (audio→słowo), Pochodnia (uzupełnij sylabę)
 - 23 sylaby + 67 słów (3 poziomy: Płomyk 20 / Ognik 25 / Pochodnia 22) z polskim kanonem elementarzowym
-- Mini-scenki słów: 55 scenek dla 25 słów (premiera tier — Płomyk + 5 Ognik favourites), CSS keyframes + emoji + audio. Pozostałe słowa fallback do standard celebration.
+- Mini-scenki słów: 56 scenek dla 25 słów (premiera tier — Płomyk + 5 Ognik favourites), CSS keyframes + emoji + audio. Pozostałe słowa fallback do standard celebration.
 - Iskra ożywiona: 8 easter eggs (apsik, czkawka, beknięcie, salto, gibberish + 2 silly z humorMode), komiczny fail przy błędach
 - 5 wild celebrations (rakieta, spadające frukty, ekran-salto, tańczący awokado, tęcza) co `wildCelebrationFreq ± 2 jitter` (default 8)
 - Album słów (67 kart): kolekcjonerstwo, scenka po tap, ceremony co 10. odblokowane
@@ -37,9 +37,27 @@
 ### Build / testy
 
 - `pnpm tsc -b` ✓
-- `pnpm test --run` — **527/527 zielone**
+- `pnpm test --run` — **528/528 zielone** (po QA bugfixach)
 - `pnpm build` ✓ (242 precache entries, 3.42 MB — JS + CSS + HTML + 227 audio MP3 + manifest + icons)
 - `pnpm audio:check` ✓ (227 plików, idempotentny)
+
+### QA pass (2026-04-27, post-Phase 13)
+
+**Manualne testowanie przez chrome-devtools-mcp** — Home, ReadingLevelSelect, wszystkie 4 sesje (Iskierka/Płomyk/Ognik/Pochodnia), Album, Settings (po math gate 2+9-5=6), Raport rodzica z heatmapą fonemów. Console: 0 errors.
+
+**3 bugi znalezione i naprawione (commits `1814527`, `65a19bf`, `ce05732`):**
+1. **Pochodnia distractors length-matching** — gdy target sylaba długa (np. `DŹWIEDŹ`), distractors były krótkie 2-letterowe (`DU`/`RU`/`WA`); dziecko zgadywało po długości. Fix: pool distraktorów z `ALL_WORDS[*].syllables`, preferowanie ±1/±2 długości.
+2. **Settings copy "słonie"** — opis "Animacje słów" miał typo (elephants); zmienione na opisowy tekst.
+3. **Raport sylaby total 0/0** — mianownik teraz `ALL_SYLLABLES.length` (23) zamiast rozmiaru store.
+
+**Wymaga weryfikacji na iPadzie (chrome-devtools-mcp nie obsługuje natural drag/touch):**
+- Drag-and-drop palcem + Apple Pencil w Płomyk
+- Audio playback po pierwszej user interakcji
+- Pełen flow 8 pytań → SessionEnd → Album navigation
+- Wild celebration trigger (~8 correct → rakieta/owoce/salto)
+- Iskra easter eggs (tap mascot)
+- Animacja mini-scenek runtime
+- `usePageVisibility` agresywność na iOS Safari
 
 ---
 
