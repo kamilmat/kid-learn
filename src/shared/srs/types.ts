@@ -5,6 +5,15 @@ export type DisplayCase = 'upper' | 'lower' | 'pair'
 
 export type Outcome = 'correct' | 'wrong' | 'dontKnow' | 'timeout'
 
+// Bazowy typ dla każdego elementu z SRS — używany przez select/update/scoring/distractors.
+// Konkretne typy (LetterState, SyllableState, WordState) rozszerzają go o pola specyficzne.
+export type BaseItemState = {
+  id: string                  // unikalny identyfikator (np. "letter-A", "syl-MA", "word-MAMA")
+  box: Box
+  lastSeen: number
+  recentWrong: number
+}
+
 export type LetterState = {
   letter: string
   box: Box
