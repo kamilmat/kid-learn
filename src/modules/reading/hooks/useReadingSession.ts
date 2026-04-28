@@ -52,6 +52,8 @@ type Args = {
   now?: () => number
 }
 
+export type QuestionOutcome = 'correct' | 'wrong' | 'dontKnow'
+
 type Hook = {
   status: Status
   totalQuestions: number
@@ -60,6 +62,10 @@ type Hook = {
   feedbackVariant: FeedbackVariant
   paused: boolean
   results: SessionResult | null
+  /** Bieżąca liczba iskierek (poprawnych odpowiedzi) w sesji — aktualizowana na bieżąco */
+  iskierkiEarned: number
+  /** Wyniki zakończonych pytań (indeks i < currentQuestionIndex) */
+  questionOutcomes: QuestionOutcome[]
 
   start: () => void
   submitAnswer: (answer: string) => void
@@ -296,6 +302,8 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   const [paused, setPaused] = useState(false)
   const [results, setResults] = useState<SessionResult | null>(null)
   const [pickedScene, setPickedScene] = useState<{ wordId: string; sceneId: string } | null>(null)
+  const [iskierkiEarned, setIskierkiEarned] = useState(0)
+  const [questionOutcomes, setQuestionOutcomes] = useState<QuestionOutcome[]>([])
 
   // Internal refs — unikamy stale closures w callbackach
   const statusRef = useRef<Status>('idle')
@@ -315,6 +323,9 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
 
   // Album tracking — nowe słowa zdobyte w sesji
   const newAlbumWordsRef = useRef<string[]>([])
+
+  // Wynik aktualnego pytania — ustawiany w handleOutcome, pushowany w advance
+  const pendingOutcomeRef = useRef<QuestionOutcome | null>(null)
 
   // Wild celebration jitter — obliczany raz na sesję
   const wildJitterRef = useRef(0)
@@ -508,9 +519,13 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
         }
       }
 
+      // Zapisz wynik pytania (pushowany do questionOutcomes w advance)
+      pendingOutcomeRef.current = isCorrect ? 'correct' : outcome === 'wrong' ? 'wrong' : 'dontKnow'
+
       // Zaktualizuj liczniki
       if (isCorrect) {
         correctCountRef.current += 1
+        setIskierkiEarned(correctCountRef.current)
         // Wild celebration check — używamy getState() żeby mieć aktualne wartości
         // po synchronicznym incrementWildCounter (store.set jest sync)
         const readingStore = useReading.getState()
@@ -568,6 +583,13 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
 
   // Przechodzi do następnego pytania lub kończy sesję
   const advance = useCallback((): void => {
+    // Pushuj wynik zakończonego pytania do questionOutcomes
+    if (pendingOutcomeRef.current !== null) {
+      const outcome = pendingOutcomeRef.current
+      pendingOutcomeRef.current = null
+      setQuestionOutcomes((prev) => [...prev, outcome])
+    }
+
     const nextIndex = currentQuestionIndexRef.current + 1
     if (nextIndex >= QUESTIONS_PER_SESSION) {
       // Sesja zakończona
@@ -626,6 +648,9 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     startedAtRef.current = now()
     setResults(null)
     setPickedScene(null)
+    setIskierkiEarned(0)
+    setQuestionOutcomes([])
+    pendingOutcomeRef.current = null
 
     // Oblicz jitter dla tej sesji: ±2
     wildJitterRef.current = Math.floor(rng() * 5) - 2  // -2, -1, 0, 1, 2
@@ -723,6 +748,8 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     feedbackVariant,
     paused,
     results,
+    iskierkiEarned,
+    questionOutcomes,
     start,
     submitAnswer,
     submitDontKnow,
