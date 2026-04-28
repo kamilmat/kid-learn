@@ -5,6 +5,10 @@
 
 ## Aktualny stan (2026-04-28 — sesja UX polish)
 
+### 🎯 Następna sesja: **moduł 3 — cyferki** (dodawanie / odejmowanie / mnożenie)
+
+Decyzja user'a 2026-04-28. Start od brainstormingu (poziomy, typy ćwiczeń, scope), spec do `docs/superpowers/specs/`, potem implementacja w `src/modules/numbers/` (lub `math/`) reużywająca `shared/`. Memory: `project_next_session_module3_math.md`.
+
 ### Sesja podsumowanie (commits dziś, w kolejności):
 
 | Commit | Krótko |
