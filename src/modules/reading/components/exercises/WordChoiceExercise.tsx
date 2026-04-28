@@ -79,9 +79,9 @@ export function WordChoiceExercise({
           gap: 16,
         }}
       >
-        {choices.map((word) => (
+        {choices.map((word, i) => (
           <WordTile
-            key={word}
+            key={`${word}-${i}`}
             word={word}
             onTap={() => onAnswer(word)}
           />

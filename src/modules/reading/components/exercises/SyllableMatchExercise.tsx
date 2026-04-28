@@ -79,9 +79,9 @@ export function SyllableMatchExercise({
           gap: 16,
         }}
       >
-        {choices.map((syllable) => (
+        {choices.map((syllable, i) => (
           <SyllableTile
-            key={syllable}
+            key={`${syllable}-${i}`}
             syllable={syllable}
             onTap={() => onAnswer(syllable)}
           />
