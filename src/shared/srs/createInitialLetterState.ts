@@ -2,6 +2,7 @@ import type { LetterState } from './types'
 
 export function createInitialLetterState(letter: string): LetterState {
   return {
+    id: `letter-${letter.toUpperCase()}`,
     letter,
     box: 1,
     lastSeen: 0,

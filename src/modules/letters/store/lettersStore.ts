@@ -134,13 +134,22 @@ export const useLetters = create<LettersStore>()(
       // świeżych defaultów zamiast `undefined`.
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<PersistedLettersShape>
-        return {
+        const merged = {
           ...current,
           letters: { ...(p.letters ?? {}) },
           sessions: Array.isArray(p.sessions) ? p.sessions : [],
           seenIntros: Array.isArray(p.seenIntros) ? p.seenIntros : [],
           lastUsedLevel: p.lastUsedLevel ?? null,
         }
+        // Migration: assign id to LetterState entries that pre-date the id field.
+        if (merged.letters) {
+          for (const [letter, state] of Object.entries(merged.letters)) {
+            if (state && !(state as { id?: string }).id) {
+              (state as { id: string }).id = `letter-${letter.toUpperCase()}`
+            }
+          }
+        }
+        return merged
       },
     },
   ),

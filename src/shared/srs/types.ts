@@ -15,6 +15,7 @@ export type BaseItemState = {
 }
 
 export type LetterState = {
+  id: string
   letter: string
   box: Box
   lastSeen: number

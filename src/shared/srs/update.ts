@@ -98,6 +98,7 @@ export function updateLetterState(
       : state.confusedWith
 
   const next: LetterState = {
+    id: state.id,
     letter: state.letter,
     box: newBox,
     lastSeen: now,
