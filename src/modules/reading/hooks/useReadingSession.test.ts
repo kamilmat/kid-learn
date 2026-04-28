@@ -244,4 +244,57 @@ describe('useReadingSession', () => {
     act(() => result.current.start())
     expect(result.current.pickedScene).toBeNull()
   })
+
+  it('triggers wild celebration when correct count >= wildCelebrationFreq + jitter', () => {
+    const settings = { reading: { wildCelebrationFreq: 2 } } as any
+    // rng=0.5 → jitter = Math.floor(0.5*5) - 2 = 0; trigger at counter >= 2
+    const { result } = renderHook(() => useReadingSession({
+      level: 'iskierka',
+      audioBus: mockAudioBus,
+      settings,
+      rng: () => 0.5,
+    }))
+    act(() => result.current.start())
+
+    // Submit 1st correct (counter goes 0→1, no wild)
+    let target = result.current.currentQuestion?.type === 'syllable-match'
+      ? result.current.currentQuestion.targetSyllable : null
+    if (target) {
+      act(() => result.current.submitAnswer(target))
+      expect(result.current.feedbackVariant).toBe('correct')  // not 'wild' yet
+      act(() => result.current.skipFeedback())
+    }
+
+    // Submit 2nd correct (counter goes 1→2, threshold 2 hit, should be 'wild')
+    target = result.current.currentQuestion?.type === 'syllable-match'
+      ? result.current.currentQuestion.targetSyllable : null
+    if (target) {
+      act(() => result.current.submitAnswer(target))
+      expect(result.current.feedbackVariant).toBe('wild')
+    }
+  })
+
+  it('Pochodnia low-box (3+ syl) never picks first position', () => {
+    // Run multiple sessions with deterministic rng to verify distribution
+    const positions = new Set<string>()
+    for (let seed = 0; seed < 30; seed++) {
+      const { result } = renderHook(() => useReadingSession({
+        level: 'pochodnia',
+        audioBus: mockAudioBus,
+        settings: mockSettings,
+        rng: () => (seed * 0.137) % 1,  // varied but deterministic
+      }))
+      act(() => result.current.start())
+      if (result.current.currentQuestion?.type === 'syllable-fill') {
+        const q = result.current.currentQuestion
+        // Only count for 3+ syllable words at low box (initial state, all box=1)
+        // Total syllables = visibleSyllables.length + 1 (the missing one)
+        if (q.visibleSyllables.length + 1 >= 3) {
+          positions.add(q.missingPosition)
+        }
+      }
+    }
+    // Expect 'first' NOT to appear when low-box (box=1) for 3+syl words
+    expect(positions.has('first')).toBe(false)
+  })
 })
