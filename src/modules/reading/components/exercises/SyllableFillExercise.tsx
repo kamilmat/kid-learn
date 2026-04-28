@@ -9,6 +9,7 @@
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { SyllableTile } from '../SyllableTile'
 import type { SyllableFillVariant } from '../../types'
+import { getSyllableColor } from '../../utils/syllableColors'
 
 export type SyllableFillExerciseProps = {
   targetWord: string
@@ -154,7 +155,10 @@ export function SyllableFillExercise({
               ?
             </div>
           ) : (
-            <div key={`syl-${i}-${syl}`} style={syllableBoxStyle}>
+            <div
+              key={`syl-${i}-${syl}`}
+              style={{ ...syllableBoxStyle, color: getSyllableColor(i) }}
+            >
               {syl}
             </div>
           ),

@@ -13,7 +13,9 @@ describe('WordChoiceExercise', () => {
         onAudioRepeat={vi.fn()}
       />,
     )
-    for (const c of ['TATA', 'MAMA', 'BABA', 'LALA']) expect(screen.getByText(c)).toBeDefined()
+    for (const c of ['TATA', 'MAMA', 'BABA', 'LALA']) {
+      expect(screen.getByLabelText(`słowo ${c}`)).toBeDefined()
+    }
   })
 
   it('calls onAnswer with chosen word', () => {

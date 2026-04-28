@@ -1,13 +1,16 @@
 // WordTile — kafelek z pełnym słowem do ćwiczeń czytania.
-// Sekcja Phase 5.2 planu: min 140×60, Lexend, auto-scale fontu.
+// Sylaby kolorowane wg pozycji (paleta z syllableColors) — dziecko widzi
+// gdzie kończy się jedna sylaba a zaczyna następna.
 
 import type { CSSProperties } from 'react'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
+import { getSyllableColor } from '../utils/syllableColors'
 
 export type WordTileState = 'idle' | 'correct' | 'wrong' | 'highlighted'
 
 export type WordTileProps = {
   word: string
+  syllables?: string[]
   state?: WordTileState
   onTap?: () => void
 }
@@ -25,12 +28,11 @@ function stateStyle(state: WordTileState): CSSProperties {
   }
 }
 
-// Długie słowa (>5 znaków) dostają mniejszy font żeby zmieścić się w kafelku.
 function fontSizeForWord(word: string): number {
   return word.length > 5 ? 28 : 32
 }
 
-export function WordTile({ word, state = 'idle', onTap }: WordTileProps) {
+export function WordTile({ word, syllables, state = 'idle', onTap }: WordTileProps) {
   const handlers = useTapHandler({ onTap: onTap ?? (() => undefined) })
 
   const baseStyle: CSSProperties = {
@@ -55,6 +57,10 @@ export function WordTile({ word, state = 'idle', onTap }: WordTileProps) {
     padding: '8px 16px',
   }
 
+  // W stanach correct/wrong/highlighted używamy jednolitego koloru dla czytelności
+  // (background już niesie semantykę). Kolory sylab tylko w stanie idle.
+  const showSyllableColors = state === 'idle' && syllables && syllables.length > 0
+
   return (
     <button
       type="button"
@@ -62,7 +68,17 @@ export function WordTile({ word, state = 'idle', onTap }: WordTileProps) {
       style={{ ...baseStyle, ...stateStyle(state) }}
       {...(onTap ? handlers : {})}
     >
-      {word}
+      {showSyllableColors ? (
+        <span aria-hidden="true">
+          {syllables.map((syl, i) => (
+            <span key={i} style={{ color: getSyllableColor(i) }}>
+              {syl}
+            </span>
+          ))}
+        </span>
+      ) : (
+        word
+      )}
     </button>
   )
 }

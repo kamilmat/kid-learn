@@ -3,6 +3,7 @@
 
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { WordTile } from '../WordTile'
+import { ALL_WORDS } from '../../data/words'
 
 export type WordChoiceExerciseProps = {
   targetWord: string
@@ -79,13 +80,17 @@ export function WordChoiceExercise({
           gap: 16,
         }}
       >
-        {choices.map((word, i) => (
-          <WordTile
-            key={`${word}-${i}`}
-            word={word}
-            onTap={() => onAnswer(word)}
-          />
-        ))}
+        {choices.map((word, i) => {
+          const syllables = ALL_WORDS.find((w) => w.text === word)?.syllables
+          return (
+            <WordTile
+              key={`${word}-${i}`}
+              word={word}
+              {...(syllables ? { syllables } : {})}
+              onTap={() => onAnswer(word)}
+            />
+          )
+        })}
       </div>
 
       <button
