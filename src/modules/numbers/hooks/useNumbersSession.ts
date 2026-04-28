@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { pickNextItem } from '@/shared/srs/select'
 import { nextBox, nextRecentWrong } from '@/shared/srs/update'
@@ -62,7 +62,6 @@ export function useNumbersSession({
   const questionStartedAtRef = useRef<number>(0)
   const lastFactRef = useRef<MathFactId | null>(null)
 
-  const facts = useNumbers((s) => s.facts)
   const ensureFactInitialized = useNumbers((s) => s.ensureFactInitialized)
   const applySessionResults = useNumbers((s) => s.applySessionResults)
 
@@ -75,18 +74,16 @@ export function useNumbersSession({
     return main
   }, [level])
 
-  // Initialize all facts in store
-  useEffect(() => {
-    levelFacts.forEach((f) => ensureFactInitialized(f.id, f.conceptId))
-  }, [levelFacts, ensureFactInitialized])
-
   const pickAndSetQuestion = useCallback(() => {
+    // Inicjalizuj fakty synchronicznie — useEffect-init może nie zdążyć
+    // przed pierwszym start() (race condition).
+    levelFacts.forEach((f) => ensureFactInitialized(f.id, f.conceptId))
+
     let pool: string[]
     if (
       level === 'pochodnia' &&
       rng() < POCHODNIA_SUBTRACT_MAINTENANCE_RATIO
     ) {
-      // Maintenance: pick from sub- facts
       pool = POCHODNIA_SUB_MAINTENANCE_FACTS.map((f) => f.id)
     } else {
       pool = levelFacts.map((f) => f.id)
@@ -94,7 +91,10 @@ export function useNumbersSession({
 
     if (pool.length === 0) return
 
-    const factId = pickNextItem(facts, pool, lastFactRef.current, now(), rng)
+    // Zawsze sięgaj po świeży snapshot store (closure z subscribed facts byłby
+    // stale przy pierwszym start() — ensureFactInitialized dopiero co biegło).
+    const currentFacts = useNumbers.getState().facts
+    const factId = pickNextItem(currentFacts, pool, lastFactRef.current, now(), rng)
     lastFactRef.current = factId
 
     const fact = levelFacts.find((f) => f.id === factId)
@@ -109,7 +109,7 @@ export function useNumbersSession({
       payload: { args: fact.args, op },
     })
     questionStartedAtRef.current = now()
-  }, [facts, levelFacts, level, now, rng])
+  }, [levelFacts, level, now, rng, ensureFactInitialized])
 
   const start = useCallback(() => {
     audioBus.stop()
@@ -154,7 +154,8 @@ export function useNumbersSession({
         level,
         events: eventsRef.current,
       }
-      const updatedFacts = computeUpdatedFacts(facts, eventsRef.current, endedAt)
+      const currentFacts = useNumbers.getState().facts
+      const updatedFacts = computeUpdatedFacts(currentFacts, eventsRef.current, endedAt)
       const updatedConcepts = computeMasteryProgress(
         useNumbers.getState().concepts,
         eventsRef.current,
@@ -172,7 +173,6 @@ export function useNumbersSession({
     questionCount,
     now,
     level,
-    facts,
     applySessionResults,
     pickAndSetQuestion,
   ])
