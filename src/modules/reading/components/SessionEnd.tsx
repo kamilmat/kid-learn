@@ -1,16 +1,20 @@
 // SessionEnd — ekran końca sesji czytania.
 // Phase 6.6.3: podsumowanie wyników + iskierki + nowe słowa w albumie.
+// Phase 9: ceremonia odblokowywania albumu co 10 kart.
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { colors, radii } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
 import { IskraMascot } from '@/shared/ui/IskraMascot'
+import { useReading } from '../store/readingStore'
 import type { SessionResult } from '../hooks/useReadingSession'
+import type { AudioBus } from '@/shared/audio/AudioBus'
 
 export type SessionEndProps = {
   results: SessionResult
   onExit: () => void
   onAlbum: () => void
+  audioBus?: Pick<AudioBus, 'play' | 'stop'>
 }
 
 type BreakdownCellProps = {
@@ -48,7 +52,109 @@ function BreakdownCell({ icon, label, value, color, testId }: BreakdownCellProps
   )
 }
 
-export function SessionEnd({ results, onExit, onAlbum }: SessionEndProps) {
+// CeremonyView — shows when album crosses a multiple-of-10 milestone.
+function CeremonyView({
+  milestone,
+  onContinue,
+  audioBus,
+}: {
+  milestone: number
+  onContinue: () => void
+  audioBus?: Pick<AudioBus, 'play' | 'stop'>
+}) {
+  // Play fanfare once on mount
+  useEffect(() => {
+    if (audioBus) void audioBus.play('sfx-mastery-fanfara')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Confetti particles — simple CSS-animated array
+  const particles = Array.from({ length: 12 }, (_, i) => i)
+
+  return (
+    <div
+      data-testid="ceremony-view"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(254, 249, 242, 0.97)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 24,
+        zIndex: 200,
+        padding: 32,
+        textAlign: 'center',
+      }}
+    >
+      {/* Confetti particles */}
+      <style>{`
+        @keyframes confettiFall {
+          0% { transform: translateY(-60px) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(120px) rotate(360deg); opacity: 0; }
+        }
+      `}</style>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        {particles.map(i => (
+          <div
+            key={i}
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              left: `${(i * 8 + 4)}%`,
+              top: `${10 + (i % 3) * 15}%`,
+              fontSize: 20,
+              animation: `confettiFall ${1.2 + (i % 4) * 0.3}s ease-in ${(i % 6) * 0.2}s infinite`,
+            }}
+          >
+            {['🎉', '⭐', '✨', '🌟'][i % 4]}
+          </div>
+        ))}
+      </div>
+
+      <IskraMascot size={160} state="dance" intensity="torch" oneshotKey={`ceremony-${milestone}`} />
+
+      <div style={{ fontSize: 48, lineHeight: 1 }}>🎉</div>
+
+      <div style={{ fontFamily: 'var(--font-handwritten)', fontSize: 40, fontWeight: 800, color: '#f59e0b' }}>
+        ŁAAŁ!
+      </div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: '#2d2d33' }}>
+        Masz już {milestone} kart!
+      </div>
+      <div style={{ fontSize: 18, color: '#6b7280' }}>
+        Zbierasz słowa jak mistrz 🔥
+      </div>
+
+      <Button size="large" onClick={onContinue}>
+        Świetnie!
+      </Button>
+    </div>
+  )
+}
+
+export function SessionEnd({ results, onExit, onAlbum, audioBus }: SessionEndProps) {
+  const ceremony = useReading(s => s.pendingCeremonyMilestone)
+  const clearCeremony = useReading(s => s.clearPendingCeremony)
+  const [ceremonyDismissed, setCeremonyDismissed] = useState(false)
+
+  const handleCeremonyContinue = () => {
+    clearCeremony()
+    setCeremonyDismissed(true)
+  }
+
+  // Show ceremony overlay if milestone pending and not yet dismissed
+  if (ceremony !== null && !ceremonyDismissed) {
+    return (
+      <CeremonyView
+        milestone={ceremony}
+        onContinue={handleCeremonyContinue}
+        {...(audioBus !== undefined ? { audioBus } : {})}
+      />
+    )
+  }
+
   const correctCount = results.outcomes['correct'] ?? 0
   const wrongCount = results.outcomes['wrong'] ?? 0
   const dontKnowCount = results.outcomes['dontKnow'] ?? 0

@@ -592,9 +592,18 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       // Używamy getState() żeby mieć synchroniczny dostęp do store
       const storeState = useReading.getState()
       storeState.applySessionResults(syllableStatesRef.current, wordStatesRef.current, sessionLog)
-      // Dodaj nowe słowa do albumu
+      // Dodaj nowe słowa do albumu + sprawdź milestone ceremonii
+      const prevAlbumCount = useReading.getState().albumUnlocked.length
       for (const wordId of newAlbumWordsRef.current) {
         useReading.getState().addToAlbum(wordId)
+      }
+      const newAlbumCount = useReading.getState().albumUnlocked.length
+      const CEREMONY_MILESTONES = [10, 20, 30, 40, 50, 60]
+      for (const m of CEREMONY_MILESTONES) {
+        if (prevAlbumCount < m && newAlbumCount >= m) {
+          useReading.getState().setPendingCeremony(m)
+          break
+        }
       }
 
       setResults(sessionResults)

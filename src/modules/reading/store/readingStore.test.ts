@@ -89,4 +89,13 @@ describe('readingStore', () => {
     state.markSceneSeen('MAMA', 'mama-v1')
     expect(useReading.getState().seenSceneVariants['MAMA']).toHaveLength(1)
   })
+
+  it('setPendingCeremony / clearPendingCeremony work', () => {
+    const state = useReading.getState()
+    expect(useReading.getState().pendingCeremonyMilestone).toBeNull()
+    state.setPendingCeremony(10)
+    expect(useReading.getState().pendingCeremonyMilestone).toBe(10)
+    state.clearPendingCeremony()
+    expect(useReading.getState().pendingCeremonyMilestone).toBeNull()
+  })
 })

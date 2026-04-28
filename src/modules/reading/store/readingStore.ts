@@ -21,6 +21,7 @@ export type ReadingState = {
   lastUsedLevel: Level | null
   wildCelebrationCounter: number
   seenSceneVariants: Record<string, string[]>
+  pendingCeremonyMilestone: number | null
 
   ensureSyllableInitialized: (syllable: string) => void
   ensureWordInitialized: (wordId: string) => void
@@ -36,6 +37,8 @@ export type ReadingState = {
   incrementWildCounter: () => void
   resetWildCounter: () => void
   markSceneSeen: (wordText: string, sceneId: string) => void
+  setPendingCeremony: (milestone: number) => void
+  clearPendingCeremony: () => void
   resetAllProgress: () => void
   reset: () => void
 }
@@ -49,6 +52,7 @@ const initialState = {
   lastUsedLevel: null,
   wildCelebrationCounter: 0,
   seenSceneVariants: {} as Record<string, string[]>,
+  pendingCeremonyMilestone: null as number | null,
 }
 
 export const useReading = create<ReadingState>()(
@@ -145,6 +149,10 @@ export const useReading = create<ReadingState>()(
         })
       },
 
+      setPendingCeremony: (milestone) => set({ pendingCeremonyMilestone: milestone }),
+
+      clearPendingCeremony: () => set({ pendingCeremonyMilestone: null }),
+
       resetAllProgress: () => set(initialState),
 
       reset: () => set(initialState),
@@ -164,6 +172,7 @@ export const useReading = create<ReadingState>()(
           lastUsedLevel: p.lastUsedLevel ?? null,
           wildCelebrationCounter: typeof p.wildCelebrationCounter === 'number' ? p.wildCelebrationCounter : 0,
           seenSceneVariants: (p.seenSceneVariants && typeof p.seenSceneVariants === 'object' && !Array.isArray(p.seenSceneVariants)) ? p.seenSceneVariants : {},
+          pendingCeremonyMilestone: typeof p.pendingCeremonyMilestone === 'number' ? p.pendingCeremonyMilestone : null,
         } as ReadingState
       },
     },
