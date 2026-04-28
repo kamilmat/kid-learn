@@ -31,7 +31,8 @@ Bez zmian względem modułu 1:
 - **Vitest** — testy logiki nietrywialnej (SRS dla słów, generator dystraktorów dla sylab, weryfikacja drag-and-drop)
 - **Edge TTS** (Python wrapper) — generowanie audio przy buildzie
 - **`react-router-dom`** — routing rozszerzony o `/reading/*`
-- **`@dnd-kit/core`** lub własny minimalny drag-and-drop hook — dla układania sylab. Decyzja w plan'ie implementacji (dnd-kit jest standardem React i ma magnetism out-of-the-box, ale dodaje ~30KB).
+- **`@dnd-kit/core` + `@dnd-kit/sortable`** (~30KB gzipped) — drag-and-drop sylab. Wybrany ze względu na wbudowane PointerSensor/TouchSensor z handlingiem stylus i drag thresholdami (iOS Safari + Apple Pencil edge case'y już raz spaliły tydzień przy module 1 — nie powtarzamy budowy własnego). Magnetism (collision detection) i keyboard a11y out-of-the-box.
+- **`Lexend`** (Google Fonts, OFL) — czcionka dla **kafelków sylab/słów**. Lexend jest zaprojektowany dla early readers (szerokie litery, większe odstępy, badania pokazują 25%+ szybsze czytanie u dzieci). Kalam (już w projekcie) zostaje dla **albumu (podpisy słów), Iskra speech bubbles, miejsc z handwritten feel**.
 
 ## 4. Struktura projektu
 
@@ -227,19 +228,25 @@ Dwie pule pozycji (sylaby + słowa) ważone osobno — w jednej sesji puli sylab
 - **Animowalne**: każde słowo *może* mieć mini-scenkę. Słowa bez scenki mają fallback (sekcja 9.5)
 - **Zerówka-friendly**: nazwy zwierząt, członków rodziny, otoczenia, pojazdów
 
-### 8.2 Pula per poziom (propozycja, finalna lista po review)
+### 8.2 Pula per poziom — zatwierdzone listy
 
-**Iskierka — sylaby (16-20):** MA, TA, LA, KO, MO, TO, LO, RA, RO, RU, ME, TE, LE, BO, DO, SO, NO, BA, KU, PA
+**Iskierka — sylaby (23):** MA, TA, LA, KO, MO, TO, LO, RA, RO, RU, BA, DA, DO, KU, NA, NO, SA, NU, PA, WA, DU, KA, TY
 
-**Płomyk — 2-sylabowe CV+CV (20-25):** MAMA, TATA, LALA, KURA, RYBA, SOWA, RUDA, DUDA, NUDA, ŁAPA, KOSA, NORA, RANA, DOM, KOT, NOS, MAK, RAK, OKO, OSA, ULA, ALA, OLA, EMA, IGO
+Pure CV bez palatalizacji (SI/NI/CI/ZI wykluczone — palatalizacja uczona w Pochodnia). Częstość spółgłosek M/T/L/K/R = top 5 w polskim, co daje szybkie sylaby. Pula dobrana tak, by **w 100% pokrywała Płomyk słownik**.
 
-**Ognik — 2-3 sylabowe + dwuznaki (25-30):** SZAFA, CZAPKA, MASZYNA, RZEKA, ŻABA, CHŁOPIEC, PARASOL, BUTELKA, BANAN, JABŁKO, RYBKA, KOSZULA, LISEK, GĘŚ, HUŚTAWKA, SAMOCHÓD, KOMPUTER, TELEFON, ZABAWKA, KRZESŁO, OBRAZ, LAMPA, KSIĄŻKA, ROWER, AUTO, DROGA
+**Płomyk — 2-sylabowe CV+CV (20):** MAMA, TATA, LALA, KURA, NORA, ROSA, LATO, BABA, MAPA, TAMA, NUTA, RAMA, KORA, KOSA, SOWA, KOTY, LAMA, KAWA, KASA, DUDA
 
-**Pochodnia — 3+ sylab + zmiękczenia (25-30):** KAPELUSZ, ZIELONY, ŚLIWKA, SIANO, KOŃ, MIŚ, CIASTKO, NIEDŹWIEDŹ, KSIĘŻYC, PIENIĄDZ, MIESZKANIE, DZIECKO, CZWARTEK, DWORZEC, LOKOMOTYWA, POMIDOR, OGÓREK, MARCHEW, ZIEMNIAK, CEBULA, SAŁATA, KAPUSTA, ARBUZ, MELON
+Wszystkie konkretne (zwierzęta, jedzenie, otoczenie). Zero dwuznaków, zero zmiękczeń. Każde słowo dekomponuje się na 2 sylaby z Iskierka pool.
 
-**Total:** ~85-100 słów + ~16-20 sylab = **~110 audio kluczy** (plus reakcje Iskry, easter eggs, UI cues, scenes audio).
+**Ognik — 2-3 sylabowe + dwuznaki + monosylaby z palatalizacją (25):** SZAFA, CZAPKA, MASZYNA, MUSZKA, RZEKA, ŻABA, CHŁOPIEC, PARASOL, BANAN, KOSZULA, SAMOCHÓD, KOMPUTER, TELEFON, ZABAWKA, LAMPA, ROWER, AUTO, RYBKA, KOTEK, BUTELKA, SZALIK, LIZAK, MIŚ, GĘŚ, KOŃ
 
-User finalizuje listę przed nagrywaniem audio (selekcja kanonu może się zmienić).
+8 słów z dwuznakami (SZ/CZ/RZ/Ż/CH), 3 monosylabowe z palatalizacją końcową (MIŚ/GĘŚ/KOŃ), reszta neutralne 2-3 sylabowe.
+
+**Pochodnia — 3+ sylab + zmiękczenia (22):** KAPELUSZ, ZIELONY, ŚLIWKA, SIANO, CIASTKO, PIENIĄDZ, DZIECKO, LOKOMOTYWA, POMIDOR, OGÓREK, MARCHEW, ZIEMNIAK, CEBULA, SAŁATA, KAPUSTA, ARBUZ, MELON, BANANY, KSIĘŻYC, NIEDŹWIEDŹ, CZWARTEK, CZEKOLADA
+
+Tematyka: warzywa/owoce (kanon przedszkolny) + dni tygodnia + zmiękczone klasyki (ŚLIWKA, NIEDŹWIEDŹ). LOKOMOTYWA = klasyk Tuwima. Wszystkie 3+ sylab więc Pochodnia mechanic (uzupełnij sylabę) działa na każdym.
+
+**Total:** 67 słów + 23 sylaby = **90 audio kluczy** (plus reakcje Iskry, easter eggs, UI cues, scenes audio).
 
 ### 8.3 Audio kluczy
 
@@ -294,15 +301,25 @@ Komponent `WordScene` renderuje scenę: tworzy `<div>` z emoji + odpalą `style.
 
 Default ON. Ustawienie w panelu rodzica (po bramie math) pozwala wyłączyć dla dzieci nadwrażliwych na bodźce. Gdy OFF: po correct gra tylko audio słowa + zielona poświata, bez animacji.
 
-### 9.5 Fallback — słowa bez scenki
+### 9.5 Strategia produkcji scenek — 3 tier
 
-Nie każde słowo w `data/words.ts` musi mieć wpis w `data/scenes.ts`. Gdy dla danego słowa brak scenki:
+| Tier | Słowa | Wariantów per słowo | Co zawiera |
+|---|---|---|---|
+| **Premiera** | 20 Płomyk + 5 Ognik-favourites | 2-3 (~50-60 scenek total) | Pełne keyframes + dedykowane SFX + emoji-particles (hearts, stars, smoke, sparkle) |
+| **Wave 2** | Reszta Ognik (20 słów) | 1-2 (~30 scenek) | Prostsze CSS keyframes, reused SFX z biblioteki |
+| **Wave 3** | Pochodnia (22 słowa) | 1 + fallback | Minimalne, niektóre tylko fallback emoji-only |
 
-- **Sukces (Płomyk/Ognik/Pochodnia)** → standardowe celebration (zielona poświata + "ding" + audio słowa) bez sceny
-- **Album** → karta pokazuje tylko emoji domyślny ("⭐") albo fallback emoji wybrany w `data/words.ts` jako pole `albumEmoji`
-- **Sukces na słowie bez scenki to wciąż OK** — dziecko nie traci doświadczenia, tylko nie dostaje "magii". Daje to space na stopniowe dodawanie scenek bez blokowania słów.
+5 Ognik-favourites do tieru Premiera (selekcja słów najbardziej "pokazowych" wizualnie): SAMOCHÓD, ŻABA, BANAN, RYBKA, KOTEK.
 
-Cel: na premierę modułu **30 najczęstszych słów Iskierka+Płomyk** ma scenki (≥2 warianty każde). Pozostałe ~60-70 słów dochodzi stopniowo.
+Pochodnia ma najmniejszy nacisk na scenki bo tam dziecko jest skupione na czytaniu długich słów — scenka jest nagrodą sygnałową, nie main event.
+
+### 9.6 Fallback — słowa bez scenki
+
+Gdy dla słowa brak wpisu w `data/scenes.ts`:
+
+- **Sukces** → standardowe celebration (zielona poświata + "ding" + audio słowa) bez sceny
+- **Album** → karta pokazuje fallback emoji z pola `albumEmoji` w `data/words.ts` (każde słowo musi mieć ten field, nawet bez scenki)
+- **Sukces na słowie bez scenki to wciąż OK** — dziecko nie traci doświadczenia, tylko nie dostaje "magii". Pozwala stopniowe dodawanie scenek bez blokowania słów
 
 ## 10. Iskra ożywiona
 
@@ -581,12 +598,12 @@ Szczegółowy plan w `docs/superpowers/plans/` (po review tego speca + invokacji
 
 ## 18. Otwarte decyzje (do plan'a / implementacji)
 
-- **Drag-and-drop biblioteka:** `@dnd-kit/core` (~30KB) vs własny minimalny hook. Decyzja w plan'ie po próbie własnego prototypu — własny hook preferowany jeśli wystarcza (mniejszy bundle), `@dnd-kit` gdy potrzebujemy keyboard a11y / multi-touch
-- **Finalna lista słów per poziom** (sekcja 8.2 to propozycja — user akceptuje / modyfikuje przed nagrywaniem audio)
-- **Lista scenek** (sekcja 9.2 ma przykłady — finalne keyframes + wybór emoji + wybór SFX dorzucane przy implementacji fazy 7)
-- **Lista easter eggs Iskry** (sekcja 10.2 — finalne SFX i animacje przy fazie 8)
-- **Lista wild celebrations** (sekcja 11.2 — finalne komponenty przy fazie 10)
-- **Czcionka czytania (sylaby/słowa):** Kalam (jak w module 1) vs druga, czytelniejsza dla bloków sylab — finalna decyzja po teście wizualnym w fazie 1-2
+Kluczowe decyzje są zatwierdzone (sekcje 3, 8.2, 9.5, 10.2, 11.2). Pozostałe szczegóły to zadania implementacyjne, nie decyzje designowe:
+
+- **Konkretne keyframes scenek** (50-60 scenek tieru Premiera) — definiowane przy implementacji fazy 7. Spec nie podaje keyframes inline (zbyt detaliczne) — agent implementuje per scenę z `data/scenes.ts`, kierując się wzorcami z mockupów companion.
+- **Konkretne SFX files** (15-20 plików CC0) — agent wybiera z mixkit/freesound przy fazie 11 wg listy z sekcji 13.1. Każdy plik <100KB, format mp3.
+- **Konkretne komponenty wild celebrations** (5 wariantów, sekcja 11.2) — keyframes + audio + ewentualne emoji-particles definiowane przy fazie 10
+- **Konkretne SFX easter eggs Iskry** (8 wpisów, sekcja 10.2) — non-verbal CC0 + ewentualne TTS Marek dla "salto" / "gibberish" przy fazie 8
 
 ## 19. Out of scope (potwierdzone)
 
