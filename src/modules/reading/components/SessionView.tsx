@@ -1,7 +1,8 @@
 // SessionView — orkiestrator UI sesji czytania.
 // Phase 6.5: renderuje właściwe ćwiczenie wg poziomu + overlaye.
+// Phase 7: mini-scenki słów po poprawnej odpowiedzi (Płomyk/Ognik/Pochodnia).
 
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import type { Level, Settings } from '@/shared/settings/types'
 import { useReadingSession } from '../hooks/useReadingSession'
@@ -13,6 +14,10 @@ import { SyllableFillExercise } from './exercises/SyllableFillExercise'
 import { FeedbackOverlay } from './FeedbackOverlay'
 import { PauseOverlay } from './PauseOverlay'
 import { SessionEnd } from './SessionEnd'
+import { WordScene } from './WordScene'
+import { pickRandomScene } from '../data/scenes'
+import type { Scene } from '../data/scenes'
+import { useReading } from '../store/readingStore'
 
 export type SessionViewProps = {
   level: Level
@@ -30,6 +35,12 @@ export function SessionView({
   onSessionComplete,
 }: SessionViewProps) {
   const session = useReadingSession({ level, audioBus, settings })
+  const seenVariants = useReading(s => s.seenSceneVariants)
+  const markSceneSeen = useReading(s => s.markSceneSeen)
+  const [activeScene, setActiveScene] = useState<Scene | null>(null)
+
+  // wordAnimations: enabled unless explicitly set to 'off' (Phase 11 will add settings UI)
+  const wordAnimationsEnabled = (settings.reading as Record<string, unknown> | undefined)?.wordAnimations !== 'off'
 
   // Startuj sesję przy mounto
   useEffect(() => {
@@ -44,6 +55,44 @@ export function SessionView({
       onSessionComplete?.()
     }
   }, [session.status, session.results, onSessionComplete])
+
+  // Trigger scene on correct answer for non-Iskierka exercises
+  useEffect(() => {
+    if (
+      session.feedbackVariant === 'correct' &&
+      session.currentQuestion !== null &&
+      session.currentQuestion.type !== 'syllable-match' &&
+      activeScene === null &&
+      wordAnimationsEnabled
+    ) {
+      const q = session.currentQuestion
+      let wordText: string | null = null
+      if (q.type === 'word-assembly' || q.type === 'word-choice' || q.type === 'syllable-fill') {
+        wordText = q.targetWord
+      }
+      if (wordText) {
+        const seen = seenVariants[wordText] ?? []
+        const scene = pickRandomScene(wordText, seen)
+        if (scene) {
+          markSceneSeen(wordText, scene.id)
+          setActiveScene(scene)
+        }
+      }
+    }
+  // activeScene intentionally not in deps — we only want to fire once per correct transition
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.feedbackVariant, session.currentQuestion, wordAnimationsEnabled])
+
+  // Reset activeScene when feedback is dismissed
+  useEffect(() => {
+    if (session.feedbackVariant === null && activeScene !== null) {
+      setActiveScene(null)
+    }
+  }, [session.feedbackVariant, activeScene])
+
+  const handleSceneComplete = useCallback(() => {
+    setActiveScene(null)
+  }, [])
 
   if (session.status === 'idle') {
     return (
@@ -110,7 +159,17 @@ export function SessionView({
         />
       )}
 
-      {session.feedbackVariant !== null && (
+      {/* WordScene plays above everything as the celebration IS the feedback */}
+      {activeScene && (
+        <WordScene
+          scene={activeScene}
+          audioBus={audioBus}
+          onComplete={handleSceneComplete}
+        />
+      )}
+
+      {/* FeedbackOverlay shown only when no active scene (scene replaces it for 'correct') */}
+      {session.feedbackVariant !== null && !activeScene && (
         <FeedbackOverlay
           variant={session.feedbackVariant}
           onSkip={session.skipFeedback}

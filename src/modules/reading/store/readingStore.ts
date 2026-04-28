@@ -20,6 +20,7 @@ export type ReadingState = {
   seenIntros: string[]
   lastUsedLevel: Level | null
   wildCelebrationCounter: number
+  seenSceneVariants: Record<string, string[]>
 
   ensureSyllableInitialized: (syllable: string) => void
   ensureWordInitialized: (wordId: string) => void
@@ -34,6 +35,7 @@ export type ReadingState = {
   setLastUsedLevel: (level: Level) => void
   incrementWildCounter: () => void
   resetWildCounter: () => void
+  markSceneSeen: (wordText: string, sceneId: string) => void
   resetAllProgress: () => void
   reset: () => void
 }
@@ -46,6 +48,7 @@ const initialState = {
   seenIntros: [],
   lastUsedLevel: null,
   wildCelebrationCounter: 0,
+  seenSceneVariants: {} as Record<string, string[]>,
 }
 
 export const useReading = create<ReadingState>()(
@@ -129,6 +132,19 @@ export const useReading = create<ReadingState>()(
 
       resetWildCounter: () => set({ wildCelebrationCounter: 0 }),
 
+      markSceneSeen: (wordText, sceneId) => {
+        set((s) => {
+          const current = s.seenSceneVariants[wordText] ?? []
+          if (current.includes(sceneId)) return s
+          return {
+            seenSceneVariants: {
+              ...s.seenSceneVariants,
+              [wordText]: [...current, sceneId],
+            },
+          }
+        })
+      },
+
       resetAllProgress: () => set(initialState),
 
       reset: () => set(initialState),
@@ -147,6 +163,7 @@ export const useReading = create<ReadingState>()(
           albumUnlocked: Array.isArray(p.albumUnlocked) ? p.albumUnlocked : [],
           lastUsedLevel: p.lastUsedLevel ?? null,
           wildCelebrationCounter: typeof p.wildCelebrationCounter === 'number' ? p.wildCelebrationCounter : 0,
+          seenSceneVariants: (p.seenSceneVariants && typeof p.seenSceneVariants === 'object' && !Array.isArray(p.seenSceneVariants)) ? p.seenSceneVariants : {},
         } as ReadingState
       },
     },
