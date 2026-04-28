@@ -92,5 +92,5 @@ export function getWordById(id: string): WordData | undefined {
 }
 
 export function getWordAudioKey(word: string): string {
-  return `word-${word}`
+  return `word-${word.toLowerCase()}`
 }

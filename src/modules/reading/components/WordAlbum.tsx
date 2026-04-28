@@ -3,7 +3,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useReading } from '../store/readingStore'
-import { ALL_WORDS, getWordById } from '../data/words'
+import { ALL_WORDS, getWordById, getWordAudioKey } from '../data/words'
 import { pickRandomScene } from '../data/scenes'
 import { WordScene } from './WordScene'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
@@ -55,7 +55,7 @@ export function WordAlbum({ audioBus, onExit }: Props) {
       setActiveScene({ scene, wordId })
     } else {
       // Fallback: brak scenki, odgraj samo audio słowa
-      void audioBus.play(`word-${word.text}`)
+      void audioBus.play(getWordAudioKey(word.text))
     }
   }, [albumUnlocked, seenSceneVariants, markSceneSeen, audioBus])
 

@@ -22,7 +22,7 @@ import type {
 import { LEVEL_TO_EXERCISE } from '../types'
 import { getReadingPool } from '../data/levelPools'
 import { ALL_SYLLABLES, getSyllableAudioKey } from '../data/syllables'
-import { ALL_WORDS, getWordById, getWordsByLevel } from '../data/words'
+import { ALL_WORDS, getWordById, getWordsByLevel, getWordAudioKey } from '../data/words'
 import { pickNextItem } from '@/shared/srs/select'
 import { nextBox, nextRecentWrong } from '@/shared/srs/update'
 import { useReading } from '../store/readingStore'
@@ -321,13 +321,13 @@ function playPromptAudio(
     case 'word-assembly':
       // Krótka zachęta + sekwencja sylab
       void audioBus.play(`reading-plomyk-intro`)
-      void audioBus.play(`word-${question.targetWord}`)
+      void audioBus.play(getWordAudioKey(question.targetWord))
       break
     case 'word-choice':
-      void audioBus.play(`word-${question.targetWord}`)
+      void audioBus.play(getWordAudioKey(question.targetWord))
       break
     case 'syllable-fill':
-      void audioBus.play(`word-${question.targetWord}`)
+      void audioBus.play(getWordAudioKey(question.targetWord))
       break
   }
 }
@@ -596,7 +596,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
           case 'word-assembly':
           case 'word-choice':
           case 'syllable-fill':
-            void audioBus.play(`word-${q.targetWord}`)
+            void audioBus.play(getWordAudioKey(q.targetWord))
             break
         }
       } else if (outcome === 'dontKnow') {
@@ -609,7 +609,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
           case 'word-assembly':
           case 'word-choice':
           case 'syllable-fill':
-            void audioBus.play(`word-${q.targetWord}`)
+            void audioBus.play(getWordAudioKey(q.targetWord))
             break
         }
       }
