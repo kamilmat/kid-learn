@@ -2,8 +2,11 @@
 // Phase 6.5: renderuje właściwe ćwiczenie wg poziomu + overlaye.
 // Phase 7: mini-scenki słów po poprawnej odpowiedzi (Płomyk/Ognik/Pochodnia).
 // Phase 8: IskraMascotAnimated (comic-fail przy wrong/dontKnow, success przy correct).
+// Phase 10: WildCelebration — 5 absurdalnych celebracji co wildCelebrationFreq correct.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { WildCelebration } from './WildCelebration'
+import { pickRandomWildCelebration, type WildCelebrationDef } from '../data/wildCelebrations'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import type { Level, Settings } from '@/shared/settings/types'
 import { useReadingSession } from '../hooks/useReadingSession'
@@ -43,6 +46,7 @@ export function SessionView({
   const seenVariants = useReading(s => s.seenSceneVariants)
   const markSceneSeen = useReading(s => s.markSceneSeen)
   const [activeScene, setActiveScene] = useState<Scene | null>(null)
+  const [activeWildCelebration, setActiveWildCelebration] = useState<WildCelebrationDef | null>(null)
   const iskra = useIskraReactions()
   const lastFeedbackRef = useRef<typeof session.feedbackVariant>(null)
 
@@ -109,6 +113,18 @@ export function SessionView({
       setActiveScene(null)
     }
   }, [session.feedbackVariant, activeScene])
+
+  // Trigger wild celebration when feedbackVariant='wild'
+  useEffect(() => {
+    if (session.feedbackVariant === 'wild' && !activeWildCelebration) {
+      setActiveWildCelebration(pickRandomWildCelebration())
+    }
+    if (session.feedbackVariant === null && activeWildCelebration) {
+      setActiveWildCelebration(null)
+    }
+  // activeWildCelebration intentionally handled via early-return pattern above
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.feedbackVariant])
 
   const handleSceneComplete = useCallback(() => {
     setActiveScene(null)
@@ -185,7 +201,7 @@ export function SessionView({
       )}
 
       {/* WordScene plays above everything as the celebration IS the feedback */}
-      {activeScene && (
+      {activeScene && !activeWildCelebration && (
         <WordScene
           scene={activeScene}
           audioBus={audioBus}
@@ -193,11 +209,23 @@ export function SessionView({
         />
       )}
 
-      {/* FeedbackOverlay shown only when no active scene (scene replaces it for 'correct') */}
-      {session.feedbackVariant !== null && !activeScene && (
+      {/* FeedbackOverlay shown only when no active scene and not wild (scene/wild replace it) */}
+      {session.feedbackVariant !== null && session.feedbackVariant !== 'wild' && !activeScene && !activeWildCelebration && (
         <FeedbackOverlay
           variant={session.feedbackVariant}
           onSkip={session.skipFeedback}
+        />
+      )}
+
+      {/* WildCelebration — z-index 1500, renders above everything */}
+      {activeWildCelebration && (
+        <WildCelebration
+          def={activeWildCelebration}
+          audioBus={audioBus}
+          onComplete={() => {
+            setActiveWildCelebration(null)
+            session.skipFeedback()
+          }}
         />
       )}
 
