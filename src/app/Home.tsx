@@ -1,67 +1,57 @@
 /**
- * Home — ekran główny Iskierek (sekcje 5, 17 spec).
+ * Home — ekran główny Iskierek.
  *
  * Layout:
  *   - Tytuł "Iskierki"
- *   - Centralna duża IskraMascot (idle, flame)
- *   - Siatka kafelków modułów (MVP: "Litery" + placeholder "Wkrótce")
+ *   - Siatka 2 kafelków: Litery (moduł 1) + Czytanie (moduł 2)
  *   - Para "rodzicowa" (⚙ + 📊) w prawym dolnym rogu, mała i przytłumiona
  *
- * Onboarding głosowy (5.2):
- *   Przy pierwszym wejściu lektor mówi `welcome` → po krótkiej pauzie
- *   `home-intro`. Klucz w localStorage: `iskierki-home-introduced-v1`.
- *
+ * Onboarding głosowy (1× per klucz z lettersStore/readingStore seenIntros).
  * Home jest specjalny — bez KidNav (to root, nie ma "wstecz").
  */
 
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { audioBus } from '@/shared/audio/AudioBus'
 import { IskraMascot } from '@/shared/ui/IskraMascot'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { colors, radii, tapTargets } from '@/app/theme'
-
-const HOME_INTRO_KEY = 'iskierki-home-introduced-v1'
-const INTRO_GAP_MS = 600
+import { useLetters } from '@/modules/letters/store/lettersStore'
+import { useReading } from '@/modules/reading/store/readingStore'
 
 export function Home() {
   const navigate = useNavigate()
+  const lettersIntroSeen = useLetters((s) => s.hasSeenIntro('home-letters-intro'))
+  const readingIntroSeen = useReading((s) => s.hasSeenIntro('home-reading-intro'))
+  const markLettersIntro = useLetters((s) => s.markIntroSeen)
+  const markReadingIntro = useReading((s) => s.markIntroSeen)
 
+  // Onboarding głosowy — pierwsze odwiedzenie home wymaga jednego z intro
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    let cancelled = false
-    try {
-      if (window.localStorage.getItem(HOME_INTRO_KEY) !== null) {
-        return
-      }
-      window.localStorage.setItem(HOME_INTRO_KEY, '1')
-    } catch {
-      // localStorage niedostępne (privacy mode) — pomijamy intro, nie crashujemy.
-      return
+    if (!lettersIntroSeen) {
+      void audioBus.play('home-letters-intro')
+      markLettersIntro('home-letters-intro')
+    } else if (!readingIntroSeen) {
+      void audioBus.play('home-reading-intro')
+      markReadingIntro('home-reading-intro')
     }
-    void (async () => {
-      try {
-        await audioBus.play('welcome')
-        if (cancelled) return
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, INTRO_GAP_MS)
-        })
-        if (cancelled) return
-        await audioBus.play('home-intro')
-      } catch {
-        // audio niedostępne — cicho ignoruj.
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleLettersClick = () => {
+  const handleLetters = useCallback(() => {
+    audioBus.stop()
+    void audioBus.play('nav-tap')
     navigate('/letters')
-  }
+  }, [navigate])
 
-  const lettersTap = useTapHandler({ onTap: handleLettersClick })
+  const handleReading = useCallback(() => {
+    audioBus.stop()
+    void audioBus.play('nav-tap')
+    navigate('/reading')
+  }, [navigate])
+
+  const lettersTap = useTapHandler({ onTap: handleLetters })
+  const readingTap = useTapHandler({ onTap: handleReading })
   const settingsTap = useTapHandler({ onTap: () => navigate('/settings') })
   const reportTap = useTapHandler({ onTap: () => navigate('/report') })
 
@@ -81,7 +71,7 @@ export function Home() {
     >
       <h1
         style={{
-          fontFamily: "var(--font-handwritten)",
+          fontFamily: 'var(--font-handwritten)',
           fontSize: '3em',
           fontWeight: 700,
           margin: 0,
@@ -93,87 +83,90 @@ export function Home() {
         Iskierki
       </h1>
 
-      <div data-testid="home-mascot">
-        <IskraMascot size={200} state="idle" intensity="flame" />
-      </div>
-
       <div
         data-testid="home-modules"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
           gap: 24,
           width: '100%',
-          maxWidth: 720,
+          maxWidth: 760,
           marginTop: 16,
         }}
       >
+        {/* Kafelek: Litery (moduł 1) */}
         <button
           type="button"
           data-testid="module-letters"
+          aria-label="Litery"
           {...lettersTap}
           style={{
-            minHeight: 220,
+            minHeight: 280,
             padding: 24,
             borderRadius: radii.kid * 1.5,
-            background: '#ffffff',
-            border: `3px solid ${colors.accentBlue}`,
+            background: '#fef3c7',
+            border: '4px solid #f59e0b',
             cursor: 'pointer',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 16,
-            color: colors.text,
+            color: '#92400e',
             touchAction: 'manipulation',
             userSelect: 'none',
             WebkitUserSelect: 'none',
             WebkitTapHighlightColor: 'transparent',
           }}
         >
+          <IskraMascot size={96} state="idle" intensity="flame" />
           <span
-            aria-hidden="true"
             style={{
-              fontFamily: "var(--font-handwritten)",
-              fontSize: 88,
-              lineHeight: 1,
+              fontFamily: 'var(--font-handwritten)',
+              fontSize: 36,
               fontWeight: 700,
-              color: colors.accentBlue,
             }}
           >
-            Aa
+            Litery
           </span>
-          <IskraMascot size={56} state="idle" intensity="spark" />
-          <span style={{ fontSize: 24, fontWeight: 600 }}>Litery</span>
         </button>
 
-        <div
-          data-testid="module-placeholder"
-          aria-label="Wkrótce więcej modułów"
-          aria-disabled="true"
+        {/* Kafelek: Czytanie (moduł 2) */}
+        <button
+          type="button"
+          data-testid="module-reading"
+          aria-label="Czytanie"
+          {...readingTap}
           style={{
-            minHeight: 220,
+            minHeight: 280,
             padding: 24,
             borderRadius: radii.kid * 1.5,
-            background: '#fdf3e3',
-            border: `3px dashed ${colors.accentOrange}`,
+            background: '#dbeafe',
+            border: '4px solid #3b82f6',
+            cursor: 'pointer',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 12,
-            opacity: 0.55,
-            color: colors.text,
-            filter: 'blur(0.6px)',
+            gap: 16,
+            color: '#1e40af',
+            touchAction: 'manipulation',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTapHighlightColor: 'transparent',
           }}
         >
-          <span aria-hidden="true" style={{ fontSize: 80, lineHeight: 1 }}>
-            🔒
+          <IskraMascot size={96} state="idle" intensity="spark" />
+          <span
+            style={{
+              fontFamily: 'var(--font-handwritten)',
+              fontSize: 36,
+              fontWeight: 700,
+            }}
+          >
+            Czytanie
           </span>
-          <span aria-hidden="true" style={{ fontSize: 32, lineHeight: 1, opacity: 0.7 }}>
-            ✨
-          </span>
-        </div>
+        </button>
       </div>
 
       {/* "Rodzicowa strefa" — prawy dolny róg, drobna i przytłumiona. */}

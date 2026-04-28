@@ -40,7 +40,7 @@ if (
   })
 }
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 const navigateMock = vi.fn()
@@ -56,16 +56,27 @@ vi.mock('react-router-dom', async () => {
 })
 
 const audioPlayMock = vi.fn().mockResolvedValue(undefined)
+const audioStopMock = vi.fn()
 vi.mock('@/shared/audio/AudioBus', () => ({
   audioBus: {
     play: (key: string) => audioPlayMock(key),
+    stop: () => audioStopMock(),
   },
+}))
+
+const markLettersIntroMock = vi.fn()
+const markReadingIntroMock = vi.fn()
+vi.mock('@/modules/letters/store/lettersStore', () => ({
+  useLetters: (selector: (s: { hasSeenIntro: (k: string) => boolean; markIntroSeen: typeof markLettersIntroMock }) => unknown) =>
+    selector({ hasSeenIntro: () => false, markIntroSeen: markLettersIntroMock }),
+}))
+vi.mock('@/modules/reading/store/readingStore', () => ({
+  useReading: (selector: (s: { hasSeenIntro: (k: string) => boolean; markIntroSeen: typeof markReadingIntroMock }) => unknown) =>
+    selector({ hasSeenIntro: () => false, markIntroSeen: markReadingIntroMock }),
 }))
 
 import { MemoryRouter } from 'react-router-dom'
 import { Home } from './Home'
-
-const HOME_INTRO_KEY = 'iskierki-home-introduced-v1'
 
 function renderHome() {
   return render(
@@ -79,19 +90,12 @@ describe('Home', () => {
   beforeEach(() => {
     navigateMock.mockClear()
     audioPlayMock.mockClear()
+    audioStopMock.mockClear()
     audioPlayMock.mockResolvedValue(undefined)
     try {
-      window.localStorage.removeItem(HOME_INTRO_KEY)
+      window.localStorage.clear()
     } catch {
       /* localStorage maybe replaced by a polyfill in another test file */
-    }
-  })
-
-  afterEach(() => {
-    try {
-      window.localStorage.removeItem(HOME_INTRO_KEY)
-    } catch {
-      /* ignore */
     }
   })
 
@@ -102,11 +106,6 @@ describe('Home', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders the central mascot', () => {
-    renderHome()
-    expect(screen.getByTestId('home-mascot')).toBeInTheDocument()
-  })
-
   it('renders the "Litery" module tile', () => {
     renderHome()
     const tile = screen.getByTestId('module-letters')
@@ -114,13 +113,11 @@ describe('Home', () => {
     expect(tile.textContent).toContain('Litery')
   })
 
-  it('renders the locked placeholder tile (no text — child cannot read)', () => {
+  it('renders the "Czytanie" module tile', () => {
     renderHome()
-    const placeholder = screen.getByTestId('module-placeholder')
-    expect(placeholder).toBeInTheDocument()
-    expect(placeholder).toHaveAttribute('aria-label', 'Wkrótce więcej modułów')
-    expect(placeholder).toHaveAttribute('aria-disabled', 'true')
-    expect(placeholder.textContent).toContain('🔒')
+    const tile = screen.getByTestId('module-reading')
+    expect(tile).toBeInTheDocument()
+    expect(tile.textContent).toContain('Czytanie')
   })
 
   it('renders parent zone with settings (⚙) and report (📊) buttons', () => {
@@ -138,6 +135,12 @@ describe('Home', () => {
     expect(navigateMock).toHaveBeenCalledWith('/letters')
   })
 
+  it('clicking "Czytanie" navigates to /reading', () => {
+    renderHome()
+    screen.getByTestId('module-reading').click()
+    expect(navigateMock).toHaveBeenCalledWith('/reading')
+  })
+
   it('clicking ⚙ navigates to /settings', () => {
     renderHome()
     screen.getByRole('button', { name: 'Ustawienia' }).click()
@@ -148,18 +151,5 @@ describe('Home', () => {
     renderHome()
     screen.getByRole('button', { name: 'Raport' }).click()
     expect(navigateMock).toHaveBeenCalledWith('/report')
-  })
-
-  it('plays "welcome" intro on first visit and marks localStorage', () => {
-    renderHome()
-    expect(audioPlayMock).toHaveBeenCalledWith('welcome')
-    expect(window.localStorage.getItem(HOME_INTRO_KEY)).toBe('1')
-  })
-
-  it('does not replay intro when localStorage flag already present', () => {
-    window.localStorage.setItem(HOME_INTRO_KEY, '1')
-    renderHome()
-    expect(audioPlayMock).not.toHaveBeenCalledWith('welcome')
-    expect(audioPlayMock).not.toHaveBeenCalledWith('home-intro')
   })
 })
