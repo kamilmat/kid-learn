@@ -1,8 +1,9 @@
 // SessionView — orkiestrator UI sesji czytania.
 // Phase 6.5: renderuje właściwe ćwiczenie wg poziomu + overlaye.
 // Phase 7: mini-scenki słów po poprawnej odpowiedzi (Płomyk/Ognik/Pochodnia).
+// Phase 8: IskraMascotAnimated (comic-fail przy wrong/dontKnow, success przy correct).
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import type { Level, Settings } from '@/shared/settings/types'
 import { useReadingSession } from '../hooks/useReadingSession'
@@ -18,6 +19,8 @@ import { WordScene } from './WordScene'
 import { pickRandomScene } from '../data/scenes'
 import type { Scene } from '../data/scenes'
 import { useReading } from '../store/readingStore'
+import { useIskraReactions } from '../hooks/useIskraReactions'
+import { IskraMascotAnimated } from './IskraMascotAnimated'
 
 export type SessionViewProps = {
   level: Level
@@ -38,6 +41,8 @@ export function SessionView({
   const seenVariants = useReading(s => s.seenSceneVariants)
   const markSceneSeen = useReading(s => s.markSceneSeen)
   const [activeScene, setActiveScene] = useState<Scene | null>(null)
+  const iskra = useIskraReactions()
+  const lastFeedbackRef = useRef<typeof session.feedbackVariant>(null)
 
   // wordAnimations: enabled unless explicitly set to 'off' (Phase 11 will add settings UI)
   const wordAnimationsEnabled = (settings.reading as Record<string, unknown> | undefined)?.wordAnimations !== 'off'
@@ -55,6 +60,19 @@ export function SessionView({
       onSessionComplete?.()
     }
   }, [session.status, session.results, onSessionComplete])
+
+  // Iskra reaguje na feedback: comic-fail przy wrong/dontKnow, success przy correct
+  useEffect(() => {
+    if (session.feedbackVariant === lastFeedbackRef.current) return
+    lastFeedbackRef.current = session.feedbackVariant
+    if (session.feedbackVariant === 'wrong' || session.feedbackVariant === 'dontKnow') {
+      iskra.triggerComicFail()
+    } else if (session.feedbackVariant === 'correct') {
+      iskra.triggerSuccess()
+    }
+  // iskra jest stable (useCallback), ale nie potrzebujemy go w deps — zmieniamy state, nie odczytujemy
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.feedbackVariant])
 
   // Trigger scene on correct answer for non-Iskierka exercises
   useEffect(() => {
@@ -117,6 +135,10 @@ export function SessionView({
 
   return (
     <div data-testid="reading-session-view" style={{ height: '100%', position: 'relative' }}>
+      {/* Iskra w górnym rogu — reaguje na feedback (comic-fail / success) */}
+      <div style={{ position: 'fixed', top: 80, right: 16, zIndex: 100 }}>
+        <IskraMascotAnimated audioBus={audioBus} size={60} intensity="flame" reactionsHook={iskra} />
+      </div>
       {q && exerciseType === 'syllable-match' && q.type === 'syllable-match' && (
         <SyllableMatchExercise
           targetSyllable={q.targetSyllable}
