@@ -1,7 +1,7 @@
 // WordAlbum — kolekcja kart słów opanowanych przez dziecko (Phase 9).
 // Karty unlockowane gdy SRS box >= 5. Tap na odblokowaną kartę → scenka + audio.
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useReading } from '../store/readingStore'
 import { ALL_WORDS, getWordById } from '../data/words'
 import { pickRandomScene } from '../data/scenes'
@@ -26,6 +26,17 @@ export function WordAlbum({ audioBus, onExit }: Props) {
   const markSceneSeen = useReading(s => s.markSceneSeen)
   const [filter, setFilter] = useState<Filter>('all')
   const [activeScene, setActiveScene] = useState<{ scene: Scene; wordId: string } | null>(null)
+
+  // Onboarding głosowy — 1× przy pierwszym otwarciu albumu
+  useEffect(() => {
+    const key = 'reading-album-intro'
+    if (!useReading.getState().hasSeenIntro(key)) {
+      void audioBus.play(key)
+      useReading.getState().markIntroSeen(key)
+    }
+    // mount-only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const filtered = ALL_WORDS.filter(w => filter === 'all' || w.level === filter)
   const totalCount = ALL_WORDS.length

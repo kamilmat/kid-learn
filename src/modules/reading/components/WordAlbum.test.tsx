@@ -33,6 +33,8 @@ describe('WordAlbum', () => {
     useReading.getState().reset()
     localStorage.clear()
     vi.clearAllMocks()
+    // Oznacz intro jako odtworzone, żeby nie wpływało na testy audioBus
+    useReading.getState().markIntroSeen('reading-album-intro')
   })
 
   it('renders album title and counter', () => {
