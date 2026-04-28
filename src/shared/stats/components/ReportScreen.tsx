@@ -11,6 +11,7 @@ import { useSettings } from '@/shared/settings/settingsStore'
 import { useLetters } from '@/modules/letters/store/lettersStore'
 import { useReading } from '@/modules/reading/store/readingStore'
 import { ALL_WORDS } from '@/modules/reading/data/words'
+import { ALL_SYLLABLES } from '@/modules/reading/data/syllables'
 import { exportReportToMarkdown } from '@/shared/stats/exporter'
 import { LettersSection } from './LettersSection'
 import { ActivitySection } from './ActivitySection'
@@ -74,7 +75,7 @@ function ReadingStats() {
       <div style={sectionStyle}>
         <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>Sylaby</h3>
         <p style={{ margin: '0 0 4px' }}>
-          Opanowane: {masteredSyl.length} / {syllableEntries.length}
+          Opanowane: {masteredSyl.length} / {ALL_SYLLABLES.length}
         </p>
         {difficultSyl.length > 0 && (
           <p style={{ margin: 0, color: '#dc2626' }}>
