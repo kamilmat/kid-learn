@@ -4,10 +4,17 @@
  * Reads keyed string maps from `audio-source/*.json`, then for each key:
  *   1. If a manual override `audio-source/manual-overrides/<key>.mp3` exists,
  *      copy it to `public/audio/<key>.mp3` and mark `source: 'override'` in the manifest.
- *   2. Otherwise compute SHA-256 of the source text and compare to the cached hash
+ *   2. Otherwise compute SHA-256 of the source text + voice and compare to the cached hash
  *      in `public/audio/.manifest.json`. If hash matches and the file exists, skip.
- *      If not, invoke `edge-tts` with `pl-PL-ZofiaNeural` to (re)generate the mp3
+ *      If not, invoke `edge-tts` with the appropriate voice to (re)generate the mp3
  *      and update the manifest.
+ *
+ * Each JSON file may have a `_voice` field (default: 'zofia'). Keys starting with `_`
+ * are treated as metadata and skipped during audio generation.
+ *
+ * Voice map:
+ *   zofia → pl-PL-ZofiaNeural  (default, lektor)
+ *   marek → pl-PL-MarekNeural  (Iskra mascot)
  *
  * Modes:
  *   build  — generate everything missing or changed
@@ -24,6 +31,7 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   writeFileSync,
 } from 'node:fs'
@@ -40,9 +48,33 @@ export type ManifestEntry = {
 
 export type Manifest = Record<string, ManifestEntry>
 
-export type SourceMap = Record<string, string>
+export type SourceEntry = {
+  text: string
+  voice: string
+}
+
+export type SourceMap = Record<string, SourceEntry>
 
 type Mode = 'build' | 'check'
+
+// ---------- voice map ----------
+
+const VOICE_MAP: Record<string, string> = {
+  zofia: 'pl-PL-ZofiaNeural',
+  marek: 'pl-PL-MarekNeural',
+}
+
+const DEFAULT_VOICE = 'zofia'
+
+function resolveVoice(voiceKey: string): string {
+  const mapped = VOICE_MAP[voiceKey]
+  if (!mapped) {
+    throw new Error(
+      `Unknown voice "${voiceKey}". Valid voices: ${Object.keys(VOICE_MAP).join(', ')}`,
+    )
+  }
+  return mapped
+}
 
 // ---------- paths ----------
 
@@ -54,15 +86,25 @@ const MANUAL_OVERRIDES_DIR = join(AUDIO_SOURCE_DIR, 'manual-overrides')
 const PUBLIC_AUDIO_DIR = join(ROOT, 'public', 'audio')
 const MANIFEST_PATH = join(PUBLIC_AUDIO_DIR, '.manifest.json')
 
-const SOURCE_FILES = ['letters.json', 'words.json', 'ui-strings.json'] as const
-
-const VOICE = 'pl-PL-ZofiaNeural'
-
 // ---------- pure helpers (testable) ----------
 
 /**
+ * Discovers all *.json files in the audio-source directory (non-recursive).
+ * Returns absolute paths, sorted for stable ordering.
+ */
+export function discoverSourceFiles(dir: string): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true })
+  return entries
+    .filter((e) => e.isFile() && e.name.endsWith('.json'))
+    .map((e) => join(dir, e.name))
+    .sort()
+}
+
+/**
  * Loads & merges all source JSON maps into one keyed map.
- * Throws on duplicate keys across files (developer error).
+ * - Reads `_voice` metadata field from each file (default: 'zofia').
+ * - Skips all keys starting with `_` (metadata).
+ * - Throws on duplicate keys across files (developer error).
  */
 export function loadSources(filePaths: readonly string[]): SourceMap {
   const merged: SourceMap = {}
@@ -72,22 +114,42 @@ export function loadSources(filePaths: readonly string[]): SourceMap {
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
       throw new Error(`${filePath}: expected JSON object map, got ${typeof parsed}`)
     }
-    for (const [key, value] of Object.entries(parsed)) {
+    const obj = parsed as Record<string, unknown>
+
+    // Read optional _voice metadata field (default: 'zofia').
+    const voiceKey =
+      typeof obj['_voice'] === 'string' ? (obj['_voice'] as string) : DEFAULT_VOICE
+    // Validate the voice is known before processing the whole file.
+    resolveVoice(voiceKey)
+    const edgeTtsVoice = resolveVoice(voiceKey)
+
+    for (const [key, value] of Object.entries(obj)) {
+      // Skip metadata keys.
+      if (key.startsWith('_')) continue
+
       if (typeof value !== 'string') {
         throw new Error(`${filePath}: value for "${key}" is not a string`)
       }
       if (key in merged) {
         throw new Error(`Duplicate audio key "${key}" (also defined elsewhere)`)
       }
-      merged[key] = value
+      merged[key] = { text: value, voice: edgeTtsVoice }
     }
   }
   return merged
 }
 
-/** Stable SHA-256 of the source text. Used as cache key in the manifest. */
+/**
+ * Stable SHA-256 of the source text + voice. Including voice means that changing
+ * the voice for a key (e.g. zofia→marek) will trigger regeneration.
+ */
+export function hashEntry(text: string, voice: string): string {
+  return createHash('sha256').update(`${voice}\n${text}`, 'utf8').digest('hex')
+}
+
+/** @deprecated Use hashEntry instead. Kept for backward compatibility in tests. */
 export function hashText(text: string): string {
-  return createHash('sha256').update(text, 'utf8').digest('hex')
+  return hashEntry(text, VOICE_MAP[DEFAULT_VOICE]!)
 }
 
 export function readManifest(path: string): Manifest {
@@ -124,12 +186,13 @@ export function decideAction(params: {
   hasOverride: boolean
   hasOutputFile: boolean
   text: string
+  voice: string
   manifestEntry: ManifestEntry | undefined
 }): BuildAction {
   if (params.hasOverride) return { kind: 'override' }
   if (!params.hasOutputFile) return { kind: 'generate', reason: 'missing-file' }
   if (!params.manifestEntry) return { kind: 'generate', reason: 'no-manifest-entry' }
-  if (params.manifestEntry.hash !== hashText(params.text)) {
+  if (params.manifestEntry.hash !== hashEntry(params.text, params.voice)) {
     return { kind: 'generate', reason: 'hash-mismatch' }
   }
   return { kind: 'cache-hit' }
@@ -173,14 +236,14 @@ function ensureEdgeTtsAvailable(): void {
   }
 }
 
-function runEdgeTts(text: string, outPath: string): void {
+function runEdgeTts(text: string, voice: string, outPath: string): void {
   if (!edgeTtsPath) edgeTtsPath = findEdgeTts()
   if (!edgeTtsPath) {
     throw new Error('edge-tts binary not found')
   }
   const result = spawnSync(
     edgeTtsPath,
-    ['--voice', VOICE, '--text', text, '--write-media', outPath],
+    ['--voice', voice, '--text', text, '--write-media', outPath],
     { encoding: 'utf8' },
   )
   if (result.status !== 0) {
@@ -209,13 +272,14 @@ function runBuild(sources: SourceMap): void {
   let cached = 0
   let failed = 0
 
-  for (const [key, text] of Object.entries(sources)) {
+  for (const [key, { text, voice }] of Object.entries(sources)) {
     const out = outputPath(key)
     const ovr = overridePath(key)
     const action = decideAction({
       hasOverride: existsSync(ovr),
       hasOutputFile: existsSync(out),
       text,
+      voice,
       manifestEntry: manifest[key],
     })
 
@@ -223,7 +287,7 @@ function runBuild(sources: SourceMap): void {
       if (action.kind === 'override') {
         copyFileSync(ovr, out)
         manifest[key] = {
-          hash: hashText(text),
+          hash: hashEntry(text, voice),
           updatedAt: Date.now(),
           source: 'override',
         }
@@ -233,10 +297,10 @@ function runBuild(sources: SourceMap): void {
         cached += 1
         console.log(`✓ ${key} (cache hit)`)
       } else {
-        console.log(`→ ${key} (generuję, ${action.reason})`)
-        runEdgeTts(text, out)
+        console.log(`→ ${key} (generuję, ${action.reason}, voice=${voice})`)
+        runEdgeTts(text, voice, out)
         manifest[key] = {
-          hash: hashText(text),
+          hash: hashEntry(text, voice),
           updatedAt: Date.now(),
           source: 'tts',
         }
@@ -284,7 +348,8 @@ function parseMode(argv: readonly string[]): Mode {
 
 function main(): void {
   const mode = parseMode(process.argv)
-  const sourceFilePaths = SOURCE_FILES.map((f) => join(AUDIO_SOURCE_DIR, f))
+  const sourceFilePaths = discoverSourceFiles(AUDIO_SOURCE_DIR)
+  console.log(`Discovered source files: ${sourceFilePaths.map((p) => p.split('/').pop()).join(', ')}`)
   const sources = loadSources(sourceFilePaths)
 
   if (mode === 'build') runBuild(sources)
