@@ -516,7 +516,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
         const readingStore = useReading.getState()
         readingStore.incrementWildCounter()
         const currentCounter = useReading.getState().wildCelebrationCounter
-        const freq = settings.reading?.wildCelebrationFreq ?? 8
+        const freq = settings.reading.wildCelebrationFreq
         const threshold = freq + wildJitterRef.current
         if (currentCounter >= threshold) {
           // Trigger wild celebration — ustawiamy status=feedback z wariantem 'wild'

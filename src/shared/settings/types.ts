@@ -18,6 +18,8 @@ export type CelebrationTempo = 'short' | 'medium' | 'long'
 export type DefaultLevelSetting = Level | 'last-used'
 export type Voice = 'zofia' // tylko Zofia w MVP — sekcja 13.2
 export type TilesPerQuestion = 3 | 4 | 5 | 6 | 8 | 10
+export type HumorMode = 'on' | 'off'
+export type WordAnimations = 'on' | 'off'
 
 export type Settings = {
   // override per poziom; brak klucza = używaj domyślnej puli poziomu
@@ -34,9 +36,14 @@ export type Settings = {
   voice: Voice
   // override per poziom; brak klucza = używaj domyślnej liczby kafelków poziomu
   tilesPerQuestion: Partial<Record<Level, TilesPerQuestion>>
-  // Ustawienia modułu czytania — opcjonalne (Phase 11 doda pełną migrację + UI)
-  reading?: {
-    wildCelebrationFreq?: number
+  // Tryb humoru — śmieszne reakcje Iskry (beknięcie, czkawka, apsik)
+  humorMode: HumorMode
+  // Ustawienia modułu czytania
+  reading: {
+    wordAnimations: WordAnimations
+    wildCelebrationFreq: number                           // 3-15, default 8
+    questionsPerSession: Partial<Record<Level, number>>  // default 8 dla wszystkich poziomów
+    timeLimit: Partial<Record<Level, TimeLimit>>         // default 'off' dla czytania
   }
 }
 

@@ -2,11 +2,13 @@
 
 import type {
   CaseMode,
+  HumorMode,
   Level,
   Settings,
   StyleMode,
   TilesPerQuestion,
   TimeLimit,
+  WordAnimations,
 } from './types'
 
 // Lista wszystkich poziomów w kolejności rosnącej trudności. Single source of truth
@@ -109,6 +111,13 @@ export const defaultSettings: Settings = {
   defaultLevel: 'last-used',
   voice: 'zofia',
   tilesPerQuestion: {},
+  humorMode: 'on' as HumorMode,
+  reading: {
+    wordAnimations: 'on' as WordAnimations,
+    wildCelebrationFreq: 8,
+    questionsPerSession: {},
+    timeLimit: {},
+  },
 }
 
 /**

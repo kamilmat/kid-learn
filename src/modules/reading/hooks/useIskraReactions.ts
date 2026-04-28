@@ -16,9 +16,7 @@ const COMIC_FAIL_VARIANTS: ComicFailVariant[] = ['scratch', 'eatBanana', 'confus
 const COMIC_FAIL_DURATION = 1000  // krótszy niż correct celebration (~2.5s)
 
 export function useIskraReactions(rng: () => number = Math.random) {
-  const humorMode = useSettings(
-    s => (s.settings as Record<string, unknown>).humorMode === 'off' ? 'off' : 'on'
-  ) as 'on' | 'off'
+  const humorMode = useSettings(s => s.settings.humorMode)
   const [reaction, setReaction] = useState<IskraReaction>({ type: 'idle' })
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 

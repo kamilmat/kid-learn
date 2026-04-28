@@ -124,6 +124,7 @@ export const useSettings = create<SettingsStore>()(
       // Migration:
       //   v2 → v3: `showCountdownBar` z boolean na Partial<Record<Level, boolean>>.
       //   v3 → v4: `timeLimit` z prymitywu (TimeLimit) na Partial<Record<Level, TimeLimit>>.
+      //   v4: `humorMode` + `reading` (nowe pola modułu 2) — obsługiwane przez merge.
       // W obu przypadkach drop'ujemy legacy wartość — zostają per-level defaults
       // (iskierka/płomyk: timeLimit='off', ognik/pochodnia: timeLimit=15).
       //
@@ -144,6 +145,18 @@ export const useSettings = create<SettingsStore>()(
         // Bardziej odporne niż enumeracja typeof === 'number' || === 'off'.
         if (tl !== null && tl !== undefined && typeof tl !== 'object') {
           delete sanitizedSettings.timeLimit
+        }
+        // v4 → v5: uzupełnij brakujące pola modułu 2 gdy brak w localStorage.
+        if (!sanitizedSettings.humorMode) {
+          sanitizedSettings.humorMode = 'on'
+        }
+        if (!sanitizedSettings.reading) {
+          sanitizedSettings.reading = {
+            wordAnimations: 'on',
+            wildCelebrationFreq: 8,
+            questionsPerSession: {},
+            timeLimit: {},
+          }
         }
         return {
           ...current,

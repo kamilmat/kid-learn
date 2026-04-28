@@ -50,8 +50,7 @@ export function SessionView({
   const iskra = useIskraReactions()
   const lastFeedbackRef = useRef<typeof session.feedbackVariant>(null)
 
-  // wordAnimations: enabled unless explicitly set to 'off' (Phase 11 will add settings UI)
-  const wordAnimationsEnabled = (settings.reading as Record<string, unknown> | undefined)?.wordAnimations !== 'off'
+  const wordAnimationsEnabled = settings.reading.wordAnimations !== 'off'
 
   // Startuj sesję przy mounto
   useEffect(() => {

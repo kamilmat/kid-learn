@@ -106,6 +106,13 @@ describe('defaultSettings (sekcja 13.2)', () => {
     expect(defaultSettings.caseMode).toEqual({})
     expect(defaultSettings.styleMode).toEqual({})
     expect(defaultSettings.tilesPerQuestion).toEqual({})
+    expect(defaultSettings.humorMode).toBe('on')
+    expect(defaultSettings.reading).toEqual({
+      wordAnimations: 'on',
+      wildCelebrationFreq: 8,
+      questionsPerSession: {},
+      timeLimit: {},
+    })
   })
 })
 
