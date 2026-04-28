@@ -27,6 +27,7 @@ export type SessionViewProps = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   settings: Settings
   onExit: () => void
+  onAlbum?: () => void
   onSessionComplete?: () => void
 }
 
@@ -35,6 +36,7 @@ export function SessionView({
   audioBus,
   settings,
   onExit,
+  onAlbum,
   onSessionComplete,
 }: SessionViewProps) {
   const session = useReadingSession({ level, audioBus, settings })
@@ -125,7 +127,8 @@ export function SessionView({
       <SessionEnd
         results={session.results}
         onExit={onExit}
-        onAlbum={onExit}
+        onAlbum={onAlbum ?? onExit}
+        audioBus={audioBus}
       />
     )
   }

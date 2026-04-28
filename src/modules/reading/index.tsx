@@ -7,6 +7,7 @@ import { useSettings } from '@/shared/settings/settingsStore'
 import type { Level } from '@/shared/settings/types'
 import { ReadingLevelSelect } from './components/ReadingLevelSelect'
 import { SessionView } from './components/SessionView'
+import { WordAlbum } from './components/WordAlbum'
 import { useReading } from './store/readingStore'
 
 const VALID_LEVELS: ReadonlySet<Level> = new Set<Level>([
@@ -24,7 +25,7 @@ export function ReadingModule({ audioBus = defaultAudioBus }: { audioBus?: Pick<
         <Routes>
           <Route index element={<ReadingIndex audioBus={audioBus} />} />
           <Route path="session/:level" element={<ReadingSession audioBus={audioBus} />} />
-          <Route path="album" element={<div data-testid="reading-album-placeholder">Album — TODO Phase 9</div>} />
+          <Route path="album" element={<ReadingAlbum audioBus={audioBus} />} />
           <Route path="*" element={<Navigate to="." replace />} />
         </Routes>
       </div>
@@ -62,6 +63,10 @@ function ReadingSession({ audioBus }: ReadingSessionProps) {
     navigate('..', { state: { fromExit: true } })
   }, [navigate])
 
+  const handleAlbum = useCallback(() => {
+    navigate('../album')
+  }, [navigate])
+
   if (!isValidLevel) {
     return <Navigate to=".." replace />
   }
@@ -72,8 +77,14 @@ function ReadingSession({ audioBus }: ReadingSessionProps) {
       audioBus={audioBus}
       settings={settings}
       onExit={handleExit}
+      onAlbum={handleAlbum}
     />
   )
+}
+
+function ReadingAlbum({ audioBus }: { audioBus: Pick<AudioBus, 'play' | 'stop'> }) {
+  const navigate = useNavigate()
+  return <WordAlbum audioBus={audioBus} onExit={() => navigate('..')} />
 }
 
 export default ReadingModule
