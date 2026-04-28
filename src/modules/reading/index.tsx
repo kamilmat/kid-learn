@@ -1,9 +1,20 @@
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { useCallback } from 'react'
+import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import { KidNav } from '@/shared/ui/KidNav'
+import { useSettings } from '@/shared/settings/settingsStore'
+import type { Level } from '@/shared/settings/types'
 import { ReadingLevelSelect } from './components/ReadingLevelSelect'
+import { SessionView } from './components/SessionView'
 import { useReading } from './store/readingStore'
+
+const VALID_LEVELS: ReadonlySet<Level> = new Set<Level>([
+  'iskierka',
+  'plomyk',
+  'ognik',
+  'pochodnia',
+])
 
 export function ReadingModule({ audioBus = defaultAudioBus }: { audioBus?: Pick<AudioBus, 'play' | 'stop'> } = {}) {
   return (
@@ -12,7 +23,7 @@ export function ReadingModule({ audioBus = defaultAudioBus }: { audioBus?: Pick<
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <Routes>
           <Route index element={<ReadingIndex audioBus={audioBus} />} />
-          <Route path="session/:level" element={<div data-testid="reading-session-placeholder">Session — TODO Phase 6</div>} />
+          <Route path="session/:level" element={<ReadingSession audioBus={audioBus} />} />
           <Route path="album" element={<div data-testid="reading-album-placeholder">Album — TODO Phase 9</div>} />
           <Route path="*" element={<Navigate to="." replace />} />
         </Routes>
@@ -31,6 +42,36 @@ function ReadingIndex({ audioBus }: { audioBus: Pick<AudioBus, 'play' | 'stop'> 
         setLastUsed(level)
         navigate(`session/${level}`)
       }}
+    />
+  )
+}
+
+type ReadingSessionProps = {
+  audioBus: Pick<AudioBus, 'play' | 'stop'>
+}
+
+function ReadingSession({ audioBus }: ReadingSessionProps) {
+  const params = useParams<{ level: string }>()
+  const navigate = useNavigate()
+  const settings = useSettings((s) => s.settings)
+
+  const level = (params.level ?? '') as Level
+  const isValidLevel = VALID_LEVELS.has(level)
+
+  const handleExit = useCallback(() => {
+    navigate('..', { state: { fromExit: true } })
+  }, [navigate])
+
+  if (!isValidLevel) {
+    return <Navigate to=".." replace />
+  }
+
+  return (
+    <SessionView
+      level={level}
+      audioBus={audioBus}
+      settings={settings}
+      onExit={handleExit}
     />
   )
 }
