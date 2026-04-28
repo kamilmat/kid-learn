@@ -35,7 +35,7 @@
 
 **Manualne chrome-devtools-mcp** — Home, ReadingLevelSelect, Iskierka (poprawna odpowiedź → "Brawo!"), Płomyk (drag programowy działa, slot przyjmuje correct syl), Ognik (kafelki kolorowane: SZA-FA, PA-RA-SOL, CHŁO-PIEC, LI-ZAK), Pochodnia (KSIĘ-?-ŻYC z gap, kolory pozycji), Album (5/67 unlocked, MAMA i MASZYNA pokazują kolorowe sylaby), Settings (po math gate 9+2-9=2), Raport rodzica (sylaby 0/23, słowa 5/67, heatmapa). Console: 0 errors, 1 warn (meta tag deprecation — fixed).
 
-**Drag-drop test:** programowy drag z chrome devtools nie symuluje pełnych pointermove (over=null). Architektura poprawna (DIV+touch-action:none), wymaga real iPad test.
+**Drag-drop test:** ✅ **POTWIERDZONE OK na iPadzie** (user-test 2026-04-28) — palec działa, Apple Pencil działa. Programowy drag z chrome devtools nie symulował pełnych pointermove (over=null), więc tylko architektura była potwierdzona — fizyczny test ostatecznie potwierdził fix (commit `91d2244`: DIV+touch-action:none).
 
 ### Feature: kolorowanie sylab (commits `e692f3d`, `91d2244`)
 
