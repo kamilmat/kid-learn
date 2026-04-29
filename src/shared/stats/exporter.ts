@@ -25,6 +25,14 @@ import {
   collectFlagsForRecentSessions,
   FLAG_LABEL,
 } from './components/AntiCheatSection'
+import { CONCEPTS } from '@/modules/numbers/data/concepts'
+import { CONCEPT_LABELS } from '@/modules/numbers/data/conceptLabels'
+import { formatFactId } from './components/NumbersStats'
+import type {
+  ConceptId,
+  ConceptMastery,
+  MathFactState,
+} from '@/modules/numbers/types'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1_000
 
@@ -53,11 +61,17 @@ function fmtDate(ts: number): string {
 /**
  * Generuje pełny raport rodzica jako Markdown.
  */
+export type NumbersSnapshot = {
+  facts: Record<string, MathFactState>
+  concepts: Partial<Record<ConceptId, ConceptMastery>>
+}
+
 export function exportReportToMarkdown(
   letters: Record<string, LetterState>,
   sessions: SessionLog[],
   settings: Settings,
   now: number,
+  numbersSnapshot?: NumbersSnapshot,
 ): string {
   const lines: string[] = []
   lines.push('# Raport Iskierki')
@@ -157,6 +171,46 @@ export function exportReportToMarkdown(
     `- Domyślny poziom: ${settings.defaultLevel === 'last-used' ? 'ostatnio używany' : LEVEL_LABEL[settings.defaultLevel]}`,
   )
   lines.push('')
+
+  // ---- Matematyka ----
+  if (numbersSnapshot) {
+    lines.push('## Matematyka')
+    lines.push('')
+    const allConcepts = Object.values(CONCEPTS)
+    const masteredCount = allConcepts.filter(
+      (c) => numbersSnapshot.concepts[c.id]?.state === 'mastered',
+    ).length
+    const learningCount = allConcepts.filter(
+      (c) => numbersSnapshot.concepts[c.id]?.state === 'learning',
+    ).length
+    lines.push(
+      `- **Koncepty**: opanowane ${masteredCount}/${allConcepts.length}, w nauce ${learningCount}`,
+    )
+    const masteredLabels = allConcepts
+      .filter((c) => numbersSnapshot.concepts[c.id]?.state === 'mastered')
+      .map((c) => CONCEPT_LABELS[c.id])
+    if (masteredLabels.length > 0) {
+      lines.push(`  - Opanowane: ${masteredLabels.join(', ')}`)
+    }
+    const factStates = Object.values(numbersSnapshot.facts)
+    const difficult = factStates
+      .filter((f) => f.recentWrong > 0)
+      .sort((a, b) => {
+        if (b.recentWrong !== a.recentWrong) return b.recentWrong - a.recentWrong
+        return a.box - b.box
+      })
+      .slice(0, 10)
+    if (difficult.length > 0) {
+      lines.push(
+        `- **Najtrudniejsze fakty (top 10)**: ${difficult
+          .map((f) => `${formatFactId(f.id)} (${f.recentWrong}×wrong)`)
+          .join(', ')}`,
+      )
+    } else {
+      lines.push('- **Najtrudniejsze fakty**: brak — wszystko idzie!')
+    }
+    lines.push('')
+  }
 
   return lines.join('\n')
 }

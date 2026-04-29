@@ -10,6 +10,7 @@ import { MathGate } from '@/shared/settings/components/MathGate'
 import { useSettings } from '@/shared/settings/settingsStore'
 import { useLetters } from '@/modules/letters/store/lettersStore'
 import { useReading } from '@/modules/reading/store/readingStore'
+import { useNumbers } from '@/modules/numbers/store/numbersStore'
 import { ALL_WORDS } from '@/modules/reading/data/words'
 import { ALL_SYLLABLES } from '@/modules/reading/data/syllables'
 import { exportReportToMarkdown } from '@/shared/stats/exporter'
@@ -18,6 +19,7 @@ import { ActivitySection } from './ActivitySection'
 import { LiveSessionSection } from './LiveSessionSection'
 import { SuggestionsSection } from './SuggestionsSection'
 import { AntiCheatSection } from './AntiCheatSection'
+import { NumbersStats } from './NumbersStats'
 
 const PHONEMES = [
   { fonem: 'SZ', label: 'SZ' },
@@ -196,7 +198,11 @@ export function ReportScreen({
   const unlocked = isUnlocked(now())
 
   const handleCopy = useCallback(async () => {
-    const md = exportReportToMarkdown(letters, sessions, settings, now())
+    const numbersSnapshot = {
+      facts: useNumbers.getState().facts,
+      concepts: useNumbers.getState().concepts,
+    }
+    const md = exportReportToMarkdown(letters, sessions, settings, now(), numbersSnapshot)
     try {
       await copyToClipboard(md)
       setCopyStatus('copied')
@@ -301,6 +307,7 @@ export function ReportScreen({
         <SuggestionsSection letters={letters} sessions={sessions} />
         <AntiCheatSection sessions={sessions} />
         <ReadingStats />
+        <NumbersStats />
       </div>
 
     </div>
