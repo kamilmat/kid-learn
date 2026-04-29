@@ -36,9 +36,10 @@ Po implementacji modułu 3 (commit `e73f3c6`) trzy obszary zostały świadomie o
 
 Trzy niezależne zmiany, każda commit-able osobno. Brak nowych dependencji.
 
-**Pliki nowe (24):**
+**Pliki nowe (25):**
 - `src/shared/stats/components/NumbersStats.tsx` — sekcja matematyki w raporcie
 - `src/shared/stats/components/NumbersStats.test.tsx` — smoke test
+- `src/modules/numbers/data/conceptLabels.ts` — wyciągnięty `CONCEPT_LABELS: Record<ConceptId, string>` z `MasteryTree.tsx` jako shared single source of truth
 - `src/modules/numbers/components/intros/IntroFrame.tsx` — wspólny szkielet animacji (przycisk →, audio orkiestracja, fallback timer)
 - `src/modules/numbers/components/intros/animations/<conceptId>.tsx` × 20 — animacje per koncept
 - `src/modules/numbers/components/intros/animations/index.ts` — registry `INTRO_ANIMATIONS: Record<ConceptId, Animation>`
@@ -46,10 +47,10 @@ Trzy niezależne zmiany, każda commit-able osobno. Brak nowych dependencji.
 
 **Pliki edytowane (5):**
 - `src/shared/stats/components/ReportScreen.tsx` — mount `<NumbersStats />` po `<ReadingStats />`
-- `src/shared/stats/exporter.ts` — sekcja "## Matematyka" w markdown raportu
+- `src/shared/stats/exporter.ts` — sekcja "## Matematyka" w markdown raportu (sygnatura rozszerzona o opcjonalny snapshot `useNumbers`)
 - `src/shared/settings/components/SettingsScreen.tsx` — sekcja "Matematyka (moduł 3)" przed "Reset postępów"
 - `src/modules/numbers/components/intros/ConceptIntro.tsx` — refaktor na router → `INTRO_ANIMATIONS[conceptId]` w `<IntroFrame>`
-- `src/modules/numbers/hooks/useNumbersSession.ts` — drobny guard jeśli okaże się że `conceptIntros: false` nie jest jeszcze respektowane (sprawdzenie przy implementacji)
+- `src/modules/numbers/components/MasteryTree.tsx` — usunięcie lokalnego `CONCEPT_LABELS`, import z `data/conceptLabels.ts`
 
 ## 5. Sekcja 1: Raport rodzica — `NumbersStats`
 
@@ -71,7 +72,7 @@ Nietknięte: 20 - N - M
 [link tekstowy] Zobacz drzewko →   (nawigacja do /numbers/tree)
 ```
 
-Etykiety konceptów: human-readable z mapowania (np. `iskierka-counting-5` → "Liczenie 1-5"). Mapowanie w `NumbersStats.tsx` jako `const CONCEPT_LABELS: Record<ConceptId, string>`.
+Etykiety konceptów: import z `src/modules/numbers/data/conceptLabels.ts` (wyciągnięte z `MasteryTree.tsx:12-33` — istniejący kompletny mapping 20 konceptów na polskie nazwy: "Liczenie do 5", "Rozkład 5", "Podwójki", "Po 2", "Mnożenie", itd.). Refaktor wyciąga lokalny `CONCEPT_LABELS` z MasteryTree do shared, eliminując duplikację.
 
 **(b) Trudne fakty (top 10)**
 
@@ -83,7 +84,19 @@ Wyświetlenie: pille (chip) — `2+3` `7-4` `4×3`. Pod każdą pillą małym fo
 
 Pusty state: "Brak trudnych faktów — wszystko idzie!" (zielony, `colors.accentGreen`).
 
-Parser `factId` → display: implementacja w `NumbersStats.tsx` jako helper. Format `factId` ustalimy przy implementacji (jest już w `numbers/types.ts` — sprawdzimy).
+Parser `factId` → display: helper `formatFactId(id: MathFactId): string` w `NumbersStats.tsx`. Format `factId` udokumentowany w `numbers/types.ts:5`: `<type>-<args>`. Konkretne typy w użyciu (z `concepts.ts` + `useNumbersSession.ts`):
+- `bond-N-A-B` → `A + B = N` (np. `bond-7-3-4` → "3+4")
+- `add-A-B` → `A + B` (np. `add-5-2` → "5+2")
+- `sub-A-B` → `A - B` (np. `sub-7-3` → "7-3")
+- `double-N` → `N + N` (np. `double-6` → "6+6")
+- `neardouble-A-B` → `A + B` (np. `neardouble-6-7` → "6+7")
+- `make10-A-B` → `A + B` (np. `make10-8-5` → "8+5")
+- `skip2-stepN` → `+2 ×N` (np. `skip2-step3` → "+2 ×3" lub label "po 2")
+- `mult-A-B` → `A × B` (np. `mult-3-2` → "3×2")
+- `array-AxB` → `A × B` (np. `array-3x4` → "3×4")
+- `tenframe-N` → "TF·N"
+
+Helper jest defensywny — nieznany format zwraca surowy `factId` (no-op), nie crashuje.
 
 **(c) Heatmapa typów konceptów**
 
@@ -192,17 +205,26 @@ export const INTRO_ANIMATIONS: Record<ConceptId, ComponentType<{stage: number}>>
 
 ### 7.2 Audio sync
 
-`IntroFrame` polluje `audioBus.currentTime()` co 100ms (jeśli AudioBus nie ma takiego API, dodajemy minimalne `getCurrentTime(): number | null`). Każda animacja deklaruje swój manifest scen jako stała w komponencie:
+`AudioBus.play(key): Promise<void>` rezolvuje przy `ended` (sprawdzone w `src/shared/audio/AudioBus.ts:115-159`). Brak `currentTime` API — synchronizacja przez **wall-clock od momentu startu `play()`**, czyli `setTimeout` per scena, anulowany przy unmount.
+
+`IntroFrame`:
+1. `audioBus.stop()` → `audioBus.play(introAudioKey).then(() => setAudioFinished(true))`
+2. Równolegle z `play()` startuje `setTimeout(() => setStage(1), SCENES[0].offsetMs)` itd.
+3. Cleanup w `useEffect` return clear'uje wszystkie pending timeouts.
+
+Każda animacja deklaruje swój manifest scen jako stała eksportowana razem z komponentem:
 
 ```ts
-const SCENES = [
-  { stage: 1, audioOffsetMs: 0 },
-  { stage: 2, audioOffsetMs: 1200 },
-  { stage: 3, audioOffsetMs: 2400 },
+export const SCENES = [
+  { stage: 1, offsetMs: 0 },
+  { stage: 2, offsetMs: 1200 },
+  { stage: 3, offsetMs: 2400 },
 ] as const
 ```
 
-`IntroFrame` przelicza `currentTime` → `stage`. Jeśli audio nie zacznie grać (iOS Safari pre-interaction), fallback: animacja gra na `setTimeout` z deklarowanymi offsetami.
+`IntroFrame` czyta `<Animation>.SCENES` lub akceptuje jako prop. Wszystkie offsetMs są względem startu `play()` — proste, działa również gdy audio nie wystartuje (iOS Safari pre-interaction): animacja toczy się dalej, `audioFinished` triggers po `play()` Promise (lub po fallback timer 4s jeśli `play()` rzuci, np. brak pliku audio).
+
+**Brak nowego API w AudioBus.** Eliminuje wcześniejsze ryzyko (Section 11) o dodawaniu `getCurrentTime()`.
 
 ### 7.3 Manifest 20 animacji
 
@@ -231,11 +253,19 @@ Wszystkie z narracją audio (intro-<conceptId>), sequential reveal:
 | pochodnia-arrays | Renkl | Macierz 3×4 zapełnia się rząd-po-rzędzie, total 12 | ConcreteIcons (grid) |
 | pochodnia-commutativity | CPA | Macierz 3×4 obraca się 90° → 4×3 (ten sam total) | ConcreteIcons (grid) |
 
-### 7.4 Settings respect
+### 7.4 Settings respect — gotowe
 
-`useNumbersSession.ts` musi sprawdzać `settings.numbers.conceptIntros` przed pokazaniem ConceptIntro. Jeśli `false`, sesja przeskakuje intro i idzie do pierwszego pytania.
+Guard `settings.numbers.conceptIntros` JUŻ JEST w `SessionView.tsx:68-77`:
 
-Status do weryfikacji przy implementacji: czy ten guard już istnieje (spec v3.0 sekcja 12 zakłada że tak). Jeśli nie — dodajemy.
+```ts
+const conceptsIntrosOn = settings.numbers?.conceptIntros ?? true
+const showIntro = useMemo(() => {
+  if (!conceptsIntrosOn) return false
+  // ...
+}, [...])
+```
+
+Refaktor ConceptIntro (router → INTRO_ANIMATIONS) nie wymaga zmian w SessionView ani w guard'zie — kontrakt props ConceptIntro zostaje (`{conceptId, audioBus, onContinue}`).
 
 ## 8. Testy
 
@@ -267,22 +297,28 @@ Reszta — manualna weryfikacja w przeglądarce + iPad.
 
 ## 10. Implementacja — kolejność
 
-1. **NumbersStats** (raport) — najprostsze, niezależne od reszty
-2. **SettingsScreen sekcja matematyki** — niezależne, najprostsze UI work
-3. **IntroFrame + animations registry** (szkielet)
-4. **20 animacji per koncept** — może być w 4 paczkach po 5 (per poziom) z osobnymi commitami; lub parallel agents (per poziom)
-5. **ConceptIntro refaktor** — podpięcie nowych animacji
-6. **`useNumbersSession` guard `conceptIntros: false`** — jeśli brak, dopisujemy
+Zadania mają jasne granice → naturalne kandydaty do parallel agents:
+
+**Faza A — niezależne (parallel):**
+1. **conceptLabels.ts extraction + MasteryTree refaktor** — wyciągnięcie istniejącego `CONCEPT_LABELS` do shared. Drobne, blokuje NumbersStats.
+2. **SettingsScreen sekcja matematyki** — 5 kontrolek, niezależne.
+3. **IntroFrame + animations/index.ts szkielet** — pusty registry, smoke test sprawdza tylko że `INTRO_ANIMATIONS[id]` istnieje (po wypełnieniu).
+
+**Faza B — po Fazie A (parallel):**
+4. **NumbersStats** (raport) — używa conceptLabels z Fazy A.1.
+5. **20 animacji per koncept** — można split na 4 agentów (per poziom: Iskierka 5, Płomyk 5, Ognik 4, Pochodnia 6). Każda animacja niezależna od pozostałych. Jeden agent uzupełnia też `animations/index.ts`.
+
+**Faza C — finalny:**
+6. **ConceptIntro refaktor** — podpięcie nowych animacji przez `INTRO_ANIMATIONS[conceptId]`.
+7. **Eksporter markdown rozszerzenie** + mount NumbersStats w ReportScreen.
 
 Każdy etap: `pnpm tsc -b && pnpm test --run` zielone przed commitem.
 
-## 11. Risks / open questions
+## 11. Risks (open questions zamknięte podczas self-review)
 
-- **Audio sync precyzja**: `audioBus.currentTime()` może nie istnieć w `AudioBus` API. Jeśli tak, dodajemy minimalne API (`getCurrentTime(): number | null`) lub fallback na `setTimeout` od startu (mniej precyzyjne, ale działa).
-- **iPad performance**: 20 animacji CSS — ryzyko jankowania na starszym iPadzie. Mitigacja: każda animacja prosta (1-3 keyframes), brak heavy DOM. Test na iPadzie po implementacji.
-- **`conceptIntros: false`**: nie wiadomo czy guard już jest w `useNumbersSession.ts`. Sprawdzenie przy implementacji.
-- **Etykiety konceptów (CONCEPT_LABELS)**: subjektywne tłumaczenia per koncept. Trzymam się polskich nazw z drzewka jeśli już są (sprawdzenie w `MasteryTree.tsx`).
-- **Build size**: każdy plik animacji ~2-3 kB — 20 plików = ~50 kB więcej. STATUS już ostrzega o 504 kB warning. Rozważyć lazy import animacji per koncept (`React.lazy`) — odłożone do v3.2 jeśli istotne (decyzja przy implementacji jeśli build size mocno rośnie).
+- **iPad performance**: 20 animacji CSS — ryzyko jankowania na starszym iPadzie. Mitigacja: każda animacja prosta (1-3 keyframes), brak heavy DOM, używamy `transform`/`opacity` (composited). Test na iPadzie po implementacji.
+- **Build size**: każdy plik animacji ~2-3 kB — 20 plików = ~50 kB więcej. STATUS już ostrzega o 504 kB warning. Rozważyć lazy import animacji per koncept (`React.lazy`) — odłożone do v3.2 jeśli istotne (decyzja przy implementacji jeśli build size przekroczy 600 kB).
+- **Audio drift dla długich animacji**: synchronizacja przez `setTimeout` od startu `play()` ma jitter ±10ms (standardowe JS event loop). Dla animacji 3-scenowych (~3s) to nieistotne. Gdyby któraś animacja chciała 6+ scen → rozważyć refresh sync na każdy `Promise.then` z mid-tracks (out of scope v3.1).
 
 ## 12. Acceptance criteria
 
