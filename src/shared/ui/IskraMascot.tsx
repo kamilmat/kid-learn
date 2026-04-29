@@ -116,6 +116,31 @@ export function IskraMascot({
           </radialGradient>
         </defs>
 
+        {/* Grzywka 3 iskierek na czubku — każda z desyncronizowanym flicker */}
+        <g data-testid="iskra-fringe">
+          <circle
+            cx={100}
+            cy={16}
+            r={4}
+            fill="#fff8c2"
+            className={`${uid}-fringe-spark ${uid}-fringe-spark-a`}
+          />
+          <circle
+            cx={88}
+            cy={22}
+            r={3}
+            fill="#fff8c2"
+            className={`${uid}-fringe-spark ${uid}-fringe-spark-b`}
+          />
+          <circle
+            cx={112}
+            cy={22}
+            r={3}
+            fill="#fff8c2"
+            className={`${uid}-fringe-spark ${uid}-fringe-spark-c`}
+          />
+        </g>
+
         {/* Iskry "stałe" wokół maskotki — liczba zależna od intensity */}
         <g data-testid="iskra-sparks" className={`${uid}-sparks`}>
           {sparks.map((s, i) => (
@@ -279,9 +304,10 @@ function buildCss(uid: string, _state: IskraState, sparkCount: number): string {
     .join('\n')
 
   return `
+  @media (prefers-reduced-motion: no-preference) {
     @keyframes ${uid}-idle {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
+      0%, 100% { transform: scale(1); opacity: 0.96; }
+      50% { transform: scale(1.05); opacity: 1.0; }
     }
     @keyframes ${uid}-happy {
       0%, 100% { transform: translateY(0) scale(1); }
@@ -307,7 +333,27 @@ function buildCss(uid: string, _state: IskraState, sparkCount: number): string {
       40% { opacity: 1; }
       100% { opacity: 0; transform: translateY(12px); }
     }
+    @keyframes ${uid}-fringe-flicker {
+      0%, 100% { opacity: 0.6; transform: scale(0.85); }
+      50% { opacity: 1.0; transform: scale(1.1); }
+    }
+    .${uid}-fringe-spark {
+      transform-origin: center;
+      transform-box: fill-box;
+    }
+    .${uid}-fringe-spark-a {
+      animation: ${uid}-fringe-flicker 1.6s ease-in-out infinite;
+    }
+    .${uid}-fringe-spark-b {
+      animation: ${uid}-fringe-flicker 2.1s ease-in-out infinite;
+      animation-delay: 0.55s;
+    }
+    .${uid}-fringe-spark-c {
+      animation: ${uid}-fringe-flicker 1.9s ease-in-out infinite;
+      animation-delay: 1.1s;
+    }
     ${sparkKeyframes}
     ${rainKeyframes}
-  `
+  }
+`
 }
