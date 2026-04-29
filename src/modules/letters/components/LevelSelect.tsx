@@ -257,7 +257,7 @@ export function LevelSelect({
           flexShrink: 0,
         }}
       >
-        <IskraHero size={80} state="idle" intensity="fire" />
+        <IskraHero size={100} state="idle" intensity="fire" />
         <h1 style={{ fontSize: 22, margin: 0, color: colors.text }}>
           Wybierz poziom
         </h1>

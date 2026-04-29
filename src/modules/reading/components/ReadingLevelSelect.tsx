@@ -45,7 +45,7 @@ export function ReadingLevelSelect({ onSelect, audioBus }: Props) {
           flexShrink: 0,
         }}
       >
-        <IskraHero size={80} state="idle" intensity="fire" />
+        <IskraHero size={100} state="idle" intensity="fire" />
         <h1
           style={{
             fontFamily: 'var(--font-handwritten)',
