@@ -1,21 +1,17 @@
 // ReadingLevelSelect — ekran wyboru poziomu w module Czytanie.
-// Analogiczny do LevelSelect w module Litery, bez ściany osiągnięć.
 
 import { useCallback } from 'react'
-import { LevelIconView } from '@/shared/ui/levelIcons'
+import { LevelIconView, LevelStars, LEVEL_TILE_BG, LEVEL_TILE_BORDER } from '@/shared/ui/levelIcons'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
+import { colors, radii } from '@/app/theme'
 import type { Level } from '@/shared/settings/types'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 
-const LEVELS: {
-  id: Level
-  label: string
-  subtitle: string
-}[] = [
-  { id: 'iskierka', label: 'Iskierka', subtitle: 'Sylaby' },
-  { id: 'plomyk', label: 'Płomyk', subtitle: 'Słowa' },
-  { id: 'ognik', label: 'Ognik', subtitle: 'Trudniejsze słowa' },
-  { id: 'pochodnia', label: 'Pochodnia', subtitle: 'Brakuje sylaby' },
+const LEVELS: { id: Level; label: string }[] = [
+  { id: 'iskierka', label: 'Iskierka' },
+  { id: 'plomyk', label: 'Płomyk' },
+  { id: 'ognik', label: 'Ognik' },
+  { id: 'pochodnia', label: 'Pochodnia' },
 ]
 
 type Props = {
@@ -28,28 +24,36 @@ export function ReadingLevelSelect({ onSelect, audioBus }: Props) {
     <div
       data-testid="reading-level-select"
       style={{
-        padding: 12,
         flex: 1,
-        minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
-        gap: 10,
-        boxSizing: 'border-box',
-        overflow: 'hidden',
+        alignItems: 'center',
+        padding: 24,
+        gap: 24,
+        background: colors.bg,
+        overflowY: 'auto',
+        minHeight: 0,
+        scrollbarGutter: 'stable',
       }}
     >
-      <h1 style={{ fontSize: 22, margin: 0, color: '#2d2d33', flexShrink: 0 }}>
+      <h1
+        style={{
+          fontFamily: 'var(--font-handwritten)',
+          fontSize: '2.5em',
+          margin: 0,
+          color: colors.text,
+        }}
+      >
         Wybierz poziom
       </h1>
       <div
         data-testid="reading-level-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-          gridTemplateRows: 'repeat(2, minmax(0, 1fr))',
-          gap: 10,
-          flex: 1,
-          minHeight: 0,
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 16,
+          maxWidth: 720,
+          width: '100%',
         }}
       >
         {LEVELS.map((level) => (
@@ -82,21 +86,20 @@ function LevelTile({
       type="button"
       data-testid={`reading-level-tile-${level.id}`}
       data-level={level.id}
-      aria-label={`${level.label} — ${level.subtitle}`}
+      aria-label={level.label}
       style={{
-        padding: 12,
-        borderRadius: 16,
-        background: '#ffffff',
-        border: '2px solid #5b8def',
-        color: '#2d2d33',
+        minHeight: 200,
+        padding: 20,
+        borderRadius: radii.kid,
+        background: LEVEL_TILE_BG[level.id],
+        border: `3px solid ${LEVEL_TILE_BORDER[level.id]}`,
+        color: colors.text,
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 4,
-        fontSize: 18,
-        fontWeight: 600,
+        gap: 8,
         touchAction: 'manipulation',
         userSelect: 'none',
         WebkitUserSelect: 'none',
@@ -104,26 +107,18 @@ function LevelTile({
       }}
       {...handlers}
     >
-      <span
-        style={{ display: 'flex', justifyContent: 'center', minHeight: 92, alignItems: 'center' }}
-        aria-hidden="true"
-      >
-        <LevelIconView level={level.id} size={72} />
-      </span>
-      <span style={{ fontSize: 20 }}>{level.label}</span>
+      <LevelIconView level={level.id} size={72} />
       <span
         style={{
-          fontSize: 13,
-          color: '#7a7a82',
-          textAlign: 'center',
-          lineHeight: 1.3,
-          padding: '0 6px',
-          whiteSpace: 'normal',
-          wordBreak: 'break-word',
+          fontFamily: 'var(--font-handwritten)',
+          fontSize: 28,
+          fontWeight: 700,
+          color: colors.text,
         }}
       >
-        {level.subtitle}
+        {level.label}
       </span>
+      <LevelStars level={level.id} size={18} />
     </button>
   )
 }

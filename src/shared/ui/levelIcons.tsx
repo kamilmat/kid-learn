@@ -9,6 +9,51 @@ export const LEVEL_ICONS: Record<Level, LevelIcon> = {
   pochodnia: { kind: 'torch' },
 }
 
+// Pastelowe tła per poziom — wizualny gradient trudności (Iskierka→Pochodnia).
+// Dziecko nieczytające widzi po kolorze "to jest łatwiejsze / trudniejsze".
+export const LEVEL_TILE_BG: Record<Level, string> = {
+  iskierka: '#fef3c7',  // żółty pastel
+  plomyk: '#fed7aa',    // pomarańczowy pastel
+  ognik: '#fecaca',     // czerwony pastel
+  pochodnia: '#fda4af', // intensywny róż/bordo pastel
+}
+
+export const LEVEL_TILE_BORDER: Record<Level, string> = {
+  iskierka: '#f59e0b',
+  plomyk: '#f97316',
+  ognik: '#dc2626',
+  pochodnia: '#9f1239',
+}
+
+// Wskaźnik trudności — 1 do 4 ⭐ pod ikoną. Nie tekst, tylko liczba gwiazdek.
+export const LEVEL_DIFFICULTY: Record<Level, number> = {
+  iskierka: 1,
+  plomyk: 2,
+  ognik: 3,
+  pochodnia: 4,
+}
+
+export function LevelStars({ level, size = 18 }: { level: Level; size?: number }) {
+  const count = LEVEL_DIFFICULTY[level]
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-flex',
+        gap: 2,
+        fontSize: size,
+        lineHeight: 1,
+      }}
+    >
+      {Array.from({ length: 4 }, (_, i) => (
+        <span key={i} style={{ opacity: i < count ? 1 : 0.2, filter: i < count ? 'none' : 'grayscale(1)' }}>
+          ⭐
+        </span>
+      ))}
+    </span>
+  )
+}
+
 export function LevelIconView({ level, size = 80 }: { level: Level; size?: number }) {
   const icon = LEVEL_ICONS[level]
   if (icon.kind === 'emoji') {

@@ -12,9 +12,9 @@ import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import { levelLetterPools } from '@/shared/settings/defaults'
 import type { Level } from '@/shared/settings/types'
-import { LevelIconView } from '@/shared/ui/levelIcons'
+import { LevelIconView, LevelStars, LEVEL_TILE_BG, LEVEL_TILE_BORDER } from '@/shared/ui/levelIcons'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
-import { POLISH_ALPHABET, toUpper } from '@/modules/letters/data/alphabet'
+import { toUpper } from '@/modules/letters/data/alphabet'
 import {
   selectMasteredLetters,
   useLetters,
@@ -30,30 +30,27 @@ export type LevelSelectProps = {
 type LevelMeta = {
   level: Level
   label: string
-  description: string
 }
 
 const LEVEL_META: LevelMeta[] = [
-  { level: 'iskierka', label: 'Iskierka', description: 'najłatwiejszy — 6 literek' },
-  { level: 'plomyk', label: 'Płomyk', description: 'łatwy — 14 literek' },
-  { level: 'ognik', label: 'Ognik', description: 'średni — 24 literki' },
-  { level: 'pochodnia', label: 'Pochodnia', description: 'pełen alfabet — 32 literki' },
+  { level: 'iskierka', label: 'Iskierka' },
+  { level: 'plomyk', label: 'Płomyk' },
+  { level: 'ognik', label: 'Ognik' },
+  { level: 'pochodnia', label: 'Pochodnia' },
 ]
 
 const LEVEL_SELECT_INTRO_KEY = 'level-select-intro'
 
-const tileStyle: React.CSSProperties = {
+const tileStyleBase: React.CSSProperties = {
   padding: 12,
   borderRadius: radii.kid,
-  background: '#ffffff',
-  border: `2px solid ${colors.accentBlue}`,
   color: colors.text,
   cursor: 'pointer',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  gap: 4,
+  gap: 8,
   fontSize: 18,
   fontWeight: 600,
   touchAction: 'manipulation',
@@ -79,26 +76,18 @@ function LevelTile({
       data-testid={`level-tile-${meta.level}`}
       data-level={meta.level}
       aria-label={`Poziom ${meta.label}, ${count} literek`}
-      style={tileStyle}
+      style={{
+        ...tileStyleBase,
+        background: LEVEL_TILE_BG[meta.level],
+        border: `3px solid ${LEVEL_TILE_BORDER[meta.level]}`,
+      }}
       {...tap}
     >
       <span style={{ display: 'flex', justifyContent: 'center', minHeight: 92, alignItems: 'center' }} aria-hidden="true">
         <LevelIconView level={meta.level} size={72} />
       </span>
-      <span style={{ fontSize: 20 }}>{meta.label}</span>
-      <span
-        style={{
-          fontSize: 13,
-          color: '#7a7a82',
-          textAlign: 'center',
-          lineHeight: 1.3,
-          padding: '0 6px',
-          whiteSpace: 'normal',
-          wordBreak: 'break-word',
-        }}
-      >
-        {meta.description}
-      </span>
+      <span style={{ fontSize: 22, fontFamily: 'var(--font-handwritten)' }}>{meta.label}</span>
+      <LevelStars level={meta.level} size={18} />
     </button>
   )
 }
@@ -203,6 +192,14 @@ export function LevelSelect({
     return new Set(selectMasteredLetters(snapshot))
   }, [lettersState.letters, lettersState.sessions, lettersState.seenIntros, lettersState.lastUsedLevel])
 
+  // Mastery wall: pokazujemy tylko pulę aktywnego (lub ostatniego) poziomu.
+  // Default Iskierka (6 liter) — dziecko widzi tylko to czego się uczy.
+  const lastUsedLevel = lettersState.lastUsedLevel ?? 'iskierka'
+  const visibleLetters = useMemo<readonly string[]>(
+    () => levelLetterPools[lastUsedLevel],
+    [lastUsedLevel],
+  )
+
   const markIntroSeen = useLetters((s) => s.markIntroSeen)
   const hasSeenIntro = useLetters((s) => s.hasSeenIntro)
 
@@ -283,7 +280,7 @@ export function LevelSelect({
           Tu pojawią się literki, których się nauczysz
         </p>
         <div style={masteryGridStyle}>
-          {POLISH_ALPHABET.map((letter) => (
+          {visibleLetters.map((letter) => (
             <MasteryCell
               key={letter}
               letter={letter}

@@ -68,17 +68,12 @@ describe('LevelSelect', () => {
     resetStore()
   })
 
-  it('renders 4 level tiles with letter counts', () => {
+  it('renders 4 level tiles', () => {
     render(<LevelSelect onSelect={vi.fn()} audioBus={makeAudioBus()} />)
     expect(screen.getByTestId('level-tile-iskierka')).toBeInTheDocument()
     expect(screen.getByTestId('level-tile-plomyk')).toBeInTheDocument()
     expect(screen.getByTestId('level-tile-ognik')).toBeInTheDocument()
     expect(screen.getByTestId('level-tile-pochodnia')).toBeInTheDocument()
-
-    expect(screen.getByTestId('level-tile-iskierka').textContent).toContain('6 literek')
-    expect(screen.getByTestId('level-tile-plomyk').textContent).toContain('14 literek')
-    expect(screen.getByTestId('level-tile-ognik').textContent).toContain('24 literki')
-    expect(screen.getByTestId('level-tile-pochodnia').textContent).toContain('32 literki')
   })
 
   it('clicking a tile invokes onSelect with the correct level', () => {
@@ -107,8 +102,8 @@ describe('LevelSelect', () => {
     expect(calls).not.toContain('level-select-intro')
   })
 
-  it('mastery wall shows 32 cells; box=5 letters marked mastered', () => {
-    // Oznaczamy "a" i "m" jako opanowane (box 5)
+  it('mastery wall shows pula aktywnego poziomu (default Iskierka = 6); box=5 marked', () => {
+    // Oznaczamy "a" i "m" jako opanowane (box 5) — obie w Iskierka puli
     useLetters.getState().applyOutcome(
       'a',
       { ...createInitialLetterState('a'), box: 5, masteredAt: 1 },
@@ -120,10 +115,10 @@ describe('LevelSelect', () => {
 
     render(<LevelSelect onSelect={vi.fn()} audioBus={makeAudioBus()} />)
 
-    // Cała ściana = 32 komórki
+    // Default lastUsedLevel === null → Iskierka pula = 6 komórek
     const wall = screen.getByTestId('mastery-wall')
     const cells = wall.querySelectorAll('[data-testid^="mastery-cell-"]')
-    expect(cells).toHaveLength(32)
+    expect(cells).toHaveLength(6)
 
     expect(
       screen.getByTestId('mastery-cell-a').dataset.mastered,
@@ -132,7 +127,7 @@ describe('LevelSelect', () => {
       screen.getByTestId('mastery-cell-m').dataset.mastered,
     ).toBe('true')
     expect(
-      screen.getByTestId('mastery-cell-b').dataset.mastered,
+      screen.getByTestId('mastery-cell-t').dataset.mastered,
     ).toBe('false')
   })
 
@@ -153,7 +148,8 @@ describe('LevelSelect', () => {
   it('clicking a non-mastered cell is disabled (no audio)', () => {
     const audioBus = makeAudioBus()
     render(<LevelSelect onSelect={vi.fn()} audioBus={audioBus} />)
-    const cell = screen.getByTestId('mastery-cell-b') as HTMLButtonElement
+    // 't' jest w Iskierka puli (default) ale nie mastered
+    const cell = screen.getByTestId('mastery-cell-t') as HTMLButtonElement
     expect(cell.disabled).toBe(true)
     act(() => {
       cell.click()

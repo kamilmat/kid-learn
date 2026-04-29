@@ -107,10 +107,10 @@ export function Home() {
         data-testid="home-modules"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          gap: 24,
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 16,
           width: '100%',
-          maxWidth: 760,
+          maxWidth: 1080,
           marginTop: 16,
         }}
       >

@@ -1,6 +1,6 @@
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
-import { LevelIconView } from '@/shared/ui/levelIcons'
+import { LevelIconView, LevelStars, LEVEL_TILE_BG, LEVEL_TILE_BORDER } from '@/shared/ui/levelIcons'
 import { colors, radii } from '@/app/theme'
 import type { Level } from '@/shared/settings/types'
 
@@ -32,6 +32,7 @@ export function NumbersLevelSelect({ audioBus: _audioBus, onSelect, onTree }: Pr
         background: colors.bg,
         overflowY: 'auto',
         minHeight: 0,
+        scrollbarGutter: 'stable',
       }}
     >
       <h2
@@ -103,16 +104,16 @@ function LevelTile({
       {...tap}
       style={{
         minHeight: 200,
-        padding: 24,
+        padding: 20,
         borderRadius: radii.kid,
-        background: '#fff',
-        border: `4px solid ${colors.accentBlue}`,
+        background: LEVEL_TILE_BG[level],
+        border: `3px solid ${LEVEL_TILE_BORDER[level]}`,
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 12,
+        gap: 8,
         touchAction: 'manipulation',
         userSelect: 'none',
         WebkitTapHighlightColor: 'transparent',
@@ -129,6 +130,7 @@ function LevelTile({
       >
         {label}
       </span>
+      <LevelStars level={level} size={18} />
     </button>
   )
 }
