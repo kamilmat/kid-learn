@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="60%" r="55%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#ffe28a"/>
+      <stop offset="75%" stop-color="#ffb04a"/>
+      <stop offset="100%" stop-color="#ef7a1f"/>
+    </radialGradient>
+  </defs>
+  <!-- Iskry wokół maskotki (4 male) -->
+  <circle cx="10" cy="20" r="2" fill="#ffd06a"/>
+  <circle cx="54" cy="20" r="2" fill="#ffd06a"/>
+  <circle cx="8" cy="40" r="1.5" fill="#ffd06a"/>
+  <circle cx="56" cy="40" r="1.5" fill="#ffd06a"/>
+  <!-- Płomień (kropla) -->
+  <path d="M32 4 C36 14 44 22 49 32 C55 42 57 51 55 58 C50 62 40 62 32 62 C24 62 14 62 9 58 C7 51 9 42 15 32 C20 22 28 14 32 4 Z"
+        fill="url(#g)" stroke="#c2410c" stroke-width="0.8"/>
+  <!-- Oczy -->
+  <circle cx="25" cy="42" r="2.4" fill="#2d2d33"/>
+  <circle cx="39" cy="42" r="2.4" fill="#2d2d33"/>
+  <!-- Usmiech -->
+  <path d="M25 50 Q32 55 39 50" stroke="#2d2d33" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+</svg>
