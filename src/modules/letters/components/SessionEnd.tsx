@@ -9,7 +9,7 @@ import { toUpper } from '@/modules/letters/data/alphabet'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import type { SessionEvent } from '@/modules/letters/types'
-import { IskraMascot } from '@/shared/ui/IskraMascot'
+import { IskraHero } from '@/shared/ui/IskraHero'
 import { detectPerfectSession } from '@/modules/letters/hooks/useSession.pickers'
 
 export type SessionEndProps = {
@@ -154,8 +154,8 @@ export function SessionEnd({
       }}
     >
       <div data-testid="iskra-end" aria-hidden="true">
-        <IskraMascot
-          size={isPerfect ? 180 : 120}
+        <IskraHero
+          size={isPerfect ? 180 : 140}
           state={isPerfect ? 'dance' : 'happy'}
           intensity={isPerfect ? 'torch' : 'flame'}
           oneshotKey={isPerfect ? 'perfect' : 'normal'}

@@ -14,6 +14,7 @@ import { levelLetterPools } from '@/shared/settings/defaults'
 import type { Level } from '@/shared/settings/types'
 import { LevelIconView, LevelStars, LEVEL_TILE_BG, LEVEL_TILE_BORDER } from '@/shared/ui/levelIcons'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
+import { IskraHero } from '@/shared/ui/IskraHero'
 import { toUpper } from '@/modules/letters/data/alphabet'
 import {
   selectMasteredLetters,
@@ -248,9 +249,19 @@ export function LevelSelect({
         overflow: 'hidden',
       }}
     >
-      <h1 style={{ fontSize: 22, margin: 0, color: colors.text, flexShrink: 0 }}>
-        Wybierz poziom
-      </h1>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexShrink: 0,
+        }}
+      >
+        <IskraHero size={80} state="idle" intensity="fire" />
+        <h1 style={{ fontSize: 22, margin: 0, color: colors.text }}>
+          Wybierz poziom
+        </h1>
+      </div>
 
       <div
         data-testid="level-grid"
