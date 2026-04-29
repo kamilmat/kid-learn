@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { colors, radii } from '@/app/theme'
+import { IskraHero } from '@/shared/ui/IskraHero'
 
 type Props = {
   counters: { correct: number; wrong: number; dontKnow: number }
@@ -32,6 +33,9 @@ export function SessionEnd({ counters, audioBus, onExit, onTree }: Props) {
         gap: 32,
       }}
     >
+      <div aria-hidden="true">
+        <IskraHero size={140} state="happy" intensity="torch" />
+      </div>
       <h2
         style={{
           fontFamily: 'var(--font-handwritten)',

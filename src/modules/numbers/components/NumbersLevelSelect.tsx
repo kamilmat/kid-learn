@@ -3,6 +3,7 @@ import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { LevelIconView, LevelStars, LEVEL_TILE_BG, LEVEL_TILE_BORDER } from '@/shared/ui/levelIcons'
 import { colors, radii } from '@/app/theme'
 import type { Level } from '@/shared/settings/types'
+import { IskraHero } from '@/shared/ui/IskraHero'
 
 const LEVELS: Array<{ level: Level; label: string }> = [
   { level: 'iskierka', label: 'Iskierka' },
@@ -35,16 +36,26 @@ export function NumbersLevelSelect({ audioBus: _audioBus, onSelect, onTree }: Pr
         scrollbarGutter: 'stable',
       }}
     >
-      <h2
+      <div
         style={{
-          fontFamily: 'var(--font-handwritten)',
-          fontSize: '2.5em',
-          margin: 0,
-          color: colors.text,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexShrink: 0,
         }}
       >
-        Cyferki
-      </h2>
+        <IskraHero size={80} state="idle" intensity="fire" />
+        <h2
+          style={{
+            fontFamily: 'var(--font-handwritten)',
+            fontSize: '2.5em',
+            margin: 0,
+            color: colors.text,
+          }}
+        >
+          Cyferki
+        </h2>
+      </div>
       <div
         style={{
           display: 'grid',
