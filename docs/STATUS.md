@@ -30,6 +30,16 @@ User poprosił o kolejny review skupiony na "atrakcyjniejszych wizualnie treści
 
 Plan na sesję: brainstorm → review listy ekranów + screenshot per ekran → ranking impact × effort → wykonać top 3-5.
 
+### Maskotka Iskra — dalsze ulepszenia (po round 2 v2 kawaii)
+
+Po commit `1e3615b` (anime oczy + brwi + rumieńce + szerszy uśmiech, size 96→140 na home) user zaakceptował kierunek ale chce więcej. Wybrane konkrety do następnej sesji:
+
+- **(c) Mocniejszy gradient płomienia** — 2 warstwy płomienia, jaśniejszy rdzeń, animowany subtelny ruch (jak prawdziwy ogień, nie tylko skala 1↔1.05). Zachowuje obecny `radialGradient` ale dodaje delikatne `path` z animowanym `d` lub overlay z opacity flicker.
+- **(e) Mała "grzywka" iskier** — kępka 3-4 iskierek na czubku płomienia (cy~10-15) jak fryzura, statyczna lub z mikro-animacją. Dziecko widzi "włosy" — bardziej character.
+- **(i) Hero-version Iskry z rączkami i nóżkami** — drugi wariant komponenta (np. `<IskraHero size={...} />`) używany na home + intros: dodane małe rączki (kreseczki z kropkami na końcach), baza/podstawa (mały płomień-cień pod spodem). NumberBlocks-style charakter. Standard `<IskraMascot>` zostaje dla małych instancji (status bar, feedback).
+
+Implementacja: `src/shared/ui/IskraMascot.tsx` rozbudowa + nowy `IskraHero.tsx` (eksportowany z tego samego modułu). Zachować backward compatibility — istniejące use'y `<IskraMascot size=N>` bez zmian.
+
 ---
 
 ## Aktualny stan (2026-04-29 — moduł 3 v3.1 polish round 2 ukończony)
