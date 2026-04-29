@@ -688,6 +688,108 @@ export function SettingsScreen({
         />
       </section>
 
+      {/* Matematyka (moduł 3) */}
+      <section style={sectionStyle} data-testid="section-numbers">
+        <div style={labelStyle}>Matematyka (moduł 3)</div>
+        <ToggleField
+          label="Iskra mówi na głos"
+          description="Iskra opowiada krok po kroku co robi (pomaga zrozumieć)"
+          value={settings.numbers.iskraThinkingAloud}
+          onChange={(v) =>
+            updateSetting('numbers', { ...settings.numbers, iskraThinkingAloud: v })
+          }
+          testId="numbers-iskra-thinking"
+        />
+        <ToggleField
+          label="Wprowadzenia do nowych konceptów"
+          description="Krótkie animowane intro przed pierwszym pytaniem z nowego tematu"
+          value={settings.numbers.conceptIntros}
+          onChange={(v) =>
+            updateSetting('numbers', { ...settings.numbers, conceptIntros: v })
+          }
+          testId="numbers-concept-intros"
+        />
+        <ToggleField
+          label="Celebracje opanowania"
+          description="Głośne celebracje gdy dziecko opanuje koncept w drzewku"
+          value={settings.numbers.treeCelebrationsOn}
+          onChange={(v) =>
+            updateSetting('numbers', { ...settings.numbers, treeCelebrationsOn: v })
+          }
+          testId="numbers-tree-celebrations"
+        />
+
+        <div style={{ padding: '12px 0', borderBottom: '1px solid #e5e7eb' }}>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>Pytań na sesję</div>
+          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+            Mniej = krócej; więcej = solidniej
+          </div>
+          <div
+            role="radiogroup"
+            aria-label="Pytań na sesję matematyki"
+            style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}
+          >
+            {([6, 8, 10] as const).map((n) => (
+              <label
+                key={n}
+                style={{
+                  display: 'flex',
+                  gap: 4,
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  border: `1px solid ${
+                    settings.numbers.questionCount === n
+                      ? colors.accentBlue
+                      : '#d8d8de'
+                  }`,
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="numbers-question-count"
+                  value={n}
+                  checked={settings.numbers.questionCount === n}
+                  onChange={() =>
+                    updateSetting('numbers', {
+                      ...settings.numbers,
+                      questionCount: n,
+                    })
+                  }
+                  data-testid={`numbers-question-count-${n}`}
+                />
+                <span>{n}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ padding: '12px 0' }}>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>
+            Krok dla skip count (Pochodnia)
+          </div>
+          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+            Liczenie 2,4,6… / 5,10,15… / 10,20,30… / mieszane
+          </div>
+          <select
+            data-testid="numbers-skip-count-step"
+            value={String(settings.numbers.skipCountStep)}
+            onChange={(e) => {
+              const v = e.target.value
+              const next: 2 | 5 | 10 | 'mixed' =
+                v === 'mixed' ? 'mixed' : (Number(v) as 2 | 5 | 10)
+              updateSetting('numbers', { ...settings.numbers, skipCountStep: next })
+            }}
+            style={{ ...selectStyle, marginTop: 8 }}
+          >
+            <option value="2">co 2</option>
+            <option value="5">co 5</option>
+            <option value="10">co 10</option>
+            <option value="mixed">mieszane</option>
+          </select>
+        </div>
+      </section>
+
       {/* Reset postępów */}
       <section style={sectionStyle} data-testid="section-reset">
         <div style={labelStyle}>Reset postępów</div>
