@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { colors, radii } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
-import { IskraMascot } from '@/shared/ui/IskraMascot'
+import { IskraHero } from '@/shared/ui/IskraHero'
 import { useReading } from '../store/readingStore'
 import { ALL_WORDS } from '../data/words'
 import { SyllableText } from './SyllableText'
@@ -115,7 +115,7 @@ function CeremonyView({
         ))}
       </div>
 
-      <IskraMascot size={160} state="dance" intensity="torch" oneshotKey={`ceremony-${milestone}`} />
+      <IskraHero size={160} state="dance" intensity="torch" oneshotKey={`ceremony-${milestone}`} />
 
       <div style={{ fontSize: 48, lineHeight: 1 }}>🎉</div>
 
@@ -179,8 +179,8 @@ export function SessionEnd({ results, onExit, onAlbum, audioBus }: SessionEndPro
       }}
     >
       <div aria-hidden="true">
-        <IskraMascot
-          size={isPerfect ? 180 : 120}
+        <IskraHero
+          size={isPerfect ? 180 : 140}
           state={isPerfect ? 'dance' : 'happy'}
           intensity={isPerfect ? 'torch' : 'flame'}
           oneshotKey={isPerfect ? 'reading-perfect' : 'reading-normal'}
