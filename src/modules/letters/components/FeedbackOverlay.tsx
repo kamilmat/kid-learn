@@ -14,7 +14,8 @@ import {
 } from '@/modules/letters/data/associations'
 import type { FeedbackState } from '@/modules/letters/types'
 import type { CaseMode, StyleMode } from '@/shared/settings/types'
-import { IskraMascot, type IskraState, type IskraIntensity } from '@/shared/ui/IskraMascot'
+import { type IskraState, type IskraIntensity } from '@/shared/ui/IskraMascot'
+import { IskraHero } from '@/shared/ui/IskraHero'
 
 export type FeedbackOverlayProps = {
   feedback: FeedbackState
@@ -203,8 +204,8 @@ export function FeedbackOverlay({
         if (cfg === null) return null
         return (
           <div data-testid="feedback-mascot" aria-hidden="true">
-            <IskraMascot
-              size={feedback.variant === 'mastery' ? 140 : 96}
+            <IskraHero
+              size={feedback.variant === 'mastery' ? 160 : 120}
               state={cfg.state}
               intensity={cfg.intensity}
               oneshotKey={`${feedback.targetLetter}-${feedback.variant}`}
