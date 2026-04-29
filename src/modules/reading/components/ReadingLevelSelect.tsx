@@ -6,6 +6,7 @@ import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { colors, radii } from '@/app/theme'
 import type { Level } from '@/shared/settings/types'
 import type { AudioBus } from '@/shared/audio/AudioBus'
+import { IskraHero } from '@/shared/ui/IskraHero'
 
 const LEVELS: { id: Level; label: string }[] = [
   { id: 'iskierka', label: 'Iskierka' },
@@ -36,16 +37,26 @@ export function ReadingLevelSelect({ onSelect, audioBus }: Props) {
         scrollbarGutter: 'stable',
       }}
     >
-      <h1
+      <div
         style={{
-          fontFamily: 'var(--font-handwritten)',
-          fontSize: '2.5em',
-          margin: 0,
-          color: colors.text,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexShrink: 0,
         }}
       >
-        Wybierz poziom
-      </h1>
+        <IskraHero size={80} state="idle" intensity="fire" />
+        <h1
+          style={{
+            fontFamily: 'var(--font-handwritten)',
+            fontSize: '2.5em',
+            margin: 0,
+            color: colors.text,
+          }}
+        >
+          Wybierz poziom
+        </h1>
+      </div>
       <div
         data-testid="reading-level-grid"
         style={{
