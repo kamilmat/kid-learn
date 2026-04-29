@@ -3,7 +3,51 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
-## Aktualny stan (2026-04-29 — moduł 3 v3.1 polish ukończony)
+## Następna sesja — visual review round 3 (atrakcyjność dla dziecka)
+
+User poprosił o kolejny review skupiony na "atrakcyjniejszych wizualnie treściach dla dziecka". Round 1+2 v3.1 polish (gwiazdki, kolory poziomów, drzewko stages, mini-ikony konceptów, mastery filter) już wypchnięty (commits do `0b74ec4`).
+
+**Do zrobienia w kolejnej sesji** — systematyczny pass przez wszystkie ekrany w przeglądarce (`pnpm dev` + chrome-devtools-mcp) z perspektywy nieczytającego 7-latka:
+
+- **Home**: czy maskotka Iskra obok tytułu wystarczy, czy potrzeba więcej życia (np. animowany welcome scene, machające IskraMascot, drobne floating elementy)
+- **LevelSelect** (3 moduły): kafelki mają tła pastelowe + gwiazdki — czy dodać sub-animacje (np. iskry orbitujące wokół ikony kafelka, hover/tap feedback wizualny, lekkie skalowanie)
+- **Sesja Letters**: 4 kafelki literek w pionowym layoucie zajmują pełną szerokość — czy lepszy 2×2 grid? Plus kafelki literek same w sobie są bardzo statyczne (wpisana litera + nic więcej)
+- **Sesja Reading**: kafelki sylab, drag-drop slot — czy dodać mini-sceny dla sylab (jak `MiniScene` dla słów już mamy)
+- **Sesja Numbers**: ćwiczenia różne — czy każde ma wystarczająco "show" przy poprawnej odpowiedzi (oprócz mini-celebrations)
+- **Status bar w sesji**: 8 kropek progresu wszystkie identyczne — czy ostatnia kropka mogłaby być jaśniejsza/specjalna ("dochodzisz do końca!")
+- **FeedbackOverlay**: pochwały, IskraMascot dance — sprawdzić czy są atrakcyjne, czy zbyt powtarzalne
+- **SessionEnd**: ekran końcowy — czy wystarczająco "świętuje", czy jest za suchy
+- **Settings ⚙ + Raport 📊**: dla rodzica, ale 2 emoji w prawym dolnym rogu — może czytelniejsze ikony
+- **Math gate**: bardzo formalny "6+5-7=?" w prostokątnym pop-upie — może bardziej zabawowy?
+- **Mascot wall Liter**: opanowane litery w `colors.accentOrange` (pomarańczowe płytki) — może dodać lekki glow/pulse dla podświetlenia
+- **Drzewko mistrzostwa**: stages path działa, ale brakuje animacji "przejścia" między etapami (gdy dziecko opanuje 5. koncept → płynne przeskoczenie 🌱→🪴)
+
+**Dziedziny do rozważenia**:
+- Mikrocelebracje per akcja (1-2 sekundy) zamiast 8-sekundowych wild celebrations rzadziej
+- Soft sound effects (ding/pop) na hover/tap (nie tylko correct/wrong) — opcjonalne
+- Konsystencja koloru: każdy moduł ma kolor (Litery żółty/pomarańczowy, Czytanie niebieski, Cyferki zielony) — czy konsystentnie używany?
+- Ekrany "puste" / "pierwszy raz" — zachęta wizualna do startu
+
+Plan na sesję: brainstorm → review listy ekranów + screenshot per ekran → ranking impact × effort → wykonać top 3-5.
+
+---
+
+## Aktualny stan (2026-04-29 — moduł 3 v3.1 polish round 2 ukończony)
+
+### v3.1 polish round 2 — 10 ulepszeń UX
+
+Po pierwszym review (`v3.1`) drugi pass z perspektywy 7-latka:
+- **Pochodnia ikona** (`ed2db37`): emoji 🪔 nie pasowało jako pochodnia — custom inline SVG (kij brązowy + 3-warstwowy płomień)
+- **Spójne ikony poziomów we wszystkich 3 modułach** (`b0d2d41`): Letters/Reading dotąd używały IskraMascot per intensity, Numbers używał emoji — wyciągnięto do shared `levelIcons.tsx` (✨/🔆/🔥/torch SVG)
+- **Maskotka na home + favicon SVG** (`eba73d1`): IskraMascot obok tytułu "Iskierki" + custom SVG favicon (uproszczona maskotka)
+- **Polish round 1** (`5dabf57`): 1×3 grid Home, gwiazdki ⭐ trudności zamiast tekstu, pastelowe tła per poziom (żółty→pomarańczowy→czerwony→róż), mastery wall Liter pokazuje tylko aktywną pulę (6 nie 32), Reading kafelki kompaktowe, scrollbar-gutter stable
+- **Drzewko polish** (`0b74ec4`): visible stages path (5 emoji obok siebie, aktywny 64px), 20 mini-ikon per koncept (🖐️🎲🍎🔗🔢👯🦘…)
+
+**Testy**: 559/559 zielone. **Build**: 525 kB. **Live**: https://kamilmat.github.io/kid-learn/
+
+---
+
+## Stan wcześniejszy (2026-04-29 — moduł 3 v3.1 polish ukończony)
 
 ### 🎯 Moduł 3 v3.1 polish — wszystkie 3 obszary wdrożone ✅
 
