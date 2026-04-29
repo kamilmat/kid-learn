@@ -3,7 +3,35 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
-## Aktualny stan (2026-04-28 — moduł 3 cyferki ukończony)
+## Aktualny stan (2026-04-29 — moduł 3 v3.1 polish ukończony)
+
+### 🎯 Moduł 3 v3.1 polish — wszystkie 3 obszary wdrożone ✅
+
+3 obszary z TODO przed v3 zamknięte w jednej sesji (brainstorm + spec + plan + parallel agents):
+
+- **Raport rodzica**: nowa sekcja `NumbersStats` (Koncepty X/20 + lista mastered + W nauce + Nietknięte; Najtrudniejsze fakty top 10 z `formatFactId` helper dla 9 typów; Heatmapa 8 grup typów konceptów z kolorami trudności). Mountowany w `ReportScreen` po `ReadingStats`. Eksporter MD rozszerzony o sekcję `## Matematyka`.
+- **SettingsScreen**: sekcja "Matematyka (moduł 3)" przed Reset z 5 kontrolkami — `iskraThinkingAloud`, `conceptIntros`, `treeCelebrationsOn` (toggles), `questionCount` 6/8/10 (radio), `skipCountStep` 2/5/10/mixed (select). Każda zmiana persistuje przez `updateSetting('numbers', ...)`.
+- **ConceptIntro**: refaktor placeholder (💡 emoji) → router `INTRO_ANIMATIONS[conceptId]` w nowym `IntroFrame`. 20 dedykowanych worked-example animacji (Renkl/Sweller fading + CPA dla bonds/factfamily) reusing `representations/` (TenFrame, DotPattern, ConcreteIcons, NumberBondShape). Audio sync przez `setTimeout` od `audioBus.play()` (bez nowego API). Cleanup timeoutów na unmount.
+- **Bonus refaktor**: `CONCEPT_LABELS` wyciągnięte z `MasteryTree.tsx` do `numbers/data/conceptLabels.ts` (single source of truth, używane teraz przez MasteryTree i NumbersStats).
+
+**Testy**: 559/559 zielone (551 baseline + 7 NumbersStats + 1 animations registry).
+**Build**: 524.94 kB JS (gzip 148.17 kB), 362 PWA entries.
+**Audio**: bez nowych nagrań — animacje sync z istniejącym `intro-<conceptId>.mp3` (121 mp3 z fazy 3 modułu 3 v3.0).
+
+**Spec**: `docs/superpowers/specs/2026-04-29-iskierki-math-v3.1-polish-design.md` (commit `40abc67`)
+**Plan**: `docs/superpowers/plans/2026-04-29-iskierki-math-v3.1-polish.md` (commit `fcda021`)
+**Implementation**: 6 commits (`84a4c92` → `dd7bac1`) — refactor + 4 features + integration.
+
+### Out of scope v3.1 (do v3.2)
+
+- Trendy aktywności matematyki dziennej (jak ActivitySection liter)
+- Tekstowe sugestie nauczania (jak SuggestionsSection liter)
+- iPad performance audit (test fizycznym iPadzie)
+- Lazy import animacji jeśli build size > 600 kB
+
+---
+
+## Poprzedni stan (2026-04-28 — moduł 3 cyferki ukończony)
 
 ### 🎯 Moduł 3 (Matematyka) — **wszystkie 11 faz wdrożone** ✅
 
