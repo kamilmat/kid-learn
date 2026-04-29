@@ -88,7 +88,7 @@ export function Home() {
           marginTop: 8,
         }}
       >
-        <IskraMascot size={96} state="happy" intensity="fire" />
+        <IskraMascot size={140} state="happy" intensity="fire" />
         <h1
           style={{
             fontFamily: 'var(--font-handwritten)',

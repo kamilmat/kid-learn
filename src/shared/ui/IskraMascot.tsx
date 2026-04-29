@@ -146,14 +146,37 @@ export function IskraMascot({
         >
           <path d={FLAME_PATH} fill={`url(#${uid}-grad)`} />
           <path d={FLAME_INNER_PATH} fill={`url(#${uid}-inner)`} />
-          {/* Oczy (proste — dwa małe punkty, dziecięcy charakter) */}
-          <circle data-testid="iskra-eye" cx={40} cy={86} r={4} fill="#2d2d33" />
-          <circle data-testid="iskra-eye" cx={60} cy={86} r={4} fill="#2d2d33" />
-          {/* Uśmiech (lekki łuk) */}
+          {/* Brwi — delikatne kreski wyrażające ekspresję */}
           <path
-            d="M40 100 Q50 108 60 100"
+            d="M30 76 Q37 73 44 76"
             stroke="#2d2d33"
             strokeWidth={2.5}
+            strokeLinecap="round"
+            fill="none"
+          />
+          <path
+            d="M56 76 Q63 73 70 76"
+            stroke="#2d2d33"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            fill="none"
+          />
+          {/* Oczy z białkiem + źrenicą + connectorem (anime/Kawaii style) */}
+          <circle cx={37} cy={88} r={7} fill="#ffffff" />
+          <circle cx={63} cy={88} r={7} fill="#ffffff" />
+          <circle data-testid="iskra-eye" cx={38} cy={88} r={5} fill="#2d2d33" />
+          <circle data-testid="iskra-eye" cx={64} cy={88} r={5} fill="#2d2d33" />
+          {/* Refleks w oczach — biały punkt = "iskra życia" */}
+          <circle cx={36} cy={86} r={1.8} fill="#ffffff" />
+          <circle cx={62} cy={86} r={1.8} fill="#ffffff" />
+          {/* Rumieńce — różowe okręgi pod oczami */}
+          <ellipse cx={28} cy={102} rx={6} ry={4} fill="#fda4af" opacity={0.55} />
+          <ellipse cx={72} cy={102} rx={6} ry={4} fill="#fda4af" opacity={0.55} />
+          {/* Wyraźniejszy uśmiech — szerszy łuk */}
+          <path
+            d="M38 104 Q50 116 62 104"
+            stroke="#2d2d33"
+            strokeWidth={3}
             strokeLinecap="round"
             fill="none"
           />
