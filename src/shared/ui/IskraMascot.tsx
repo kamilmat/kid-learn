@@ -120,21 +120,21 @@ export function IskraMascot({
         <g data-testid="iskra-fringe">
           <circle
             cx={100}
-            cy={16}
+            cy={10}
             r={4}
             fill="#fff8c2"
             className={`${uid}-fringe-spark ${uid}-fringe-spark-a`}
           />
           <circle
             cx={88}
-            cy={22}
+            cy={24}
             r={3}
             fill="#fff8c2"
             className={`${uid}-fringe-spark ${uid}-fringe-spark-b`}
           />
           <circle
             cx={112}
-            cy={22}
+            cy={24}
             r={3}
             fill="#fff8c2"
             className={`${uid}-fringe-spark ${uid}-fringe-spark-c`}

@@ -28,8 +28,8 @@ export function NumbersLevelSelect({ audioBus: _audioBus, onSelect, onTree }: Pr
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: 24,
-        gap: 24,
+        padding: 16,
+        gap: 16,
         background: colors.bg,
         overflowY: 'auto',
         minHeight: 0,
@@ -44,7 +44,7 @@ export function NumbersLevelSelect({ audioBus: _audioBus, onSelect, onTree }: Pr
           flexShrink: 0,
         }}
       >
-        <IskraHero size={80} state="idle" intensity="fire" />
+        <IskraHero size={100} state="idle" intensity="fire" />
         <h2
           style={{
             fontFamily: 'var(--font-handwritten)',
@@ -75,8 +75,8 @@ export function NumbersLevelSelect({ audioBus: _audioBus, onSelect, onTree }: Pr
         aria-label="Drzewko mistrzostwa"
         {...treeTap}
         style={{
-          marginTop: 16,
-          marginBottom: 16,
+          marginTop: 8,
+          marginBottom: 8,
           padding: '12px 24px',
           minHeight: 56,
           flexShrink: 0,

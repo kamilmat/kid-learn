@@ -111,4 +111,11 @@ describe('IskraMascot', () => {
     expect(fringe).toBeInTheDocument()
     expect(fringe.querySelectorAll('circle')).toHaveLength(3)
   })
+
+  it('wraps animation keyframes in prefers-reduced-motion: no-preference media query', () => {
+    const { container } = render(<IskraMascot state="idle" />)
+    const styles = container.querySelectorAll('style')
+    const allCSS = Array.from(styles).map((s) => s.textContent ?? '').join('')
+    expect(allCSS).toContain('@media (prefers-reduced-motion: no-preference)')
+  })
 })

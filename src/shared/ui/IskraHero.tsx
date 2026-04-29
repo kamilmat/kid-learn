@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
   IskraMascot,
   type IskraIntensity,
@@ -63,35 +63,35 @@ export function IskraHero({
         <ellipse
           data-testid="iskra-hero-shadow"
           cx={120}
-          cy={270}
-          rx={50}
+          cy={280}
+          rx={45}
           ry={7}
-          fill="rgba(0,0,0,0.18)"
+          fill="rgba(0,0,0,0.28)"
         />
 
         <g data-testid="iskra-hero-leg-left">
           <line
             x1={104}
             y1={235}
-            x2={98}
-            y2={265}
+            x2={102}
+            y2={275}
             stroke="#3a2010"
             strokeWidth={4}
             strokeLinecap="round"
           />
-          <circle cx={98} cy={267} r={6} fill="#3a2010" />
+          <circle cx={102} cy={277} r={6} fill="#3a2010" />
         </g>
         <g data-testid="iskra-hero-leg-right">
           <line
             x1={136}
             y1={235}
-            x2={142}
-            y2={265}
+            x2={138}
+            y2={275}
             stroke="#3a2010"
             strokeWidth={4}
             strokeLinecap="round"
           />
-          <circle cx={142} cy={267} r={6} fill="#3a2010" />
+          <circle cx={138} cy={277} r={6} fill="#3a2010" />
         </g>
 
         <g
@@ -159,6 +159,9 @@ function buildHeroCss(uid: string, state: IskraState, idleVariant: 'static' | 'w
       ? `
         .${uid}-arm-left { transform: rotate(-50deg); }
         .${uid}-arm-right { transform: rotate(50deg); }
+        .${uid}-body-wrapper {
+          animation: ${uid}-cheer-lift 0.9s ease-out forwards;
+        }
       `
       : ''
 
@@ -201,6 +204,11 @@ function buildHeroCss(uid: string, state: IskraState, idleVariant: 'static' | 'w
         0%, 100% { transform: translateX(calc(-50% - 8px)); }
         50% { transform: translateX(calc(-50% + 8px)); }
       }
+      @keyframes ${uid}-cheer-lift {
+        0% { transform: translateX(-50%) translateY(0); }
+        44% { transform: translateX(-50%) translateY(-12px); }
+        100% { transform: translateX(-50%) translateY(-12px); }
+      }
     }
   `
 }
@@ -213,7 +221,7 @@ export function useIskraReaction(): {
   const [state, setState] = useState<IskraState>('idle')
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const trigger = (next: IskraState, durationMs: number) => {
+  const trigger = useCallback((next: IskraState, durationMs: number) => {
     if (timeoutRef.current !== null) {
       clearTimeout(timeoutRef.current)
     }
@@ -222,7 +230,7 @@ export function useIskraReaction(): {
       setState('idle')
       timeoutRef.current = null
     }, durationMs)
-  }
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -232,9 +240,8 @@ export function useIskraReaction(): {
     }
   }, [])
 
-  return {
-    state,
-    cheer: () => trigger('happy', 900),
-    dance: () => trigger('dance', 4000),
-  }
+  const cheer = useCallback(() => trigger('happy', 900), [trigger])
+  const dance = useCallback(() => trigger('dance', 4000), [trigger])
+
+  return { state, cheer, dance }
 }
