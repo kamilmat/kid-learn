@@ -17,6 +17,8 @@ export function SessionEnd({ counters, audioBus, onExit, onTree }: Props) {
     void audioBus.play('session-end-good')
   }, [audioBus])
 
+  const isPerfect = counters.wrong === 0 && counters.dontKnow === 0 && counters.correct > 0
+
   const exitTap = useTapHandler({ onTap: onExit })
   const treeTap = useTapHandler({ onTap: onTree })
 
@@ -34,7 +36,11 @@ export function SessionEnd({ counters, audioBus, onExit, onTree }: Props) {
       }}
     >
       <div aria-hidden="true">
-        <IskraHero size={140} state="happy" intensity="torch" />
+        <IskraHero
+          size={isPerfect ? 180 : 140}
+          state={isPerfect ? 'dance' : 'happy'}
+          intensity="torch"
+        />
       </div>
       <h2
         style={{

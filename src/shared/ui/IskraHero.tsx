@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
   IskraMascot,
   type IskraIntensity,
@@ -221,7 +221,7 @@ export function useIskraReaction(): {
   const [state, setState] = useState<IskraState>('idle')
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const trigger = (next: IskraState, durationMs: number) => {
+  const trigger = useCallback((next: IskraState, durationMs: number) => {
     if (timeoutRef.current !== null) {
       clearTimeout(timeoutRef.current)
     }
@@ -230,7 +230,7 @@ export function useIskraReaction(): {
       setState('idle')
       timeoutRef.current = null
     }, durationMs)
-  }
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -240,9 +240,8 @@ export function useIskraReaction(): {
     }
   }, [])
 
-  return {
-    state,
-    cheer: () => trigger('happy', 900),
-    dance: () => trigger('dance', 4000),
-  }
+  const cheer = useCallback(() => trigger('happy', 900), [trigger])
+  const dance = useCallback(() => trigger('dance', 4000), [trigger])
+
+  return { state, cheer, dance }
 }
