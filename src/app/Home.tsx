@@ -14,7 +14,7 @@ import { useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { audioBus } from '@/shared/audio/AudioBus'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
-import { IskraMascot } from '@/shared/ui/IskraMascot'
+import { IskraHero } from '@/shared/ui/IskraHero'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { useLetters } from '@/modules/letters/store/lettersStore'
 import { useReading } from '@/modules/reading/store/readingStore'
@@ -88,7 +88,7 @@ export function Home() {
           marginTop: 8,
         }}
       >
-        <IskraMascot size={140} state="happy" intensity="fire" />
+        <IskraHero size={180} state="idle" intensity="fire" idleVariant="wave" />
         <h1
           style={{
             fontFamily: 'var(--font-handwritten)',
