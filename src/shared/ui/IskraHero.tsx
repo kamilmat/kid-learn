@@ -63,35 +63,35 @@ export function IskraHero({
         <ellipse
           data-testid="iskra-hero-shadow"
           cx={120}
-          cy={270}
-          rx={50}
+          cy={280}
+          rx={45}
           ry={7}
-          fill="rgba(0,0,0,0.18)"
+          fill="rgba(0,0,0,0.28)"
         />
 
         <g data-testid="iskra-hero-leg-left">
           <line
             x1={104}
             y1={235}
-            x2={98}
-            y2={265}
+            x2={102}
+            y2={275}
             stroke="#3a2010"
             strokeWidth={4}
             strokeLinecap="round"
           />
-          <circle cx={98} cy={267} r={6} fill="#3a2010" />
+          <circle cx={102} cy={277} r={6} fill="#3a2010" />
         </g>
         <g data-testid="iskra-hero-leg-right">
           <line
             x1={136}
             y1={235}
-            x2={142}
-            y2={265}
+            x2={138}
+            y2={275}
             stroke="#3a2010"
             strokeWidth={4}
             strokeLinecap="round"
           />
-          <circle cx={142} cy={267} r={6} fill="#3a2010" />
+          <circle cx={138} cy={277} r={6} fill="#3a2010" />
         </g>
 
         <g
