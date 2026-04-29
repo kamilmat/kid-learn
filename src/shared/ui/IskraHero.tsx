@@ -159,6 +159,9 @@ function buildHeroCss(uid: string, state: IskraState, idleVariant: 'static' | 'w
       ? `
         .${uid}-arm-left { transform: rotate(-50deg); }
         .${uid}-arm-right { transform: rotate(50deg); }
+        .${uid}-body-wrapper {
+          animation: ${uid}-cheer-lift 0.9s ease-out forwards;
+        }
       `
       : ''
 
@@ -200,6 +203,11 @@ function buildHeroCss(uid: string, state: IskraState, idleVariant: 'static' | 'w
       @keyframes ${uid}-dance-body {
         0%, 100% { transform: translateX(calc(-50% - 8px)); }
         50% { transform: translateX(calc(-50% + 8px)); }
+      }
+      @keyframes ${uid}-cheer-lift {
+        0% { transform: translateX(-50%) translateY(0); }
+        44% { transform: translateX(-50%) translateY(-12px); }
+        100% { transform: translateX(-50%) translateY(-12px); }
       }
     }
   `
