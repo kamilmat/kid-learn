@@ -104,4 +104,11 @@ describe('IskraMascot', () => {
     expect(root.getAttribute('data-state')).toBe('dance')
     expect(root.getAttribute('data-intensity')).toBe('torch')
   })
+
+  it('renders fringe with 3 sparks (data-testid="iskra-fringe")', () => {
+    const { getByTestId } = render(<IskraMascot state="idle" />)
+    const fringe = getByTestId('iskra-fringe')
+    expect(fringe).toBeInTheDocument()
+    expect(fringe.querySelectorAll('circle')).toHaveLength(3)
+  })
 })
