@@ -2,7 +2,7 @@
 // Analogiczny do LevelSelect w module Litery, bez ściany osiągnięć.
 
 import { useCallback } from 'react'
-import { IskraMascot, type IskraIntensity } from '@/shared/ui/IskraMascot'
+import { LevelIconView } from '@/shared/ui/levelIcons'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import type { Level } from '@/shared/settings/types'
 import type { AudioBus } from '@/shared/audio/AudioBus'
@@ -11,21 +11,12 @@ const LEVELS: {
   id: Level
   label: string
   subtitle: string
-  intensity: IskraIntensity
 }[] = [
-  { id: 'iskierka', label: 'Iskierka', subtitle: 'Sylaby', intensity: 'spark' },
-  { id: 'plomyk', label: 'Płomyk', subtitle: 'Słowa', intensity: 'flame' },
-  { id: 'ognik', label: 'Ognik', subtitle: 'Trudniejsze słowa', intensity: 'fire' },
-  { id: 'pochodnia', label: 'Pochodnia', subtitle: 'Brakuje sylaby', intensity: 'torch' },
+  { id: 'iskierka', label: 'Iskierka', subtitle: 'Sylaby' },
+  { id: 'plomyk', label: 'Płomyk', subtitle: 'Słowa' },
+  { id: 'ognik', label: 'Ognik', subtitle: 'Trudniejsze słowa' },
+  { id: 'pochodnia', label: 'Pochodnia', subtitle: 'Brakuje sylaby' },
 ]
-
-// Rozmiar maskotki rośnie z poziomem — wizualny sygnał trudności.
-const INTENSITY_TO_MASCOT_SIZE: Record<IskraIntensity, number> = {
-  spark: 44,
-  flame: 60,
-  fire: 76,
-  torch: 92,
-}
 
 type Props = {
   onSelect: (level: Level) => void
@@ -117,11 +108,7 @@ function LevelTile({
         style={{ display: 'flex', justifyContent: 'center', minHeight: 92, alignItems: 'center' }}
         aria-hidden="true"
       >
-        <IskraMascot
-          size={INTENSITY_TO_MASCOT_SIZE[level.intensity]}
-          state="idle"
-          intensity={level.intensity}
-        />
+        <LevelIconView level={level.id} size={72} />
       </span>
       <span style={{ fontSize: 20 }}>{level.label}</span>
       <span

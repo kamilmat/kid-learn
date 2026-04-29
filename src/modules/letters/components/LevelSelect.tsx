@@ -12,7 +12,7 @@ import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import { levelLetterPools } from '@/shared/settings/defaults'
 import type { Level } from '@/shared/settings/types'
-import { IskraMascot, type IskraIntensity } from '@/shared/ui/IskraMascot'
+import { LevelIconView } from '@/shared/ui/levelIcons'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { POLISH_ALPHABET, toUpper } from '@/modules/letters/data/alphabet'
 import {
@@ -30,31 +30,15 @@ export type LevelSelectProps = {
 type LevelMeta = {
   level: Level
   label: string
-  intensity: IskraIntensity
   description: string
 }
 
 const LEVEL_META: LevelMeta[] = [
-  { level: 'iskierka', label: 'Iskierka', intensity: 'spark', description: 'najłatwiejszy — 6 literek' },
-  { level: 'plomyk', label: 'Płomyk', intensity: 'flame', description: 'łatwy — 14 literek' },
-  { level: 'ognik', label: 'Ognik', intensity: 'fire', description: 'średni — 24 literki' },
-  {
-    level: 'pochodnia',
-    label: 'Pochodnia',
-    intensity: 'torch',
-    description: 'pełen alfabet — 32 literki',
-  },
+  { level: 'iskierka', label: 'Iskierka', description: 'najłatwiejszy — 6 literek' },
+  { level: 'plomyk', label: 'Płomyk', description: 'łatwy — 14 literek' },
+  { level: 'ognik', label: 'Ognik', description: 'średni — 24 literki' },
+  { level: 'pochodnia', label: 'Pochodnia', description: 'pełen alfabet — 32 literki' },
 ]
-
-// Skalowanie body mascotki per poziom — sama liczba iskier wokół (1/2/4/6)
-// jest dla 7-latka prawie nieczytelna. Wzrost rozmiaru ciała daje wyraźny
-// sygnał wzrostu trudności (Iskierka → Pochodnia).
-const INTENSITY_TO_BODY_SIZE: Record<IskraIntensity, number> = {
-  spark: 44,
-  flame: 60,
-  fire: 76,
-  torch: 92,
-}
 
 const LEVEL_SELECT_INTRO_KEY = 'level-select-intro'
 
@@ -99,7 +83,7 @@ function LevelTile({
       {...tap}
     >
       <span style={{ display: 'flex', justifyContent: 'center', minHeight: 92, alignItems: 'center' }} aria-hidden="true">
-        <IskraMascot size={INTENSITY_TO_BODY_SIZE[meta.intensity]} state="idle" intensity={meta.intensity} />
+        <LevelIconView level={meta.level} size={72} />
       </span>
       <span style={{ fontSize: 20 }}>{meta.label}</span>
       <span
