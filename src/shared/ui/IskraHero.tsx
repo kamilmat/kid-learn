@@ -63,34 +63,34 @@ export function IskraHero({
         <g
           data-testid="iskra-hero-arm-left"
           className={`${uid}-arm-left`}
-          style={{ transformOrigin: '85px 130px', transformBox: 'view-box' }}
+          style={{ transformOrigin: '88px 155px', transformBox: 'view-box' }}
         >
           <line
-            x1={85}
-            y1={130}
-            x2={55}
-            y2={165}
+            x1={88}
+            y1={155}
+            x2={58}
+            y2={185}
             stroke="#3a2010"
-            strokeWidth={4}
+            strokeWidth={5}
             strokeLinecap="round"
           />
-          <circle cx={55} cy={167} r={7} fill="#3a2010" />
+          <circle cx={58} cy={187} r={7} fill="#3a2010" />
         </g>
         <g
           data-testid="iskra-hero-arm-right"
           className={`${uid}-arm-right`}
-          style={{ transformOrigin: '155px 130px', transformBox: 'view-box' }}
+          style={{ transformOrigin: '152px 155px', transformBox: 'view-box' }}
         >
           <line
-            x1={155}
-            y1={130}
-            x2={185}
-            y2={165}
+            x1={152}
+            y1={155}
+            x2={182}
+            y2={185}
             stroke="#3a2010"
-            strokeWidth={4}
+            strokeWidth={5}
             strokeLinecap="round"
           />
-          <circle cx={185} cy={167} r={7} fill="#3a2010" />
+          <circle cx={182} cy={187} r={7} fill="#3a2010" />
         </g>
       </svg>
 
