@@ -6,13 +6,10 @@ import type { IskraState } from './IskraMascot'
 const ALL_STATES: IskraState[] = ['idle', 'happy', 'surprise', 'dance']
 
 describe('IskraHero', () => {
-  it.each(ALL_STATES)('renders shadow + 2 legs + 2 arms + inner mascot for state=%s', (state) => {
+  it.each(ALL_STATES)('renders 2 arms + inner mascot for state=%s', (state) => {
     const { getByTestId } = render(<IskraHero state={state} />)
     const root = getByTestId('iskra-hero')
     expect(root.getAttribute('data-state')).toBe(state)
-    expect(getByTestId('iskra-hero-shadow')).toBeInTheDocument()
-    expect(getByTestId('iskra-hero-leg-left')).toBeInTheDocument()
-    expect(getByTestId('iskra-hero-leg-right')).toBeInTheDocument()
     expect(getByTestId('iskra-hero-arm-left')).toBeInTheDocument()
     expect(getByTestId('iskra-hero-arm-right')).toBeInTheDocument()
     const mascot = getByTestId('iskra-mascot')
@@ -38,7 +35,7 @@ describe('IskraHero', () => {
     const { getByTestId } = render(<IskraHero size={120} />)
     const root = getByTestId('iskra-hero')
     expect(root.style.width).toBe('120px')
-    expect(root.style.height).toBe('140px')
+    expect(root.style.height).toBe('110px')
   })
 
   it('forwards intensity to inner mascot', () => {

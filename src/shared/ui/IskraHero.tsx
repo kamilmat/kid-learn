@@ -15,7 +15,7 @@ export type IskraHeroProps = {
 }
 
 const VIEWBOX_W = 240
-const VIEWBOX_H = 280
+const VIEWBOX_H = 220
 const MASCOT_OFFSET_TOP = 20
 const MASCOT_RATIO = 200 / VIEWBOX_W
 
@@ -55,76 +55,42 @@ export function IskraHero({
         width={size}
         height={heroHeight}
         xmlns="http://www.w3.org/2000/svg"
-        style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
+        style={{ position: 'absolute', inset: 0, overflow: 'visible', zIndex: 2, pointerEvents: 'none' }}
         aria-hidden="true"
       >
         <style>{css}</style>
 
-        <ellipse
-          data-testid="iskra-hero-shadow"
-          cx={120}
-          cy={280}
-          rx={45}
-          ry={7}
-          fill="rgba(0,0,0,0.28)"
-        />
-
-        <g data-testid="iskra-hero-leg-left">
-          <line
-            x1={104}
-            y1={235}
-            x2={102}
-            y2={275}
-            stroke="#3a2010"
-            strokeWidth={4}
-            strokeLinecap="round"
-          />
-          <circle cx={102} cy={277} r={6} fill="#3a2010" />
-        </g>
-        <g data-testid="iskra-hero-leg-right">
-          <line
-            x1={136}
-            y1={235}
-            x2={138}
-            y2={275}
-            stroke="#3a2010"
-            strokeWidth={4}
-            strokeLinecap="round"
-          />
-          <circle cx={138} cy={277} r={6} fill="#3a2010" />
-        </g>
-
         <g
           data-testid="iskra-hero-arm-left"
           className={`${uid}-arm-left`}
-          style={{ transformOrigin: '78px 160px', transformBox: 'fill-box' }}
+          style={{ transformOrigin: '85px 130px', transformBox: 'view-box' }}
         >
           <line
-            x1={78}
-            y1={160}
-            x2={58}
-            y2={178}
+            x1={85}
+            y1={130}
+            x2={55}
+            y2={165}
             stroke="#3a2010"
             strokeWidth={4}
             strokeLinecap="round"
           />
-          <circle cx={58} cy={180} r={7} fill="#3a2010" />
+          <circle cx={55} cy={167} r={7} fill="#3a2010" />
         </g>
         <g
           data-testid="iskra-hero-arm-right"
           className={`${uid}-arm-right`}
-          style={{ transformOrigin: '162px 160px', transformBox: 'fill-box' }}
+          style={{ transformOrigin: '155px 130px', transformBox: 'view-box' }}
         >
           <line
-            x1={162}
-            y1={160}
-            x2={182}
-            y2={178}
+            x1={155}
+            y1={130}
+            x2={185}
+            y2={165}
             stroke="#3a2010"
             strokeWidth={4}
             strokeLinecap="round"
           />
-          <circle cx={182} cy={180} r={7} fill="#3a2010" />
+          <circle cx={185} cy={167} r={7} fill="#3a2010" />
         </g>
       </svg>
 
