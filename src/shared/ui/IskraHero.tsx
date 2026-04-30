@@ -65,34 +65,33 @@ export function IskraHero({
           className={`${uid}-arm-left`}
           style={{ transformOrigin: '85px 155px', transformBox: 'view-box' }}
         >
-          <circle cx={85} cy={155} r={5} fill="#3a2010" />
-          <line
-            x1={85}
-            y1={155}
-            x2={48}
-            y2={190}
-            stroke="#3a2010"
-            strokeWidth={5}
+          {/* Zakrzywione ramie — bezier od shoulder do dłoni */}
+          <path
+            d="M 85 155 Q 70 178 48 192"
+            stroke="#d97706"
+            strokeWidth={7}
             strokeLinecap="round"
+            fill="none"
           />
-          <circle cx={48} cy={192} r={7} fill="#3a2010" />
+          {/* Dłoń — większy okrąg w kolorze płomienia z outline */}
+          <circle cx={48} cy={192} r={10} fill="#f97316" stroke="#9a3412" strokeWidth={1.5} />
+          {/* Refleks dłoni — biały punkt jak w oczach (kawaii spójność) */}
+          <circle cx={45} cy={189} r={2} fill="#ffffff" opacity={0.85} />
         </g>
         <g
           data-testid="iskra-hero-arm-right"
           className={`${uid}-arm-right`}
           style={{ transformOrigin: '155px 155px', transformBox: 'view-box' }}
         >
-          <circle cx={155} cy={155} r={5} fill="#3a2010" />
-          <line
-            x1={155}
-            y1={155}
-            x2={192}
-            y2={190}
-            stroke="#3a2010"
-            strokeWidth={5}
+          <path
+            d="M 155 155 Q 170 178 192 192"
+            stroke="#d97706"
+            strokeWidth={7}
             strokeLinecap="round"
+            fill="none"
           />
-          <circle cx={192} cy={192} r={7} fill="#3a2010" />
+          <circle cx={192} cy={192} r={10} fill="#f97316" stroke="#9a3412" strokeWidth={1.5} />
+          <circle cx={189} cy={189} r={2} fill="#ffffff" opacity={0.85} />
         </g>
       </svg>
 
@@ -156,9 +155,12 @@ function buildHeroCss(uid: string, state: IskraState, idleVariant: 'static' | 'w
       ${danceAnimations}
 
       @keyframes ${uid}-arm-wave {
-        0%, 70%, 100% { transform: rotate(0deg); }
-        80% { transform: rotate(-25deg); }
-        90% { transform: rotate(10deg); }
+        0%, 60%, 100% { transform: rotate(0deg); }
+        70% { transform: rotate(-55deg); }
+        77% { transform: rotate(-25deg); }
+        84% { transform: rotate(-55deg); }
+        91% { transform: rotate(-25deg); }
+        96% { transform: rotate(-15deg); }
       }
       @keyframes ${uid}-dance-arm-left {
         0%, 100% { transform: rotate(-15deg); }
