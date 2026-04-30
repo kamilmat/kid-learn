@@ -157,7 +157,10 @@ export function IskraMascot({
         </g>
 
         {/* Ciało maskotki: w stanach happy/idle/dance/surprise stosujemy
-            inną animację. Owijamy w <g> żeby skalować/przesuwać razem. */}
+            inną animację. Owijamy w <g> żeby skalować/przesuwać razem.
+            UWAGA: CSS animation transform NADPISUJE SVG attribute transform —
+            dlatego translate(50 30) idzie w INNER <g>, animation na outer.
+            Bez tego flame renderował się na lewo (transform attr ignored). */}
         <g
           data-testid="iskra-body"
           className={`${uid}-body`}
@@ -166,9 +169,8 @@ export function IskraMascot({
             transformBox: 'fill-box',
             ...stateAnimation,
           }}
-          // Centrujemy: nasze flame path jest 100x140, viewBox 200x200 → translate (50,30)
-          transform="translate(50 30)"
         >
+         <g transform="translate(50 30)">
           <path d={FLAME_PATH} fill={`url(#${uid}-grad)`} />
           <path d={FLAME_INNER_PATH} fill={`url(#${uid}-inner)`} />
           {/* Brwi — delikatne kreski wyrażające ekspresję */}
@@ -205,6 +207,7 @@ export function IskraMascot({
             strokeLinecap="round"
             fill="none"
           />
+         </g>
         </g>
 
         {/* Surprise: znak zapytania nad głową */}
