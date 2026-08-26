@@ -1,7 +1,7 @@
 // SyllableText — renderuje słowo z kolorowaniem sylab wg pozycji.
 // Fallback: jeśli brak syllables albo długości się nie zgadzają — zwykły tekst.
 
-import { getSyllableColor } from '../utils/syllableColors'
+import { getSyllableColor } from '@/shared/ui/syllableColors'
 
 export type SyllableTextProps = {
   word: string

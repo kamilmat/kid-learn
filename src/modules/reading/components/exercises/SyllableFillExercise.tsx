@@ -9,7 +9,7 @@
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { SyllableTile } from '../SyllableTile'
 import type { SyllableFillVariant } from '../../types'
-import { getSyllableColor } from '../../utils/syllableColors'
+import { getSyllableColor } from '@/shared/ui/syllableColors'
 
 export type SyllableFillExerciseProps = {
   targetWord: string

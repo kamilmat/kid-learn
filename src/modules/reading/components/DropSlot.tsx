@@ -3,7 +3,7 @@
 
 import type { CSSProperties } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { getSyllableColor } from '../utils/syllableColors'
+import { getSyllableColor } from '@/shared/ui/syllableColors'
 
 export type DropSlotState = 'empty' | 'filled' | 'wrong'
 
