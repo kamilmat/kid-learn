@@ -83,11 +83,11 @@ export const CZYTANKI: readonly Czytanka[] = [
     ] },
   },
   {
-    id: 'cz-09', group: 1, title: 'Ada wozi lale', emoji: '🧸',
+    id: 'cz-09', group: 1, title: 'Ada wozi lale', emoji: '🪆',
     sentences: [[w('A', 'DA'), w('WO', 'ZI'), w('LA', 'LE', '.')]],
     scene: { bg: 'room', actors: [
       { emoji: '👧', x: 30, y: 60, size: 105, anim: 'sway' },
-      { emoji: '🧸', x: 58, y: 72, size: 78, anim: 'wiggle', delay: 0.4 },
+      { emoji: '🪆', x: 58, y: 72, size: 78, anim: 'wiggle', delay: 0.4 },
       { emoji: '🛒', x: 85, y: 70, size: 70, anim: 'bob', delay: 0.9 },
     ] },
   },
@@ -336,9 +336,9 @@ export const CZYTANKI: readonly Czytanka[] = [
   {
     id: 'cz-32', group: 3, title: 'Jesień w parku', emoji: '🍂',
     sentences: [
-      [w('W'), w('PAR', 'KU'), w('PA', 'DA', 'JĄ'), w('LIŚ', 'CIE', '.')],
-      [w('LIŚ', 'CIE'), w('SĄ'), w('ŻÓŁ', 'TE'), w('I'), w('CZER', 'WO', 'NE', '.')],
-      [w('O', 'LA'), w('ZBIE', 'RA'), w('LIŚ', 'CIE', '.')],
+      [w('W'), w('PAR', 'KU'), w('PA', 'DA', 'JĄ'), w('LI', 'ŚCIE', '.')],
+      [w('LI', 'ŚCIE'), w('SĄ'), w('ŻÓŁ', 'TE'), w('I'), w('CZER', 'WO', 'NE', '.')],
+      [w('O', 'LA'), w('ZBIE', 'RA'), w('LI', 'ŚCIE', '.')],
       [w('MA', 'MA'), w('RO', 'BI'), w('Z'), w('NICH'), w('BU', 'KIET', '.')],
     ],
     scene: { bg: 'forest', actors: [
@@ -350,12 +350,12 @@ export const CZYTANKI: readonly Czytanka[] = [
   {
     id: 'cz-33', group: 3, title: 'Deszcz za oknem', emoji: '🌧️',
     sentences: [
-      [w('ZA'), w('OK', 'NEM'), w('PA', 'DA'), w('DESZCZ', '.')],
+      [w('NA'), w('DWO', 'RZE'), w('PA', 'DA'), w('DESZCZ', '.')],
       [w('O', 'LA'), w('MA'), w('PA', 'RA', 'SOL', '.')],
       [w('PA', 'RA', 'SOL'), w('JEST'), w('ŻÓŁ', 'TY', '.')],
       [w('O', 'LA'), w('SKA', 'CZE'), w('PO'), w('KA', 'ŁU', 'ŻACH', '.')],
     ],
-    scene: { bg: 'sky', actors: [
+    scene: { bg: 'meadow', actors: [
       { emoji: '🌧️', x: 25, y: 40, size: 80, anim: 'float' },
       { emoji: '☂️', x: 55, y: 58, size: 90, anim: 'sway', delay: 0.5 },
       { emoji: '👧', x: 80, y: 70, size: 100, anim: 'bob', delay: 1 },
@@ -380,7 +380,7 @@ export const CZYTANKI: readonly Czytanka[] = [
     sentences: [
       [w('NA'), w('STA', 'WIE'), w('PŁY', 'WA', 'JĄ'), w('KACZ', 'KI', '.')],
       [w('DZIE', 'CI'), w('SY', 'PIĄ'), w('IM'), w('ZIAR', 'NO', '.')],
-      [w('KACZ', 'KI'), w('GŁOŚ', 'NO'), w('KWA', 'CZĄ', '.')],
+      [w('KACZ', 'KI'), w('GŁO', 'ŚNO'), w('KWA', 'CZĄ', '.')],
     ],
     scene: { bg: 'meadow', actors: [
       { emoji: '🦆', x: 25, y: 70, size: 90, anim: 'bob' },
@@ -434,7 +434,7 @@ export const CZYTANKI: readonly Czytanka[] = [
     id: 'cz-39', group: 3, title: 'Ciastka babci', emoji: '🍪',
     sentences: [
       [w('BAB', 'CIA'), w('PIE', 'CZE'), w('CIAST', 'KA', '.')],
-      [w('O', 'LA'), w('MIE', 'SZA'), w('CIAS', 'TO', '.')],
+      [w('O', 'LA'), w('MIE', 'SZA'), w('CIA', 'STO', '.')],
       [w('W'), w('KUCH', 'NI'), w('ŁAD', 'NIE'), w('PACH', 'NIE', '.')],
       [w('CIAST', 'KA'), w('SĄ'), w('PYSZ', 'NE', '!')],
     ],
@@ -448,7 +448,7 @@ export const CZYTANKI: readonly Czytanka[] = [
     id: 'cz-40', group: 3, title: 'Jeż w ogrodzie', emoji: '🦔',
     sentences: [
       [w('W'), w('O', 'GRO', 'DZIE'), w('MIESZ', 'KA'), w('JEŻ', '.')],
-      [w('JEŻ'), w('MA'), w('OS', 'TRE'), w('KOL', 'CE', '.')],
+      [w('JEŻ'), w('MA'), w('O', 'STRE'), w('KOL', 'CE', '.')],
       [w('W'), w('NO', 'CY'), w('SZU', 'KA'), w('ŚLI', 'MA', 'KÓW', '.')],
       [w('W'), w('DZIEŃ'), w('ŚPI'), w('POD'), w('LIŚĆ', 'MI', '.')],
     ],
@@ -534,9 +534,9 @@ export const CZYTANKI: readonly Czytanka[] = [
     sentences: [
       [w('NA'), w('ŁĄ', 'CE'), w('STO', 'I'), w('KRO', 'WA', '.')],
       [w('KRO', 'WA'), w('JE'), w('ZIE', 'LO', 'NĄ'), w('TRA', 'WĘ', '.')],
-      [w('O', 'BOK'), w('ROŚ', 'NIE'), w('DU', 'ŻE'), w('DRZE', 'WO', '.')],
+      [w('O', 'BOK'), w('RO', 'ŚNIE'), w('DU', 'ŻE'), w('DRZE', 'WO', '.')],
       [w('NA'), w('DRZE', 'WIE'), w('SIE', 'DZI'), w('PTAK', '.')],
-      [w('PTAK'), w('GŁOŚ', 'NO'), w('ŚPIE', 'WA', '.')],
+      [w('PTAK'), w('GŁO', 'ŚNO'), w('ŚPIE', 'WA', '.')],
     ],
     scene: { bg: 'meadow', actors: [
       { emoji: '🐮', x: 30, y: 70, size: 110, anim: 'sway' },
@@ -619,7 +619,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       [w('O', 'LA'), w('ZA', 'WO', 'ŁA', 'ŁA'), w('TA', 'TĘ', '.')],
       [w('TA', 'TA'), w('PRZY', 'NIÓSŁ'), w('DRA', 'BI', 'NĘ', '.')],
       [w('ZDJĄŁ'), w('KOT', 'KA'), w('Z'), w('GA', 'ŁĘ', 'ZI', '.')],
-      [w('KO', 'TEK'), w('GŁOŚ', 'NO'), w('MRU', 'CZAŁ', '.')],
+      [w('KO', 'TEK'), w('GŁO', 'ŚNO'), w('MRU', 'CZAŁ', '.')],
     ],
     scene: { bg: 'meadow', actors: [
       { emoji: '🌳', x: 25, y: 50, size: 120, anim: 'sway' },
@@ -672,7 +672,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       [w('O', 'LA'), w('RO', 'BI'), w('ZDJĘ', 'CIA', '.')],
       [w('PO', 'TEM'), w('WRA', 'CA', 'MY'), w('DO'), w('DO', 'MU', '.')],
     ],
-    scene: { bg: 'sky', actors: [
+    scene: { bg: 'meadow', actors: [
       { emoji: '🚌', x: 20, y: 70, size: 110, anim: 'bob' },
       { emoji: '🐘', x: 48, y: 62, size: 100, anim: 'sway', delay: 0.5 },
       { emoji: '🐒', x: 74, y: 50, size: 80, anim: 'wiggle', delay: 0.9 },
@@ -685,7 +685,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       [w('W'), w('SA', 'DZIE'), w('RO', 'SNĄ'), w('GRU', 'SZE', '.')],
       [w('NA'), w('GA', 'ŁĘ', 'ZIACH'), w('WI', 'SZĄ'), w('DOJ', 'RZA', 'ŁE'), w('O', 'WO', 'CE', '.')],
       [w('DZIA', 'DEK'), w('PRZY', 'NIÓSŁ'), w('DRA', 'BI', 'NĘ', '.')],
-      [w('O', 'LA'), w('ZBIE', 'RA'), w('GRU', 'SZE'), w('DO'), w('KO', 'SZA', '.')],
+      [w('O', 'LA'), w('ZBIE', 'RA'), w('GRUSZ', 'KI'), w('DO'), w('KO', 'SZA', '.')],
       [w('BAB', 'CIA'), w('U', 'GO', 'TU', 'JE'), w('Z'), w('NICH'), w('KOM', 'POT', '.')],
     ],
     scene: { bg: 'meadow', actors: [
@@ -701,8 +701,8 @@ export const CZYTANKI: readonly Czytanka[] = [
       [w('NIE', 'BO'), w('ZRO', 'BI', 'ŁO'), w('SIĘ'), w('CIEM', 'NE', '.')],
       [w('ZE', 'RWAŁ'), w('SIĘ'), w('SIL', 'NY'), w('WIATR', '.')],
       [w('PO'), w('CHWI', 'LI'), w('ZA', 'GRZMIA', 'ŁO', '.')],
-      [w('O', 'LA'), w('SCHO', 'WA', 'ŁA'), w('SIĘ'), w('POD'), w('KOC', '.')],
-      [w('PIES'), w('WSKO', 'CZYŁ'), w('DO'), w('NIEJ', '.')],
+      [w('O', 'LA'), w('WZIĘ', 'ŁA'), w('CIE', 'PŁY'), w('KOC', '.')],
+      [w('PIES'), w('WSKO', 'CZYŁ'), w('POD'), w('KOC', '.')],
       [w('BU', 'RZA'), w('SZYB', 'KO'), w('MI', 'NĘ', 'ŁA', '.')],
     ],
     scene: { bg: 'sky', actors: [
@@ -730,7 +730,7 @@ export const CZYTANKI: readonly Czytanka[] = [
   {
     id: 'cz-58', group: 4, title: 'Wieczorna kąpiel', emoji: '🛁',
     sentences: [
-      [w('WIE', 'CZO', 'REM'), w('MA', 'MA'), w('RO', 'BI'), w('KĄ', 'PIEL', '.')],
+      [w('WIE', 'CZO', 'REM'), w('MA', 'MA'), w('SZY', 'KU', 'JE'), w('KĄ', 'PIEL', '.')],
       [w('W'), w('WAN', 'NIE'), w('JEST'), w('DU', 'ŻO'), w('PIA', 'NY', '.')],
       [w('O', 'LA'), w('MY', 'JE'), w('WŁO', 'SY'), w('SZAM', 'PO', 'NEM', '.')],
       [w('PO', 'TEM'), w('WY', 'CIE', 'RA'), w('SIĘ'), w('RĘCZ', 'NI', 'KIEM', '.')],
