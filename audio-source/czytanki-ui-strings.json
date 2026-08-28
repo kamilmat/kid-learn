@@ -1,5 +1,6 @@
 {
-  "_voice": "zofia",
+  "_voice": "agnieszka",
+  "_engine": "azure",
   "home-czytanki-intro": "Dotknij Czytanki, aby czytać sylabami!",
   "czytanki-list-intro": "Wybierz czytankę! Zacznij od tych na górze, są najłatwiejsze.",
   "czytanki-intro": "Dotknij sylabę, a ja ją przeczytam. Ty powtórz! Przytrzymaj dłużej, a przeczytam całe słowo.",

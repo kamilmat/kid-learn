@@ -1,9 +1,10 @@
 // Generuje źródła audio czytanek z danych (unikalne sylaby + słowa).
 // Pliki wynikowe NIE są edytowane ręcznie. Uruchom: pnpm audio:czytanki
 //
-// Sylaby i słowa są rozdzielone, bo mają różne silniki TTS: izolowaną sylabę
-// Edge TTS czyta źle ("lo" → "elo"), więc idzie przez Azure z jawnym IPA;
-// całe słowa Edge wymawia poprawnie i zostają na nim (zero kosztu, zero klucza).
+// Sylaby i słowa są rozdzielone, bo mają różne silniki Azure: izolowaną
+// sylabę trzeba czytać z jawnym IPA ("lo" → "elo" bez tego), więc idzie
+// przez `azure-ipa`; całe słowa Azure wymawia poprawnie z samej ortografii,
+// więc zostają na zwykłym SSML (`azure`, głos Agnieszka, plain text, bez IPA).
 import { existsSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -32,9 +33,9 @@ export function buildCzytankiSource(): CzytankiSources {
       }
     }
   }
-  const syllables: Record<string, string> = { _voice: 'zofia', _engine: 'azure-ipa' }
+  const syllables: Record<string, string> = { _voice: 'agnieszka', _engine: 'azure-ipa' }
   for (const [k, v] of [...syl.entries()].sort()) syllables[k] = v
-  const wordMap: Record<string, string> = { _voice: 'zofia' }
+  const wordMap: Record<string, string> = { _voice: 'agnieszka', _engine: 'azure' }
   for (const [k, v] of [...words.entries()].sort()) wordMap[k] = v
   return { syllables, words: wordMap }
 }
@@ -49,5 +50,5 @@ writeFileSync(WORDS_OUT, JSON.stringify(words, null, 2) + '\n', 'utf8')
 if (existsSync(LEGACY_OUT)) rmSync(LEGACY_OUT)
 console.log(
   `czytanki-syllables.json: ${countKeys(syllables)} kluczy (azure-ipa), ` +
-    `czytanki-words.json: ${countKeys(words)} kluczy (edge)`,
+    `czytanki-words.json: ${countKeys(words)} kluczy (azure)`,
 )

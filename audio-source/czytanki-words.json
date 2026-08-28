@@ -1,5 +1,6 @@
 {
-  "_voice": "zofia",
+  "_voice": "agnieszka",
+  "_engine": "azure",
   "cz-word-ada": "ada",
   "cz-word-auto": "auto",
   "cz-word-autobusem": "autobusem",

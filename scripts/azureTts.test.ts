@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildSsml, parseEnvFile } from './azureTts'
+import { buildPlainSsml, buildSsml, parseEnvFile } from './azureTts'
 
 describe('buildSsml', () => {
   it('wstawia głos, prozodię i fonem IPA', () => {
@@ -17,6 +17,29 @@ describe('buildSsml', () => {
     const ssml = buildSsml({ voice: 'v', ipa: 'a"b', text: '<a & b>' })
     expect(ssml).toContain('ph="a&quot;b"')
     expect(ssml).toContain('&lt;a &amp; b&gt;')
+  })
+})
+
+describe('buildPlainSsml', () => {
+  it('wstawia głos i tekst bez phoneme/prosody', () => {
+    const ssml = buildPlainSsml({ voice: 'pl-PL-AgnieszkaNeural', text: 'ada' })
+    expect(ssml).toBe(
+      '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="pl-PL">' +
+        '<voice name="pl-PL-AgnieszkaNeural"><lang xml:lang="pl-PL">ada</lang></voice></speak>',
+    )
+    expect(ssml).not.toContain('<phoneme')
+    expect(ssml).not.toContain('<prosody')
+  })
+
+  it('escapuje & i < w tekście', () => {
+    const ssml = buildPlainSsml({ voice: 'v', text: '<a & b>' })
+    expect(ssml).toContain('&lt;a &amp; b&gt;')
+    expect(ssml).not.toContain('<a & b>')
+  })
+
+  it('dodaje prosody tylko gdy podano rate', () => {
+    const ssml = buildPlainSsml({ voice: 'v', text: 'ada', rate: '-10%' })
+    expect(ssml).toContain('<prosody rate="-10%">ada</prosody>')
   })
 })
 

@@ -7,12 +7,14 @@ import {
   decideAction,
   hashEntry,
   hashEntryAzure,
+  hashEntryAzurePlain,
   hashText,
   loadSources,
   parseCli,
 } from './generate-audio'
 
 const DEFAULT_VOICE = 'pl-PL-ZofiaNeural'
+const AGNIESZKA_VOICE = 'pl-PL-AgnieszkaNeural'
 
 describe('hashText', () => {
   it('is deterministic for the same input', () => {
@@ -154,6 +156,36 @@ describe('loadSources', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+
+  it('resolves the agnieszka voice for engine azure', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'iskierki-audio-'))
+    try {
+      const a = join(dir, 'lektor.json')
+      writeFileSync(
+        a,
+        JSON.stringify({ _voice: 'agnieszka', _engine: 'azure', 'word-ada': 'ada' }),
+      )
+      const merged = loadSources([a])
+      expect(merged['word-ada']).toEqual({
+        text: 'ada',
+        voice: AGNIESZKA_VOICE,
+        engine: 'azure',
+      })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects agnieszka combined with engine edge (Azure-only voice)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'iskierki-audio-'))
+    try {
+      const a = join(dir, 'bad-voice.json')
+      writeFileSync(a, JSON.stringify({ _voice: 'agnieszka', 'test-key': 'value' }))
+      expect(() => loadSources([a])).toThrow(/voice agnieszka is Azure-only/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('hashEntryAzure', () => {
@@ -166,6 +198,20 @@ describe('hashEntryAzure', () => {
   it('changes when IPA changes', () => {
     expect(hashEntryAzure('lo', DEFAULT_VOICE, 'l\u02C8\u0254')).not.toBe(
       hashEntryAzure('lo', DEFAULT_VOICE, 'l\u0254'),
+    )
+  })
+})
+
+describe('hashEntryAzurePlain', () => {
+  it('differs from the edge hash for the same text+voice', () => {
+    expect(hashEntryAzurePlain('ada', AGNIESZKA_VOICE)).not.toBe(
+      hashEntry('ada', AGNIESZKA_VOICE),
+    )
+  })
+
+  it('is deterministic for the same text+voice', () => {
+    expect(hashEntryAzurePlain('ada', AGNIESZKA_VOICE)).toBe(
+      hashEntryAzurePlain('ada', AGNIESZKA_VOICE),
     )
   })
 })

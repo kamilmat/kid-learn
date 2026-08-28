@@ -16,7 +16,7 @@ Tablet-first (iPad 10"), RWD wszędzie. Bez backendu, postęp w `localStorage`.
 - **Status / co dalej:** `docs/STATUS.md` — czytaj na początku sesji
 - **Stack:** React 19 + Vite + TS strict + Tailwind 4 + Zustand + Vitest + vite-plugin-pwa + @dnd-kit/core + @dnd-kit/sortable
 - **Dev server:** `pnpm dev` (port 5173 lub kolejny wolny)
-- **Audio:** Edge TTS (Python pkg `edge-tts`), generowane do `public/audio/` przy `pnpm audio:build`. Czcionki: **Kalam** (pisana, Google Fonts OFL) + **Lexend** (early-reader, kafelki sylabowe)
+- **Audio:** lektor (moduły 1-3) = Zofia via Edge TTS; Iskra = Marek via Edge TTS; czytanki (moduł 4) = Agnieszka via Azure (`azure` plain SSML dla słów/UI, `azure-ipa` dla sylab). Generowane do `public/audio/` przy `pnpm audio:build`. Czcionki: **Kalam** (pisana, Google Fonts OFL) + **Lexend** (early-reader, kafelki sylabowe)
 
 ## Struktura
 
@@ -63,23 +63,23 @@ audio-source/              # source teksty dla TTS
 ├── reading-ui-strings.json # pochwały czytania, scenki, wild celebrations (moduł 2)
 ├── iskra-reactions.json   # reakcje Iskry: easter eggs, silly, fail (moduł 2; głos Marek)
 ├── numbers.json / math-ui-strings.json # koncepty, fakty, UI (moduł 3)
-├── czytanki-syllables.json # generowany (`pnpm audio:czytanki`); `_engine: azure-ipa` — sylaby cz-syl-*
-├── czytanki-words.json     # generowany (`pnpm audio:czytanki`); Edge TTS — słowa cz-word-*
-├── czytanki-ui-strings.json # intro, nawigacja, cue (moduł 4)
+├── czytanki-syllables.json # generowany (`pnpm audio:czytanki`); głos Agnieszka, `_engine: azure-ipa` — sylaby cz-syl-*
+├── czytanki-words.json     # generowany (`pnpm audio:czytanki`); głos Agnieszka, `_engine: azure` (plain SSML) — słowa cz-word-*
+├── czytanki-ui-strings.json # intro, nawigacja, cue (moduł 4); głos Agnieszka, `_engine: azure`
 └── manual-overrides/*.mp3 # wygrywa nad TTS (jeśli istnieje plik)
 
-scripts/generate-audio.ts  # idempotentny: hash text vs manifest, dwa silniki (edge | azure-ipa)
+scripts/generate-audio.ts  # idempotentny: hash text vs manifest, trzy silniki (edge | azure | azure-ipa)
 scripts/polishG2p.ts       # ortografia PL → IPA (toIpa) dla `_engine: azure-ipa`
-scripts/azureTts.ts        # SSML <phoneme alphabet="ipa"> + REST Azure Speech + loader .env.local
-scripts/czytanki-audio-source.ts # generuje czytanki-syllables.json (azure-ipa) + czytanki-words.json (edge)
+scripts/azureTts.ts        # REST Azure Speech: buildSsml (phoneme IPA) + buildPlainSsml (plain), backoff 429/5xx, loader .env.local
+scripts/czytanki-audio-source.ts # generuje czytanki-syllables.json (agnieszka/azure-ipa) + czytanki-words.json (agnieszka/azure)
 public/audio/              # build artifact: 1135 plików mp3 + .manifest.json
 ```
 
 ## Kluczowe decyzje (już zaakceptowane)
 
 - **Modułowa architektura** — kolejne moduły (sylaby, cyfry, kolory) doklejają się jako `src/modules/<nazwa>/`. Reużywają shared/ (SRS, audio, settings, stats, engagement, ui).
-- **Audio — Edge TTS przez Python wrapper** (`scripts/tts.py` + CLI). User edytuje `audio-source/*.json`, woła `pnpm audio:build`. Manual override przez `audio-source/manual-overrides/<klucz>.mp3` wygrywa nad TTS.
-- **Dwa silniki TTS** — plik `audio-source/*.json` deklaruje `_engine`: `edge` (domyślny, darmowy CLI, bez SSML) albo `azure-ipa`. `azure-ipa` idzie do Azure Speech REST tym samym głosem (pl-PL-ZofiaNeural) z SSML `<phoneme alphabet="ipa" ph="…">`, gdzie IPA liczy `scripts/polishG2p.ts` z ortografii. WHY: Edge zgaduje wymowę **izolowanych sylab** i myli się ("lo" → "elo", "ka" → "ka a", "ry" → "ri"), a IPA omija ten zgadywacz. Używane przez `czytanki-syllables.json`; całe słowa i zdania zostają na Edge. Wymaga `.env.local` (gitignore) z `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION=westeurope` — darmowy tier F0 wystarcza; wzór w `.env.example`. Podgląd planu bez klucza: `pnpm audio:dry` (wypisuje engine, tekst, IPA i akcję dla każdego klucza).
+- **Audio — Edge TTS przez Python wrapper** (`scripts/tts.py` + CLI) dla modułów 1-3 i Iskry. User edytuje `audio-source/*.json`, woła `pnpm audio:build`. Manual override przez `audio-source/manual-overrides/<klucz>.mp3` wygrywa nad TTS.
+- **Trzy silniki TTS** — plik `audio-source/*.json` deklaruje `_engine`: `edge` (domyślny, darmowy CLI, bez SSML), `azure` (Azure Speech REST, zwykłe SSML bez phoneme — plain text) albo `azure-ipa` (Azure Speech REST + SSML `<phoneme alphabet="ipa" ph="…">`, gdzie IPA liczy `scripts/polishG2p.ts` z ortografii). WHY osobny `azure-ipa`: Edge/Azure zgadują wymowę **izolowanych sylab** i mylą się ("lo" → "elo", "ka" → "ka a", "ry" → "ri"), a IPA omija ten zgadywacz. Głos `agnieszka` (pl-PL-AgnieszkaNeural, lektor czytanek — moduł 4) jest Azure-only: `_voice: agnieszka` + `_engine: edge` rzuca błąd przy wczytywaniu źródeł. `azure-ipa` używane przez `czytanki-syllables.json`; całe słowa i UI czytanek (`czytanki-words.json`, `czytanki-ui-strings.json`) idą przez `azure` (plain SSML). `synthesizeAzure` throttluje requesty (min. odstęp ~3.1s, tier F0 ≈20 req/min) i robi retry z exponential backoff na 429/5xx (do 6 prób: 2s/4s/8s/16s/32s/60s, honoruje `Retry-After`). Wymaga `.env.local` (gitignore) z `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION=westeurope` — darmowy tier F0 wystarcza; wzór w `.env.example`. Podgląd planu bez klucza: `pnpm audio:dry` (wypisuje engine, tekst, IPA i akcję dla każdego klucza).
 - **Brak fonemów IPA w Edge** — publiczny endpoint Edge TTS nie obsługuje SSML phoneme tags. Dla liter zostały polskie nazwy ("be", "pe", "em") albo manual recordings.
 - **Theme: jeden tryb** — warm light (`#fef9f2` tło, `#2d2d33` tekst), ignoruje `prefers-color-scheme`. Brak dark mode.
 - **No-text UI dla dziecka** — tylko ikony + audio cues. Wszystkie tap-targety ≥60×60. Brak gestów (tylko tap); moduł 2 używa drag-drop (@dnd-kit) dla ćwiczenia Płomyk.

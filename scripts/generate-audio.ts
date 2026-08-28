@@ -14,15 +14,20 @@
  * skipped during audio generation.
  *
  * Voice map:
- *   zofia → pl-PL-ZofiaNeural  (default, lektor)
- *   marek → pl-PL-MarekNeural  (Iskra mascot)
+ *   zofia      → pl-PL-ZofiaNeural      (Edge; legacy lektor)
+ *   agnieszka  → pl-PL-AgnieszkaNeural  (Azure-only; obecny lektor)
+ *   marek      → pl-PL-MarekNeural      (Edge; Iskra mascot)
  *
  * Engines:
  *   edge       — edge-tts CLI, darmowy, bez SSML (domyślny)
+ *   azure      — Azure Speech REST + zwykłe SSML (bez phoneme). Dla głosów
+ *                Azure-only (np. agnieszka) i tekstów, które Azure czyta
+ *                poprawnie z samej ortografii.
  *   azure-ipa  — Azure Speech REST + SSML <phoneme alphabet="ipa">; IPA liczone
- *                z ortografii przez scripts/polishG2p.ts. WHY: Edge zgaduje
- *                wymowę izolowanych sylab i myli się ("lo" → "elo").
- *                Wymaga AZURE_SPEECH_KEY / AZURE_SPEECH_REGION w `.env.local`.
+ *                z ortografii przez scripts/polishG2p.ts. WHY: Edge/Azure zgadują
+ *                wymowę izolowanych sylab i mylą się ("lo" → "elo").
+ *                `azure` i `azure-ipa` wymagają AZURE_SPEECH_KEY / AZURE_SPEECH_REGION
+ *                w `.env.local`.
  *
  * Modes:
  *   build  — generate everything missing or changed (`--dry-run`: tylko wypisz plan)
@@ -48,6 +53,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
+  buildPlainSsml,
   buildSsml,
   loadEnvLocal,
   MISSING_CREDENTIALS_MESSAGE,
@@ -58,7 +64,7 @@ import { toIpa } from './polishG2p'
 
 // ---------- types ----------
 
-export type Engine = 'edge' | 'azure-ipa'
+export type Engine = 'edge' | 'azure' | 'azure-ipa'
 
 export type ManifestEntry = {
   hash: string
@@ -81,7 +87,7 @@ export type SourceMap = Record<string, SourceEntry>
 
 type Mode = 'build' | 'check'
 
-const ENGINES: readonly Engine[] = ['edge', 'azure-ipa']
+const ENGINES: readonly Engine[] = ['edge', 'azure', 'azure-ipa']
 const DEFAULT_ENGINE: Engine = 'edge'
 
 // ---------- voice map ----------
@@ -89,9 +95,13 @@ const DEFAULT_ENGINE: Engine = 'edge'
 const VOICE_MAP: Record<string, string> = {
   zofia: 'pl-PL-ZofiaNeural',
   marek: 'pl-PL-MarekNeural',
+  agnieszka: 'pl-PL-AgnieszkaNeural',
 }
 
 const DEFAULT_VOICE = 'zofia'
+
+/** Głosy dostępne tylko przez Azure (brak w edge-tts / niesprawdzone tam). */
+const AZURE_ONLY_VOICES: readonly string[] = ['agnieszka']
 
 function resolveVoice(voiceKey: string): string {
   const mapped = VOICE_MAP[voiceKey]
@@ -147,8 +157,7 @@ export function loadSources(filePaths: readonly string[]): SourceMap {
     const voiceKey =
       typeof obj['_voice'] === 'string' ? (obj['_voice'] as string) : DEFAULT_VOICE
     // Validate the voice is known before processing the whole file.
-    resolveVoice(voiceKey)
-    const edgeTtsVoice = resolveVoice(voiceKey)
+    const resolvedVoice = resolveVoice(voiceKey)
 
     const engineKey =
       typeof obj['_engine'] === 'string' ? (obj['_engine'] as string) : DEFAULT_ENGINE
@@ -158,6 +167,10 @@ export function loadSources(filePaths: readonly string[]): SourceMap {
       )
     }
     const engine = engineKey as Engine
+
+    if (engine === 'edge' && AZURE_ONLY_VOICES.includes(voiceKey)) {
+      throw new Error(`${filePath}: voice ${voiceKey} is Azure-only`)
+    }
 
     for (const [key, value] of Object.entries(obj)) {
       // Skip metadata keys.
@@ -171,8 +184,8 @@ export function loadSources(filePaths: readonly string[]): SourceMap {
       }
       merged[key] =
         engine === 'azure-ipa'
-          ? { text: value, voice: edgeTtsVoice, engine, ipa: toIpa(value) }
-          : { text: value, voice: edgeTtsVoice, engine }
+          ? { text: value, voice: resolvedVoice, engine, ipa: toIpa(value) }
+          : { text: value, voice: resolvedVoice, engine }
     }
   }
   return merged
@@ -194,6 +207,15 @@ export function hashEntryAzure(text: string, voice: string, ipa: string): string
   return createHash('sha256')
     .update(`azure-ipa\n${voice}\n${ipa}\n${text}`, 'utf8')
     .digest('hex')
+}
+
+/**
+ * Hash dla wpisów `azure` (plain SSML, bez IPA). Osobny prefiks od `hashEntry`
+ * (edge), więc przełączenie edge→azure dla tego samego tekstu/głosu wymusza
+ * regenerację zamiast trafienia w cache.
+ */
+export function hashEntryAzurePlain(text: string, voice: string): string {
+  return createHash('sha256').update(`azure\n${voice}\n${text}`, 'utf8').digest('hex')
 }
 
 /** @deprecated Use hashEntry instead. Kept for backward compatibility in tests. */
@@ -255,9 +277,9 @@ function expectedHash(entry: {
   engine?: Engine
   ipa?: string
 }): string {
-  return entry.engine === 'azure-ipa'
-    ? hashEntryAzure(entry.text, entry.voice, entry.ipa ?? '')
-    : hashEntry(entry.text, entry.voice)
+  if (entry.engine === 'azure-ipa') return hashEntryAzure(entry.text, entry.voice, entry.ipa ?? '')
+  if (entry.engine === 'azure') return hashEntryAzurePlain(entry.text, entry.voice)
+  return hashEntry(entry.text, entry.voice)
 }
 
 // ---------- IO helpers ----------
@@ -316,7 +338,9 @@ function runEdgeTts(text: string, voice: string, outPath: string): void {
 
 /** Zwraca dane Azure albo null, gdy żaden wpis ich nie potrzebuje. */
 function ensureAzureAvailable(sources: SourceMap): { key: string; region: string } | null {
-  const needsAzure = Object.values(sources).some((e) => e.engine === 'azure-ipa')
+  const needsAzure = Object.values(sources).some(
+    (e) => e.engine === 'azure-ipa' || e.engine === 'azure',
+  )
   if (!needsAzure) return null
   loadEnvLocal(ROOT)
   const credentials = readAzureCredentials()
@@ -415,6 +439,14 @@ async function runBuild(sources: SourceMap): Promise<void> {
           if (!azure) throw new Error('brak danych logowania Azure')
           await synthesizeAzure({
             ssml: buildSsml({ voice, ipa: ipa ?? '', text }),
+            key: azure.key,
+            region: azure.region,
+            outPath: out,
+          })
+        } else if (engine === 'azure') {
+          if (!azure) throw new Error('brak danych logowania Azure')
+          await synthesizeAzure({
+            ssml: buildPlainSsml({ voice, text }),
             key: azure.key,
             region: azure.region,
             outPath: out,
