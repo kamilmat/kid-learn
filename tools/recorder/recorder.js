@@ -2,6 +2,8 @@ const SOURCES = [
   { file: 'letters.json', group: 'Litery' },
   { file: 'words.json', group: 'Słowa-i-asocjacje' }, // splitujemy w runtime
   { file: 'ui-strings.json', group: 'UI' },
+  { file: 'czytanki-syllables.json', group: 'Czytanki-sylaby' },
+  { file: 'czytanki-words.json', group: 'Czytanki-słowa' },
 ];
 
 const state = {
@@ -41,6 +43,8 @@ async function loadSources() {
       // SFX keys (_sfx_ placeholder text) — to nie są nagrania głosowe,
       // pliki istnieją jako CC0 mp3. Pomijamy w recorderze.
       if (text === '_sfx_') continue;
+      // Metadane źródła (_voice, _engine, _comment) — nie są kluczami audio.
+      if (key.startsWith('_')) continue;
       // words.json zawiera zarówno word-* jak assoc-* — rozdzielamy
       let g = group;
       if (group === 'Słowa-i-asocjacje') {
