@@ -153,14 +153,16 @@ export const useSettings = create<SettingsStore>()(
         if (!sanitizedSettings.humorMode) {
           sanitizedSettings.humorMode = 'on'
         }
-        if (!sanitizedSettings.reading) {
-          sanitizedSettings.reading = {
-            wordAnimations: 'on',
-            wildCelebrationFreq: 8,
-            questionsPerSession: {},
-            timeLimit: {},
-          }
+        // Deep-merge: stary persist mógł zapisać `reading` bez pól dodanych później
+        // (np. wildCelebrationFreq -> undefined -> NaN w useReadingSession).
+        const persistedReading = sanitizedSettings.reading as Record<string, unknown> | undefined
+        const mergedReading: Record<string, unknown> = {
+          ...defaultSettings.reading,
+          ...(persistedReading ?? {}),
         }
+        // legacy: `reading.timeLimit` nigdy nie było użyte (moduł 2 nie ma timera)
+        delete mergedReading.timeLimit
+        sanitizedSettings.reading = mergedReading
         // v5: uzupełnij brakujące pola modułu 3 (numbers).
         const persistedNumbers = sanitizedSettings.numbers as Record<string, unknown> | undefined
         sanitizedSettings.numbers = {

@@ -70,21 +70,14 @@ export function SessionView({
 
   const wordAnimationsEnabled = settings.reading.wordAnimations !== 'off'
 
-  // Onboarding głosowy — 1× per poziom
-  useEffect(() => {
-    const key = `reading-${level}-intro`
-    if (!useReading.getState().hasSeenIntro(key)) {
-      void audioBus.play(key)
-      useReading.getState().markIntroSeen(key)
-    }
-    // mount-only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Onboarding głosowy poziomu odpala się w `session.start()` — kolejka FIFO
+  // (intro -> prompt), inaczej `stop()` ze start() ucinał intro w tym samym mouncie.
 
-  // Anti-cheat: idle detection — auto-pauza po 20s bez interakcji
+  // Anti-cheat: idle detection — auto-pauza po 20s bez interakcji.
+  // Także podczas feedbacku: overlay auto-znika, ale dziecko może odejść w trakcie.
   useIdleDetector({
     thresholdMs: 20_000,
-    enabled: session.status === 'asking',
+    enabled: session.status === 'asking' || session.status === 'feedback',
     onIdle: () => session.pause(),
   })
 
@@ -176,6 +169,14 @@ export function SessionView({
     setActiveScene(null)
   }, [])
 
+  // Wyjście w trakcie sesji — zapisz częściowy postęp SRS zanim odejdziemy
+  const handleExit = useCallback(() => {
+    session.quit()
+    onExit()
+  // session nie jest stabilny (nowy obiekt co render) — quit odczytuje refy
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onExit, session.quit])
+
   if (session.status === 'idle') {
     return (
       <div style={{ padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -188,8 +189,8 @@ export function SessionView({
     return (
       <SessionEnd
         results={session.results}
-        onExit={onExit}
-        onAlbum={onAlbum ?? onExit}
+        onExit={handleExit}
+        onAlbum={onAlbum ?? handleExit}
         audioBus={audioBus}
       />
     )
@@ -322,6 +323,8 @@ export function SessionView({
           <FeedbackOverlay
             variant={session.feedbackVariant}
             onSkip={session.skipFeedback}
+            waitForAudio={session.waitForFeedbackAudio}
+            paused={session.paused}
           />
         )}
 
@@ -340,7 +343,7 @@ export function SessionView({
         {session.paused && (
           <PauseOverlay
             onResume={session.resume}
-            onExit={onExit}
+            onExit={handleExit}
           />
         )}
       </div>

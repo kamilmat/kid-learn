@@ -59,12 +59,13 @@ function ReadingSession({ audioBus }: ReadingSessionProps) {
   const level = (params.level ?? '') as Level
   const isValidLevel = VALID_LEVELS.has(level)
 
+  // replace: bez tego ⬅️ z ekranu wyboru poziomu wracało w sesję (auto-start)
   const handleExit = useCallback(() => {
-    navigate('..', { state: { fromExit: true } })
+    navigate('..', { replace: true, state: { fromExit: true } })
   }, [navigate])
 
   const handleAlbum = useCallback(() => {
-    navigate('../album')
+    navigate('../album', { replace: true })
   }, [navigate])
 
   if (!isValidLevel) {
@@ -84,7 +85,7 @@ function ReadingSession({ audioBus }: ReadingSessionProps) {
 
 function ReadingAlbum({ audioBus }: { audioBus: Pick<AudioBus, 'play' | 'stop'> }) {
   const navigate = useNavigate()
-  return <WordAlbum audioBus={audioBus} onExit={() => navigate('..')} />
+  return <WordAlbum audioBus={audioBus} onExit={() => navigate('..', { replace: true })} />
 }
 
 export default ReadingModule

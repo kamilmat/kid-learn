@@ -126,7 +126,6 @@ export const defaultSettings: Settings = {
     wordAnimations: 'on' as WordAnimations,
     wildCelebrationFreq: 8,
     questionsPerSession: {},
-    timeLimit: {},
   },
   numbers: NUMBERS_DEFAULTS,
 }
