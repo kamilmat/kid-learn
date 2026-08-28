@@ -18,6 +18,10 @@ export type NumbersState = {
   wildCelebrationCounter: number
 
   ensureFactInitialized: (factId: MathFactId, conceptId: ConceptId) => void
+  /** Bulk init — jeden `set()` na całą pulę poziomu (zamiast N zapisów persist). */
+  ensureFactsInitialized: (
+    facts: ReadonlyArray<{ id: MathFactId; conceptId: ConceptId }>,
+  ) => void
   applySessionResults: (
     updatedFacts: Record<MathFactId, MathFactState>,
     updatedConcepts: Partial<Record<ConceptId, ConceptMastery>>,
@@ -31,6 +35,9 @@ export type NumbersState = {
   resetAllProgress: () => void
   reset: () => void
 }
+
+// Tyle sesji trzymamy w localStorage (jak MAX_SESSION_HISTORY w lettersStore).
+const MAX_SESSION_HISTORY = 50
 
 const initialState = {
   facts: {} as Record<MathFactId, MathFactState>,
@@ -62,12 +69,35 @@ export const useNumbers = create<NumbersState>()(
         }))
       },
 
+      ensureFactsInitialized: (facts) => {
+        const existing = get().facts
+        const missing = facts.filter((f) => !existing[f.id])
+        if (missing.length === 0) return
+        const added: Record<MathFactId, MathFactState> = {}
+        for (const f of missing) {
+          added[f.id] = {
+            id: f.id,
+            conceptId: f.conceptId,
+            box: 1,
+            lastSeen: 0,
+            recentWrong: 0,
+          }
+        }
+        set((s) => ({ facts: { ...s.facts, ...added } }))
+      },
+
       applySessionResults: (updatedFacts, updatedConcepts, log) => {
-        set((s) => ({
-          facts: { ...s.facts, ...updatedFacts },
-          concepts: { ...s.concepts, ...updatedConcepts },
-          sessions: [...s.sessions, log],
-        }))
+        set((s) => {
+          const sessions = [...s.sessions, log]
+          return {
+            facts: { ...s.facts, ...updatedFacts },
+            concepts: { ...s.concepts, ...updatedConcepts },
+            sessions:
+              sessions.length > MAX_SESSION_HISTORY
+                ? sessions.slice(sessions.length - MAX_SESSION_HISTORY)
+                : sessions,
+          }
+        })
       },
 
       markIntroSeen: (key) => {
@@ -106,7 +136,9 @@ export const useNumbers = create<NumbersState>()(
             p.concepts && typeof p.concepts === 'object' && !Array.isArray(p.concepts)
               ? p.concepts
               : {},
-          sessions: Array.isArray(p.sessions) ? p.sessions : [],
+          sessions: Array.isArray(p.sessions)
+            ? p.sessions.slice(-MAX_SESSION_HISTORY)
+            : [],
           seenIntros: Array.isArray(p.seenIntros) ? p.seenIntros : [],
           lastUsedLevel: p.lastUsedLevel ?? null,
           wildCelebrationCounter:

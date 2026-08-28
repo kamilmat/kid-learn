@@ -19,7 +19,6 @@ export function SubitizeFlashExercise({ audioBus, payload, onAnswer }: Props) {
   const [phase, setPhase] = useState<'flash' | 'answer'>('flash')
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany')
     const t = setTimeout(() => setPhase('answer'), FLASH_MS)
     return () => clearTimeout(t)

@@ -18,7 +18,6 @@ export function TenFrameFill({ audioBus, payload, onAnswer }: Props) {
   const missing = clamp(payload.args[1] ?? 10 - filled, 1, 10)
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany-missing')
   }, [audioBus])
 

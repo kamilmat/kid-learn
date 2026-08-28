@@ -23,7 +23,6 @@ export function NearDoublesExercise({ audioBus, payload, onAnswer }: Props) {
   const correct = a + b
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany-total')
   }, [audioBus])
 

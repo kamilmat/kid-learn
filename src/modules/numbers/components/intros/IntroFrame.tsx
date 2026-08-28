@@ -25,17 +25,17 @@ export function IntroFrame({ introAudioKey, audioBus, onContinue, Animation }: P
   const timeoutsRef = useRef<number[]>([])
 
   useEffect(() => {
-    audioBus.stop()
     const fallback = window.setTimeout(
       () => setAudioFinished(true),
       FALLBACK_FINISH_MS,
     )
     timeoutsRef.current.push(fallback)
 
-    audioBus
-      .play(introAudioKey)
-      .then(() => setAudioFinished(true))
-      .catch(() => setAudioFinished(true))
+    // Bez stop() na mouncie — kolejka FIFO gra powitanie sesji, potem to intro.
+    void Promise.resolve(audioBus.play(introAudioKey)).then(
+      () => setAudioFinished(true),
+      () => setAudioFinished(true),
+    )
 
     for (const scene of Animation.SCENES) {
       const id = window.setTimeout(() => setStage(scene.stage), scene.offsetMs)

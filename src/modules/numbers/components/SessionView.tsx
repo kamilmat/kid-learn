@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { CSSProperties } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import type { Settings, Level } from '@/shared/settings/types'
+import { useIdleDetector } from '@/shared/engagement/useIdleDetector'
+import { usePageVisibility } from '@/shared/engagement/usePageVisibility'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
-import { colors, radii } from '@/app/theme'
+import { colors, radii, tapTargets } from '@/app/theme'
 import { useNumbersSession, type SessionStatus } from '../hooks/useNumbersSession'
 import { useNumbers } from '../store/numbersStore'
+import { extractCorrectValue } from '../data/correctValue'
 import type { AnswerOutcome, ExerciseType, Question } from '../types'
 import { ConceptIntro } from './intros/ConceptIntro'
 import { SessionEnd } from './SessionEnd'
@@ -34,7 +37,26 @@ type Props = {
   onTree: () => void
 }
 
-const FEEDBACK_DURATION_MS = 2200
+// Minimalny czas overlayu feedbacku. Realne przejście następuje dopiero gdy
+// kolejka audio (pochwała / "spróbuj jeszcze raz" + "tu było N") się domknie —
+// stały timer ucinał korektę hypercorrection.
+const MIN_FEEDBACK_MS = 2200
+// Twardy limit — overlay nigdy nie może zablokować sesji, gdyby audio nie
+// domknęło obietnicy.
+const MAX_FEEDBACK_MS = 12_000
+const IDLE_THRESHOLD_MS = 20_000
+
+/**
+ * Domyka obietnicę `play()` niezależnie od wyniku — czekamy na KONIEC klipu,
+ * a brak pliku (404) czy `stop()` nie może zawiesić przejścia do następnego
+ * pytania.
+ */
+function settled(promise: Promise<unknown> | undefined): Promise<void> {
+  return Promise.resolve(promise).then(
+    () => undefined,
+    () => undefined,
+  )
+}
 
 const PRAISE_KEYS = [
   'praise-effort',
@@ -64,6 +86,30 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
     session.start()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Anti-cheat: idle 20 s bez interakcji → auto-pauza (jak w module liter).
+  useIdleDetector({
+    thresholdMs: IDLE_THRESHOLD_MS,
+    enabled: session.status === 'asking',
+    onIdle: () => session.pause('idle'),
+  })
+
+  // Anti-cheat: wyjście z zakładki / zablokowanie iPada → auto-pauza.
+  usePageVisibility({
+    enabled: session.status === 'asking' || session.status === 'feedback',
+    onHidden: () => session.pause('visibility'),
+    onVisible: () => {
+      // Celowo bez auto-wznowienia — dziecko musi tapnąć Wznów.
+    },
+  })
+
+  // Wyjście w trakcie sesji zapisuje częściowe wyniki (SRS by przepadł).
+  const handleQuit = useCallback(() => {
+    session.flush()
+    onExit()
+    // flush jest stabilne w obrębie sesji
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.flush, onExit])
 
   const conceptsIntrosOn = settings.numbers?.conceptIntros ?? true
 
@@ -121,7 +167,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
         counters={session.counters}
         currentIdx={session.questionIdx}
         total={session.questionCount}
-        onPause={session.pause}
+        onPause={() => session.pause('manual')}
       />
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <ExerciseRouter
@@ -142,7 +188,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
         <PauseOverlay
           audioBus={audioBus}
           onResume={session.resume}
-          onExit={onExit}
+          onExit={handleQuit}
         />
       )}
     </div>
@@ -264,8 +310,8 @@ function StatusBar({
         aria-label="Pauza"
         {...pauseTap}
         style={{
-          width: 44,
-          height: 44,
+          width: tapTargets.minSize,
+          height: tapTargets.minSize,
           borderRadius: radii.kid,
           background: '#fef3c7',
           border: `2px solid #f59e0b`,
@@ -281,7 +327,7 @@ function StatusBar({
   )
 }
 
-function FeedbackOverlay({
+export function FeedbackOverlay({
   outcome,
   correctValue,
   audioBus,
@@ -292,36 +338,56 @@ function FeedbackOverlay({
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   onAdvance: () => void
 }) {
+  const onAdvanceRef = useRef(onAdvance)
   useEffect(() => {
-    audioBus.stop()
-    if (outcome === 'correct') {
-      const praise = PRAISE_KEYS[Math.floor(Math.random() * PRAISE_KEYS.length)]
-      void audioBus.play(praise!)
-    } else if (outcome === 'wrong') {
-      void audioBus.play('try-again-soft')
-      if (correctValue !== null) {
-        // Hypercorrection — krótka pauza, potem pokazanie poprawnego
-        const t = setTimeout(() => {
-          void audioBus.play(`correct-show-${correctValue}`)
-        }, 900)
-        return () => clearTimeout(t)
-      }
-    } else {
-      void audioBus.play('try-again')
-      if (correctValue !== null) {
-        const t = setTimeout(() => {
-          void audioBus.play(`correct-show-${correctValue}`)
-        }, 900)
-        return () => clearTimeout(t)
-      }
-    }
-    return undefined
-  }, [outcome, correctValue, audioBus])
+    onAdvanceRef.current = onAdvance
+  }, [onAdvance])
 
   useEffect(() => {
-    const t = setTimeout(onAdvance, FEEDBACK_DURATION_MS)
-    return () => clearTimeout(t)
-  }, [onAdvance])
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let safetyTimer: ReturnType<typeof setTimeout> | undefined
+    const startedAt = Date.now()
+
+    audioBus.stop()
+    const plays: Array<Promise<unknown>> = []
+    if (outcome === 'correct') {
+      const praise = PRAISE_KEYS[Math.floor(Math.random() * PRAISE_KEYS.length)]!
+      plays.push(settled(audioBus.play(praise)))
+    } else {
+      plays.push(
+        settled(audioBus.play(outcome === 'wrong' ? 'try-again-soft' : 'try-again')),
+      )
+      // Hypercorrection — kolejka jest FIFO, więc "tu było N" zagra zaraz po
+      // korekcie; żadnego timera nie trzeba, a przejście czeka na koniec audio.
+      if (correctValue !== null) {
+        plays.push(settled(audioBus.play(`correct-show-${correctValue}`)))
+      }
+    }
+
+    // Bezpiecznik: gdyby audio nigdy nie zamknęło obietnicy (element bez
+    // zdarzeń `ended`/`error`), sesja nie może utknąć na overlayu.
+    const safety = new Promise<void>((resolve) => {
+      safetyTimer = setTimeout(resolve, MAX_FEEDBACK_MS)
+    })
+
+    void Promise.race([Promise.all(plays), safety]).then(() => {
+      if (cancelled) return
+      const elapsed = Date.now() - startedAt
+      timer = setTimeout(
+        () => {
+          if (!cancelled) onAdvanceRef.current()
+        },
+        Math.max(0, MIN_FEEDBACK_MS - elapsed),
+      )
+    })
+
+    return () => {
+      cancelled = true
+      if (timer !== undefined) clearTimeout(timer)
+      if (safetyTimer !== undefined) clearTimeout(safetyTimer)
+    }
+  }, [outcome, correctValue, audioBus])
 
   const bg =
     outcome === 'correct' ? 'rgba(22, 163, 74, 0.85)' : 'rgba(239, 68, 68, 0.85)'
@@ -339,7 +405,9 @@ function FeedbackOverlay({
     color: '#fff',
     fontFamily: 'var(--font-handwritten)',
     zIndex: 50,
-    pointerEvents: 'none',
+    // 'auto' — overlay musi POCHŁANIAĆ tapy, inaczej dziecko odpowiada drugi raz
+    // na to samo pytanie zanim feedback się skończy.
+    pointerEvents: 'auto',
   }
 
   return (
@@ -354,45 +422,6 @@ function FeedbackOverlay({
       )}
     </div>
   )
-}
-
-function extractCorrectValue(question: Question): number | null {
-  const args = (question.payload as { args: number[] }).args
-  switch (question.exerciseType) {
-    case 'subitize-flash':
-    case 'match-digit-dots':
-      return args[0] ?? null
-    case 'number-rhythm':
-      return args[0] ?? null
-    case 'concrete-add':
-      return (args[0] ?? 0) + (args[1] ?? 0)
-    case 'number-bond-builder':
-      return args[0] ?? null  // whole
-    case 'ten-frame-fill':
-      return args[1] ?? null  // missing
-    case 'concrete-add-subtract': {
-      const op = (question.payload as { op?: '+' | '-' }).op ?? '+'
-      const a = args[0] ?? 0
-      const b = args[1] ?? 0
-      return op === '-' ? a - b : a + b
-    }
-    case 'fact-family-triangle':
-      return args[2] ?? null  // whole
-    case 'doubles':
-      return (args[0] ?? 0) * 2
-    case 'near-doubles':
-      return (args[0] ?? 0) + (args[1] ?? 0)
-    case 'make-10':
-      return (args[0] ?? 0) + (args[1] ?? 0)
-    case 'equal-groups':
-      return (args[0] ?? 0) * (args[1] ?? 0)
-    case 'skip-count-chase':
-      return args[2] ?? null  // nextValue
-    case 'array-match':
-      return (args[0] ?? 0) * (args[1] ?? 0)
-    case 'subtract-maintenance':
-      return (args[0] ?? 0) - (args[1] ?? 0)
-  }
 }
 
 // Re-export for tests / external usage

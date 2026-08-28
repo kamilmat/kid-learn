@@ -20,7 +20,6 @@ export function ArrayMatchExercise({ audioBus, payload, onAnswer }: Props) {
   const total = rows * cols
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany-total')
   }, [audioBus])
 

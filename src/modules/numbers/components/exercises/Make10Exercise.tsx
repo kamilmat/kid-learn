@@ -28,7 +28,6 @@ export function Make10Exercise({ audioBus, payload, onAnswer }: Props) {
   const [phase, setPhase] = useState<'animate' | 'answer'>('animate')
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('correct-make10-prefix')
     const t = setTimeout(() => {
       setPhase('answer')

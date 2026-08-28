@@ -24,7 +24,6 @@ export function FactFamilyTriangle({ audioBus, payload, onAnswer }: Props) {
   const [resolved, setResolved] = useState(false)
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-build-bond')
   }, [audioBus])
 

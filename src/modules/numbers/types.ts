@@ -85,9 +85,20 @@ export type NumbersSessionEvent = {
   timestamp: number
 }
 
+export type PauseReason = 'manual' | 'idle' | 'visibility'
+
+/** Zdarzenia anti-cheat — te same reason'y co w module liter (`SessionEventPause`). */
+export type NumbersAntiCheatEvent =
+  | { type: 'pause'; ts: number; reason: PauseReason }
+  | { type: 'resume'; ts: number }
+
 export type NumbersSessionLog = {
   startedAt: number
   endedAt: number
   level: Level
   events: NumbersSessionEvent[]
+  /** Opcjonalne — logi zapisane przed wprowadzeniem anti-cheat go nie mają. */
+  antiCheatEvents?: NumbersAntiCheatEvent[]
+  /** `true` gdy sesja została przerwana (wyjście z pauzy) przed ostatnim pytaniem. */
+  aborted?: boolean
 }

@@ -21,7 +21,6 @@ export function ConcreteAddSubtract({ audioBus, payload, onAnswer }: Props) {
   const result = op === '+' ? a + b : a - b
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play(op === '+' ? 'ask-howmany-total' : 'ask-howmany-left')
   }, [audioBus, op])
 

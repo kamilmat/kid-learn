@@ -19,7 +19,6 @@ export function NumberRhythmExercise({ audioBus, payload, onAnswer }: Props) {
   const expectedNext = pattern[0] ?? 1
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-whats-next')
   }, [audioBus])
 

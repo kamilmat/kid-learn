@@ -19,7 +19,6 @@ export function SkipCountChase({ audioBus, payload, onAnswer }: Props) {
   const nextValue = clamp(payload.args[2] ?? step * (currentIdx + 1), 1, 100)
 
   useEffect(() => {
-    audioBus.stop()
     const audioKey =
       step === 5
         ? 'ask-skip-count-5'

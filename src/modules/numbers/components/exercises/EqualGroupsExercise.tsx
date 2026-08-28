@@ -23,7 +23,6 @@ export function EqualGroupsExercise({ audioBus, payload, onAnswer }: Props) {
   const iconSet = useMemo(() => pickIconSet(n * 10 + m), [n, m])
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany-total')
   }, [audioBus])
 
