@@ -309,8 +309,10 @@ export function SessionView({
           />
         )}
 
-        {/* WordScene plays above everything as the celebration IS the feedback */}
-        {activeScene && !activeWildCelebration && (
+        {/* WordScene plays above everything as the celebration IS the feedback.
+            Na pauzie nie renderujemy overlayów feedbacku — inaczej blokowały
+            tapy w PauseOverlay i sesja się zakleszczała. */}
+        {activeScene && !activeWildCelebration && !session.paused && (
           <WordScene
             scene={activeScene}
             audioBus={audioBus}
@@ -319,7 +321,7 @@ export function SessionView({
         )}
 
         {/* FeedbackOverlay shown only when no active scene and not wild (scene/wild replace it) */}
-        {session.feedbackVariant !== null && session.feedbackVariant !== 'wild' && !activeScene && !activeWildCelebration && (
+        {session.feedbackVariant !== null && session.feedbackVariant !== 'wild' && !activeScene && !activeWildCelebration && !session.paused && (
           <FeedbackOverlay
             variant={session.feedbackVariant}
             onSkip={session.skipFeedback}
@@ -329,7 +331,7 @@ export function SessionView({
         )}
 
         {/* WildCelebration — z-index 1500, renders above everything */}
-        {activeWildCelebration && (
+        {activeWildCelebration && !session.paused && (
           <WildCelebration
             def={activeWildCelebration}
             audioBus={audioBus}

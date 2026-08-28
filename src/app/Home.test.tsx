@@ -139,11 +139,11 @@ describe('Home', () => {
     expect(screen.getByRole('button', { name: 'Raport' })).toBeInTheDocument()
   })
 
-  it('clicking "Litery" navigates to /letters i odblokowuje audio (iOS unlock)', () => {
+  it('clicking "Litery" navigates to /letters i gra nav-tap (cue + iOS unlock)', () => {
     renderHome()
     screen.getByTestId('module-letters').click()
     expect(navigateMock).toHaveBeenCalledWith('/letters')
-    expect(audioUnlockMock).toHaveBeenCalled()
+    expect(audioPlayMock).toHaveBeenCalledWith('nav-tap')
   })
 
   it('clicking "Czytanie" navigates to /reading', () => {

@@ -354,7 +354,7 @@ describe('useReadingSession', () => {
     expect(result.current.questionOutcomes[0]).toBe('dontKnow')
   })
 
-  it('pause during feedback → resume → skipFeedback advances to next question', () => {
+  it('pause during feedback → resume przechodzi od razu do następnego pytania', () => {
     const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
     act(() => result.current.start())
 
@@ -365,15 +365,36 @@ describe('useReadingSession', () => {
     // Pauza podczas feedback
     act(() => result.current.pause())
     expect(result.current.status).toBe('paused')
+    expect(result.current.paused).toBe(true)
 
-    // Resume powinien przywrócić 'feedback' (nie 'asking')
+    // `pause()` zrobiło stop() — po wznowieniu nie ma czego słuchać, więc
+    // idziemy dalej zamiast trzymać niemy overlay (i zakleszczać wariant 'wild').
     act(() => result.current.resume())
-    expect(result.current.status).toBe('feedback')
-
-    // skipFeedback powinno zadziałać (nie zgubić się z powodu złego statusu)
-    act(() => result.current.skipFeedback())
-    expect(result.current.currentQuestionIndex).toBe(1)
+    expect(result.current.paused).toBe(false)
     expect(result.current.status).toBe('asking')
+    expect(result.current.currentQuestionIndex).toBe(1)
+    expect(result.current.questionOutcomes).toHaveLength(1)
+  })
+
+  it('pause podczas wild celebration → resume nie zakleszcza sesji', () => {
+    const settings = {
+      reading: { wildCelebrationFreq: 1, questionsPerSession: { iskierka: 5 }, wordAnimations: 'off' },
+    } as any
+    const { result } = renderHook(() =>
+      useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings, rng: () => 0.5 }),
+    )
+    act(() => result.current.start())
+    const target = result.current.currentQuestion
+    expect(target?.type).toBe('syllable-match')
+    if (target?.type !== 'syllable-match') return
+    act(() => result.current.submitAnswer(target.targetSyllable))
+    expect(result.current.feedbackVariant).toBe('wild')
+
+    act(() => result.current.pause())
+    act(() => result.current.resume())
+    expect(result.current.status).toBe('asking')
+    expect(result.current.feedbackVariant).toBeNull()
+    expect(result.current.currentQuestionIndex).toBe(1)
   })
 
   it('totalQuestions honors settings.reading.questionsPerSession[level]', () => {

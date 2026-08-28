@@ -54,32 +54,23 @@ export function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // iOS Safari odblokowuje audio tylko po synchronicznym play() w gestcie.
-  // Kafelki Home nie grają nav-tap (moduł sam zagra swoje intro), więc
-  // odblokowujemy cichym klipem — inaczej intro modułu jest nieme.
-  const handleLetters = useCallback(() => {
-    audioBus.stop()
-    audioBus.unlock()
-    navigate('/letters')
-  }, [navigate])
+  // „Każdy klik mówi co zrobił" — nav-tap potwierdza tap w kafelek. Przy okazji
+  // to synchroniczne play() w geście odblokowuje audio na iOS Safari (wcześniej
+  // robił to cichy klip z unlock(), ale po obejrzeniu intro kafelki milczały).
+  // Intro modułu dokleja się za nav-tap w kolejce FIFO.
+  const goToModule = useCallback(
+    (path: string) => {
+      audioBus.stop()
+      void audioBus.play('nav-tap')
+      navigate(path)
+    },
+    [navigate],
+  )
 
-  const handleReading = useCallback(() => {
-    audioBus.stop()
-    audioBus.unlock()
-    navigate('/reading')
-  }, [navigate])
-
-  const handleNumbers = useCallback(() => {
-    audioBus.stop()
-    audioBus.unlock()
-    navigate('/numbers')
-  }, [navigate])
-
-  const handleCzytanki = useCallback(() => {
-    audioBus.stop()
-    audioBus.unlock()
-    navigate('/czytanki')
-  }, [navigate])
+  const handleLetters = useCallback(() => goToModule('/letters'), [goToModule])
+  const handleReading = useCallback(() => goToModule('/reading'), [goToModule])
+  const handleNumbers = useCallback(() => goToModule('/numbers'), [goToModule])
+  const handleCzytanki = useCallback(() => goToModule('/czytanki'), [goToModule])
 
   const lettersTap = useTapHandler({ onTap: handleLetters })
   const readingTap = useTapHandler({ onTap: handleReading })
@@ -92,7 +83,9 @@ export function Home() {
     <div
       data-testid="page-home"
       style={{
-        minHeight: '100vh',
+        // '100%' zamiast '100vh' — na iOS Safari 100vh liczy się do paska URL,
+        // przez co Home dostawał kilkanaście pikseli scrolla.
+        minHeight: '100%',
         position: 'relative',
         padding: 32,
         display: 'flex',

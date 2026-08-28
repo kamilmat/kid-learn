@@ -217,7 +217,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
                       }}
                     >
                       {word.syllables.map((syl, i) => (
-                        <SyllableButton key={i} text={syl} color={getSyllableColor(i)} fontSize={fontSize} highlighted={false}
+                        <SyllableButton key={i} text={syl} color={getSyllableColor(i)} fontSize={fontSize}
                           onTap={() => tapSyllable(syl)} onLongPress={() => holdWord(s, w, word.syllables)} />
                       ))}
                     </span>

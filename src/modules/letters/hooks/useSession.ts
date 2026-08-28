@@ -516,6 +516,89 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     cfgRef.current.onSessionEnd?.(log, { ...statesRef.current })
   }, [clearCountdown, clearFeedbackTimer])
 
+  /**
+   * Kolejkuje audio feedbacku dla wariantu i zwraca dodatkowy czas overlaya
+   * (streak audio). Wydzielone z `handleOutcome`, bo `resume` po pauzie
+   * złapanej w trakcie feedbacku musi odegrać je PONOWNIE — `pause()` robi
+   * `audioBus.stop()`, więc bez tego dziecko oglądało kilka sekund niemego
+   * overlaya.
+   */
+  const playFeedbackAudio = useCallback(
+    (
+      variant: FeedbackVariant,
+      target: string,
+      chosenLetter: string | undefined,
+      newStreak: number,
+    ): number => {
+      const cfg = cfgRef.current
+      let extraDurationMs = 0
+
+      switch (variant) {
+        case 'correct': {
+          // Bez assoc-X audio — gdy dziecko zna literę, "X jak Y" wydłuża
+          // sequence niepotrzebnie. Asocjacja gra tylko dla dontKnow/timeout
+          // (gdy dziecko potrzebuje wskazówki). Guzik "→ Dalej" daje opcję
+          // pominięcia czekania.
+          void cfg.audioBus.play('sfx-correct-ding')
+          const praiseKey = pickPraiseKey(lastPraiseKeyRef.current, cfg.rng)
+          lastPraiseKeyRef.current = praiseKey
+          void cfg.audioBus.play(praiseKey)
+          // Streak audio (jeśli próg)
+          const skey = streakAudioKey(newStreak)
+          if (skey !== null) {
+            void cfg.audioBus.play(skey)
+            extraDurationMs += STREAK_AUDIO_DURATION_MS
+          }
+          break
+        }
+        case 'wrong': {
+          const prefixKey = pickCorrectionPrefix(
+            target,
+            chosenLetter ?? '',
+            CONTRASTIVE_PAIRS as Record<string, readonly string[]>,
+            cfg.rng,
+          )
+          void cfg.audioBus.play(prefixKey)
+          void cfg.audioBus.play(`letter-${target}`)
+          break
+        }
+        case 'dontKnow':
+        case 'timeout': {
+          // Scalone audio dla obu wariantów: wsparcie + litera + asocjacja.
+          // Asocjacja "X jak Y" gra TYLKO tu (nie przy correct) — gdy dziecko
+          // nie wiedziało, "X jak Y" pomaga zapamiętać. NIE gramy
+          // correction-prefix — to było zaprojektowane dla `wrong` (komentarz
+          // do błędu). Dziecko nie pomyliło się, świadomie/biernie nie
+          // odpowiedziało.
+          void cfg.audioBus.play(pickRandom(DONTKNOW_KEYS, cfg.rng))
+          void cfg.audioBus.play(`letter-${target}`)
+          try {
+            const assoc = getAssociation(target)
+            void cfg.audioBus.play(assoc.audioKey)
+          } catch {
+            // brak asocjacji = pomijamy bez kruszenia hooka
+          }
+          break
+        }
+        case 'mastery': {
+          void cfg.audioBus.play('sfx-mastery-fanfara')
+          void cfg.audioBus.play('mastery-celebration')
+          // Mastery dziedziczy streak (firstMastery zawsze == correct outcome).
+          // Jeśli próg streak osiągnięty, dorzucamy też streak audio — dziecko
+          // dostaje pełen "wow" zamiast cichego pominięcia.
+          const skey = streakAudioKey(newStreak)
+          if (skey !== null) {
+            void cfg.audioBus.play(skey)
+            extraDurationMs += STREAK_AUDIO_DURATION_MS
+          }
+          break
+        }
+      }
+      return extraDurationMs
+    },
+    [],
+  )
+
   const handleOutcome = useCallback(
     (outcome: Outcome, chosenLetter: string | undefined, chosenSlot: Slot | undefined) => {
       const cfg = cfgRef.current
@@ -599,69 +682,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       currentStreakRef.current = newStreak
       setCurrentStreak(newStreak)
 
-      let extraDurationMs = 0
-
-      switch (variant) {
-        case 'correct': {
-          // Bez assoc-X audio — gdy dziecko zna literę, "X jak Y" wydłuża
-          // sequence niepotrzebnie. Asocjacja gra tylko dla dontKnow/timeout
-          // (gdy dziecko potrzebuje wskazówki). Guzik "→ Dalej" daje opcję
-          // pominięcia czekania.
-          void cfg.audioBus.play('sfx-correct-ding')
-          const praiseKey = pickPraiseKey(lastPraiseKeyRef.current, cfg.rng)
-          lastPraiseKeyRef.current = praiseKey
-          void cfg.audioBus.play(praiseKey)
-          // Streak audio (jeśli próg)
-          const skey = streakAudioKey(newStreak)
-          if (skey !== null) {
-            void cfg.audioBus.play(skey)
-            extraDurationMs += STREAK_AUDIO_DURATION_MS
-          }
-          break
-        }
-        case 'wrong': {
-          const prefixKey = pickCorrectionPrefix(
-            target,
-            chosenLetter ?? '',
-            CONTRASTIVE_PAIRS as Record<string, readonly string[]>,
-            cfg.rng,
-          )
-          void cfg.audioBus.play(prefixKey)
-          void cfg.audioBus.play(`letter-${target}`)
-          break
-        }
-        case 'dontKnow':
-        case 'timeout': {
-          // Scalone audio dla obu wariantów: wsparcie + litera + asocjacja.
-          // Asocjacja "X jak Y" gra TYLKO tu (nie przy correct) — gdy dziecko
-          // nie wiedziało, "X jak Y" pomaga zapamiętać. NIE gramy
-          // correction-prefix — to było zaprojektowane dla `wrong` (komentarz
-          // do błędu). Dziecko nie pomyliło się, świadomie/biernie nie
-          // odpowiedziało.
-          void cfg.audioBus.play(pickRandom(DONTKNOW_KEYS, cfg.rng))
-          void cfg.audioBus.play(`letter-${target}`)
-          try {
-            const assoc = getAssociation(target)
-            void cfg.audioBus.play(assoc.audioKey)
-          } catch {
-            // brak asocjacji = pomijamy bez kruszenia hooka
-          }
-          break
-        }
-        case 'mastery': {
-          void cfg.audioBus.play('sfx-mastery-fanfara')
-          void cfg.audioBus.play('mastery-celebration')
-          // Mastery dziedziczy streak (firstMastery zawsze == correct outcome).
-          // Jeśli próg streak osiągnięty, dorzucamy też streak audio — dziecko
-          // dostaje pełen "wow" zamiast cichego pominięcia.
-          const skey = streakAudioKey(newStreak)
-          if (skey !== null) {
-            void cfg.audioBus.play(skey)
-            extraDurationMs += STREAK_AUDIO_DURATION_MS
-          }
-          break
-        }
-      }
+      const extraDurationMs = playFeedbackAudio(variant, target, chosenLetter, newStreak)
 
       // Po feedbacku — następne pytanie lub koniec.
       // Sekwencja: durationMs+extra → zamknij overlay → 500ms wdech → next.
@@ -799,6 +820,14 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       pausedDuringFeedbackRef.current = false
       setStatus('feedback')
       if (lastFeedback !== null) {
+        // `pause()` zrobiło stop() — bez ponownego zakolejkowania overlay
+        // odliczałby pełny czas w kompletnej ciszy.
+        playFeedbackAudio(
+          lastFeedback.variant,
+          lastFeedback.targetLetter,
+          lastFeedback.chosenLetter,
+          currentStreakRef.current,
+        )
         scheduleFeedbackDismissRef.current(lastFeedbackEffectiveMsRef.current)
       } else {
         // Overlay był już zamknięty — pauza złapała "wdech". Odtwarzanie
@@ -814,7 +843,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       questionStartedAtRef.current = cfgRef.current.now()
       startCountdown()
     }
-  }, [lastFeedback, pushEvent, scheduleBreathThenNext, startCountdown, status])
+  }, [lastFeedback, playFeedbackAudio, pushEvent, scheduleBreathThenNext, startCountdown, status])
 
   const answer = useCallback(
     (chosenLetter: string, position: Slot) => {

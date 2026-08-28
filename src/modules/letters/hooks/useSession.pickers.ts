@@ -2,6 +2,7 @@
 
 import type { SessionEvent } from '@/modules/letters/types'
 import type { IskraIntensity } from '@/shared/ui/IskraMascot'
+import { pickNoRepeat } from '@/shared/audio/pickNoRepeat'
 
 export const PRAISE_KEYS = [
   'praise-1',
@@ -28,12 +29,7 @@ export function pickPraiseKey(
   lastKey: PraiseKey | null,
   rng: () => number,
 ): PraiseKey {
-  const idx = Math.floor(rng() * PRAISE_KEYS.length)
-  const candidate = PRAISE_KEYS[idx] as PraiseKey
-  if (candidate !== lastKey) return candidate
-  // Last hit — bierzemy następny modulo
-  const fallbackIdx = (idx + 1) % PRAISE_KEYS.length
-  return PRAISE_KEYS[fallbackIdx] as PraiseKey
+  return pickNoRepeat(PRAISE_KEYS, lastKey, rng)
 }
 
 export const CORRECTION_PREFIX_KEYS = [

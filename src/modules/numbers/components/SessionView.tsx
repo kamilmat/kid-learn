@@ -9,6 +9,8 @@ import { colors, radii, tapTargets } from '@/app/theme'
 import { useNumbersSession, type SessionStatus } from '../hooks/useNumbersSession'
 import { useNumbers } from '../store/numbersStore'
 import { extractCorrectValue } from '../data/correctValue'
+import { promptAudioKey, thinkingAloudKey } from '../data/promptAudio'
+import { NUMBERS_PRAISE_KEYS, type NumbersPraiseKey } from '../data/praise'
 import type { AnswerOutcome, ExerciseType, Question } from '../types'
 import { ConceptIntro } from './intros/ConceptIntro'
 import { SessionEnd } from './SessionEnd'
@@ -58,22 +60,13 @@ function settled(promise: Promise<unknown> | undefined): Promise<void> {
   )
 }
 
-const PRAISE_KEYS = [
-  'praise-effort',
-  'praise-strategy',
-  'praise-precision',
-  'praise-mastery',
-  'praise-think',
-  'praise-brawo',
-  'praise-super',
-  'praise-tak-jest',
-] as const
-
 export function SessionView({ level, audioBus, settings, onExit, onTree }: Props) {
   const session = useNumbersSession({
     level,
     audioBus,
     questionCount: settings.numbers?.questionCount ?? 8,
+    skipCountStep: settings.numbers?.skipCountStep ?? 'mixed',
+    treeCelebrationsOn: settings.numbers?.treeCelebrationsOn ?? true,
   })
   const seenIntros = useNumbers((s) => s.seenIntros)
   const markIntroSeen = useNumbers((s) => s.markIntroSeen)
@@ -86,13 +79,6 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
     session.start()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // Anti-cheat: idle 20 s bez interakcji → auto-pauza (jak w module liter).
-  useIdleDetector({
-    thresholdMs: IDLE_THRESHOLD_MS,
-    enabled: session.status === 'asking',
-    onIdle: () => session.pause('idle'),
-  })
 
   // Anti-cheat: wyjście z zakładki / zablokowanie iPada → auto-pauza.
   usePageVisibility({
@@ -121,6 +107,41 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
     const introKey = `intro-${session.currentQuestion.conceptId}`
     return !seenIntros.includes(introKey)
   }, [session.currentQuestion, session.status, seenIntros, conceptsIntrosOn])
+
+  // Anti-cheat: idle 20 s bez interakcji → auto-pauza (jak w module liter).
+  // ConceptIntro jest wyłączone z licznika — dziecko OGLĄDA worked example
+  // i nic nie tapie, a auto-pauza ucinała je w pół zdania.
+  useIdleDetector({
+    thresholdMs: IDLE_THRESHOLD_MS,
+    enabled: session.status === 'asking' && !showIntro,
+    onIdle: () => session.pause('idle'),
+  })
+
+  // Iskra „myśli na głos" — raz na sesję per typ ćwiczenia, PO promptcie
+  // (efekt rodzica leci po efekcie ćwiczenia, więc kolejka FIFO ma dobrą kolejność).
+  const thinkingAloudPlayedRef = useRef<Set<string>>(new Set())
+  const thinkingAloudOn = settings.numbers?.iskraThinkingAloud ?? true
+  const currentExerciseType = session.currentQuestion?.exerciseType ?? null
+  useEffect(() => {
+    if (!thinkingAloudOn || showIntro || currentExerciseType === null) return
+    const key = thinkingAloudKey(currentExerciseType)
+    if (key === null || thinkingAloudPlayedRef.current.has(key)) return
+    thinkingAloudPlayedRef.current.add(key)
+    void audioBus.play(key)
+  }, [thinkingAloudOn, showIntro, currentExerciseType, audioBus])
+
+  const handleRepeatPrompt = useCallback(() => {
+    const key = promptAudioKey(session.currentQuestion)
+    if (key === null) return
+    // Stop przed play — powtórka ma restartować, nie kolejkować (jak w literach).
+    audioBus.stop()
+    void audioBus.play(key)
+  }, [audioBus, session.currentQuestion])
+
+  const handleDontKnow = useCallback(() => {
+    session.answer('dontKnow')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.answer])
 
   if (session.status === 'ended') {
     return (
@@ -168,6 +189,8 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
         currentIdx={session.questionIdx}
         total={session.questionCount}
         onPause={() => session.pause('manual')}
+        onRepeatPrompt={handleRepeatPrompt}
+        onDontKnow={handleDontKnow}
       />
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <ExerciseRouter
@@ -182,6 +205,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
           correctValue={extractCorrectValue(session.currentQuestion)}
           audioBus={audioBus}
           onAdvance={session.advance}
+          {...(session.praiseKey !== null ? { praiseKey: session.praiseKey } : {})}
         />
       )}
       {session.status === 'paused' && (
@@ -189,7 +213,6 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
           onResume={session.resume}
           onQuit={handleQuit}
           position="absolute"
-          zIndex={100}
         />
       )}
     </div>
@@ -266,13 +289,19 @@ function StatusBar({
   currentIdx,
   total,
   onPause,
+  onRepeatPrompt,
+  onDontKnow,
 }: {
   counters: { correct: number; wrong: number; dontKnow: number }
   currentIdx: number
   total: number
   onPause: () => void
+  onRepeatPrompt: () => void
+  onDontKnow: () => void
 }) {
   const pauseTap = useTapHandler({ onTap: onPause })
+  const repeatTap = useTapHandler({ onTap: onRepeatPrompt })
+  const dontKnowTap = useTapHandler({ onTap: onDontKnow })
   const dots = Array.from({ length: total }).map((_, i) => i < currentIdx)
   return (
     <div
@@ -305,25 +334,65 @@ function StatusBar({
           />
         ))}
       </div>
-      <button
-        type="button"
-        data-testid="status-pause"
-        aria-label="Pauza"
-        {...pauseTap}
-        style={{
-          width: tapTargets.minSize,
-          height: tapTargets.minSize,
-          borderRadius: radii.kid,
-          background: '#fef3c7',
-          border: `2px solid #f59e0b`,
-          fontSize: 22,
-          cursor: 'pointer',
-          touchAction: 'manipulation',
-          WebkitTapHighlightColor: 'transparent',
-        }}
-      >
-        ⏸
-      </button>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          type="button"
+          data-testid="status-repeat"
+          aria-label="Powtórz polecenie"
+          {...repeatTap}
+          style={{
+            width: tapTargets.minSize,
+            height: tapTargets.minSize,
+            borderRadius: radii.kid,
+            background: '#e0f2fe',
+            border: `2px solid ${colors.accentBlue}`,
+            fontSize: 22,
+            cursor: 'pointer',
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          🔊
+        </button>
+        <button
+          type="button"
+          data-testid="status-dont-know"
+          aria-label="Nie wiem"
+          {...dontKnowTap}
+          style={{
+            width: tapTargets.minSize,
+            height: tapTargets.minSize,
+            borderRadius: radii.kid,
+            background: '#f3f4f6',
+            border: '2px solid #9ca3af',
+            fontSize: 22,
+            cursor: 'pointer',
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          🤷
+        </button>
+        <button
+          type="button"
+          data-testid="status-pause"
+          aria-label="Pauza"
+          {...pauseTap}
+          style={{
+            width: tapTargets.minSize,
+            height: tapTargets.minSize,
+            borderRadius: radii.kid,
+            background: '#fef3c7',
+            border: `2px solid #f59e0b`,
+            fontSize: 22,
+            cursor: 'pointer',
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          ⏸
+        </button>
+      </div>
     </div>
   )
 }
@@ -333,11 +402,14 @@ export function FeedbackOverlay({
   correctValue,
   audioBus,
   onAdvance,
+  praiseKey,
 }: {
   outcome: AnswerOutcome
   correctValue: number | null
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   onAdvance: () => void
+  /** Pochwała wybrana przez hook sesji (wstrzykiwalne rng + brak powtórki). */
+  praiseKey?: NumbersPraiseKey
 }) {
   const onAdvanceRef = useRef(onAdvance)
   useEffect(() => {
@@ -353,7 +425,8 @@ export function FeedbackOverlay({
     audioBus.stop()
     const plays: Array<Promise<unknown>> = []
     if (outcome === 'correct') {
-      const praise = PRAISE_KEYS[Math.floor(Math.random() * PRAISE_KEYS.length)]!
+      const praise =
+        praiseKey ?? NUMBERS_PRAISE_KEYS[Math.floor(Math.random() * NUMBERS_PRAISE_KEYS.length)]!
       plays.push(settled(audioBus.play(praise)))
     } else {
       plays.push(
@@ -388,7 +461,7 @@ export function FeedbackOverlay({
       if (timer !== undefined) clearTimeout(timer)
       if (safetyTimer !== undefined) clearTimeout(safetyTimer)
     }
-  }, [outcome, correctValue, audioBus])
+  }, [outcome, correctValue, audioBus, praiseKey])
 
   const bg =
     outcome === 'correct' ? 'rgba(22, 163, 74, 0.85)' : 'rgba(239, 68, 68, 0.85)'

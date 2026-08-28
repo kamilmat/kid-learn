@@ -14,6 +14,11 @@ export type PauseOverlayProps = {
    * stacking context), `fixed` gdy ma przykryć cały ekran.
    */
   position?: 'fixed' | 'absolute'
+  /**
+   * Domyślnie 2000 — pauza MUSI leżeć nad każdym overlayem feedbacku
+   * (50), scenki (1000) i wild celebration (1500). Niżej dziecko nie mogło
+   * tapnąć „Wznów" i sesja się zakleszczała.
+   */
   zIndex?: number
 }
 
@@ -28,7 +33,7 @@ export function PauseOverlay({
   onResume,
   onQuit,
   position = 'fixed',
-  zIndex = 40,
+  zIndex = 2000,
 }: PauseOverlayProps) {
   const resumeTap = useTapHandler({ onTap: onResume })
   const quitTap = useTapHandler({ onTap: onQuit })

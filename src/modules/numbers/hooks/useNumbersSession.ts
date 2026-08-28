@@ -2,7 +2,8 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { pickNextItem } from '@/shared/srs/select'
 import { nextBox, nextRecentWrong } from '@/shared/srs/update'
-import type { Level } from '@/shared/settings/types'
+import type { Level, SkipCountStep } from '@/shared/settings/types'
+import { pickNoRepeat } from '@/shared/audio/pickNoRepeat'
 import type {
   AnswerOutcome,
   ConceptId,
@@ -19,10 +20,12 @@ import { useNumbers } from '../store/numbersStore'
 import { CONCEPTS, MIN_AGE_FOR_MASTERY_MS } from '../data/concepts'
 import type { Fact } from '../data/facts'
 import {
+  excludeMaintenance,
   getLevelFacts,
   opForFact,
   POCHODNIA_SUB_MAINTENANCE_FACTS,
 } from '../data/levelFacts'
+import { NUMBERS_PRAISE_KEYS, type NumbersPraiseKey } from '../data/praise'
 import { exerciseTypeForFact } from './exerciseRouter'
 
 export type SessionStatus = 'asking' | 'feedback' | 'paused' | 'ended'
@@ -35,6 +38,10 @@ export type UseNumbersSessionParams = {
   level: Level
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   questionCount?: number
+  /** Ustawienie rodzica: zawęża Pochodnię do jednego kroku skip-count. */
+  skipCountStep?: SkipCountStep
+  /** Ustawienie rodzica: cue `tree-grow` gdy koncept osiąga mastery. */
+  treeCelebrationsOn?: boolean
   rng?: () => number
   now?: () => number
 }
@@ -43,6 +50,8 @@ export function useNumbersSession({
   level,
   audioBus,
   questionCount = DEFAULT_QUESTION_COUNT,
+  skipCountStep = 'mixed',
+  treeCelebrationsOn = true,
   rng = Math.random,
   now = Date.now,
 }: UseNumbersSessionParams) {
@@ -50,6 +59,8 @@ export function useNumbersSession({
   const [questionIdx, setQuestionIdx] = useState(0)
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null)
   const [lastOutcome, setLastOutcome] = useState<AnswerOutcome | null>(null)
+  const [praiseKey, setPraiseKey] = useState<NumbersPraiseKey | null>(null)
+  const lastPraiseRef = useRef<NumbersPraiseKey | null>(null)
   const [counters, setCounters] = useState({ correct: 0, wrong: 0, dontKnow: 0 })
   const eventsRef = useRef<NumbersSessionEvent[]>([])
   const antiCheatRef = useRef<NumbersAntiCheatEvent[]>([])
@@ -62,7 +73,16 @@ export function useNumbersSession({
   const ensureFactsInitialized = useNumbers((s) => s.ensureFactsInitialized)
   const applySessionResults = useNumbers((s) => s.applySessionResults)
 
-  const levelFacts = useMemo<Fact[]>(() => getLevelFacts(level), [level])
+  const levelFacts = useMemo<Fact[]>(
+    () => getLevelFacts(level, skipCountStep),
+    [level, skipCountStep],
+  )
+  // Fakty maintenance losujemy wyłącznie w gałęzi 18% — w głównej puli byłyby
+  // liczone drugi raz i wypadały częściej niż zakłada interleaving.
+  const mainPoolIds = useMemo<string[]>(
+    () => excludeMaintenance(levelFacts).map((f) => f.id),
+    [levelFacts],
+  )
 
   const pickAndSetQuestion = useCallback(() => {
     let pool: string[]
@@ -72,7 +92,7 @@ export function useNumbersSession({
     ) {
       pool = POCHODNIA_SUB_MAINTENANCE_FACTS.map((f) => f.id)
     } else {
-      pool = levelFacts.map((f) => f.id)
+      pool = mainPoolIds
     }
 
     if (pool.length === 0) return
@@ -95,13 +115,15 @@ export function useNumbersSession({
       payload: { args: fact.args, op },
     })
     questionStartedAtRef.current = now()
-  }, [levelFacts, level, now, rng])
+  }, [levelFacts, mainPoolIds, level, now, rng])
 
   const start = useCallback(() => {
     audioBus.stop()
     void audioBus.play(`session-start-${level}`)
     startedAtRef.current = now()
     finishedRef.current = false
+    lastPraiseRef.current = null
+    setPraiseKey(null)
     // Bulk init całej puli poziomu — jeden zapis persist zamiast N (Płomyk: 128).
     ensureFactsInitialized(levelFacts)
     setStatus('asking')
@@ -126,6 +148,13 @@ export function useNumbersSession({
       })
 
       setLastOutcome(outcome)
+      if (outcome === 'correct') {
+        const key = pickNoRepeat(NUMBERS_PRAISE_KEYS, lastPraiseRef.current, rng)
+        lastPraiseRef.current = key
+        setPraiseKey(key)
+      } else {
+        setPraiseKey(null)
+      }
       setCounters((c) => ({
         correct: c.correct + (outcome === 'correct' ? 1 : 0),
         wrong: c.wrong + (outcome === 'wrong' ? 1 : 0),
@@ -133,7 +162,7 @@ export function useNumbersSession({
       }))
       setStatus('feedback')
     },
-    [currentQuestion, now, status],
+    [currentQuestion, now, rng, status],
   )
 
   // Zapisz wyniki sesji (SRS + mastery + log). Idempotentne — druga próba
@@ -158,9 +187,19 @@ export function useNumbersSession({
         eventsRef.current,
         endedAt,
       )
+      // „Drzewko rośnie" — cue tylko dla konceptów, które W TEJ sesji przeszły
+      // z uczenia się w mastery (ustawienie rodzica może je wyłączyć).
+      if (treeCelebrationsOn) {
+        const before = useNumbers.getState().concepts
+        const newlyMastered = Object.entries(updatedConcepts).some(
+          ([id, c]) =>
+            c?.state === 'mastered' && before[id as ConceptId]?.state !== 'mastered',
+        )
+        if (newlyMastered) void audioBus.play('tree-grow')
+      }
       applySessionResults(updatedFacts, updatedConcepts, log)
     },
-    [now, level, applySessionResults],
+    [now, level, applySessionResults, audioBus, treeCelebrationsOn],
   )
 
   const advance = useCallback(() => {
@@ -216,6 +255,7 @@ export function useNumbersSession({
     currentQuestion,
     counters,
     lastOutcome,
+    praiseKey,
     start,
     answer,
     advance,

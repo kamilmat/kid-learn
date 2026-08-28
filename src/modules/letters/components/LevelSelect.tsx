@@ -6,7 +6,7 @@
 // Pod siatką: kompaktowa "ściana osiągnięć" — alfabet 4×8, opanowane (box=5)
 // świecą jak węgielek, pozostałe są przytłumione.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { colors, radii } from '@/app/theme'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
@@ -211,6 +211,17 @@ export function LevelSelect({
   }, [])
 
   const [celebratingLetter, setCelebratingLetter] = useState<string | null>(null)
+  // Timer celebracji trzymany w refie — bez cleanupu odmontowanie ekranu w
+  // trakcie animacji wołało setState na zniknionym komponencie.
+  const celebrationTimerRef = useRef<number | null>(null)
+  useEffect(
+    () => () => {
+      if (celebrationTimerRef.current !== null) {
+        window.clearTimeout(celebrationTimerRef.current)
+      }
+    },
+    [],
+  )
 
   const handleTileClick = (level: Level) => {
     // iPad/Safari unlock: pierwsze synchroniczne audioBus.play() w user-gesture
@@ -226,7 +237,11 @@ export function LevelSelect({
     void audioBus.play('mastery-celebration')
     setCelebratingLetter(letter)
     // krótka animacja celebration (UX cue + audio)
-    window.setTimeout(() => {
+    if (celebrationTimerRef.current !== null) {
+      window.clearTimeout(celebrationTimerRef.current)
+    }
+    celebrationTimerRef.current = window.setTimeout(() => {
+      celebrationTimerRef.current = null
       setCelebratingLetter((cur) => (cur === letter ? null : cur))
     }, 600)
   }

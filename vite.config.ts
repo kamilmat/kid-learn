@@ -17,10 +17,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      // autoUpdate — gdy push na main pojawia się nowa wersja, SW pobiera ją
-      // w tle i aktywuje przy następnym otwarciu. Dziecko widzi natychmiast
-      // świeżą wersję bez akcji rodzica (bez "Reload to update" prompt'u).
-      registerType: 'autoUpdate',
+      // 'prompt' + własna rejestracja w `main.tsx`: `autoUpdate` robił
+      // `window.location.reload()` w momencie aktywacji nowego SW — także
+      // w środku sesji dziecka (przepadał postęp pytania i grające audio).
+      // Teraz aplikacja sama decyduje, KIEDY przeładować (tylko na Home).
+      registerType: 'prompt',
+      injectRegister: null,
       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Iskierki — nauka liter',

@@ -9,6 +9,10 @@ const BOX_WEIGHTS: Record<Box, number> = {
 }
 
 const RECENCY_CAP = 3.0
+// Bez clampu element z serią błędów rósł w score bez ograniczeń (recentWrong
+// nie ma górnej granicy) i monopolizował losowanie — dziecko dostawało w kółko
+// ten sam trudny item zamiast przeplatanki.
+const RECENT_WRONG_CAP = 3
 const MS_PER_HOUR = 3_600_000
 
 export function boxWeight(box: Box): number {
@@ -25,7 +29,7 @@ export function scoreItem<T extends BaseItemState>(state: T, now: number): numbe
     state.lastSeen <= 0
       ? 1.0
       : Math.min(1 + (elapsedMs / MS_PER_HOUR) * 0.3, RECENCY_CAP)
-  const recentWrongBoost = 1 + state.recentWrong * 2.0
+  const recentWrongBoost = 1 + Math.min(state.recentWrong, RECENT_WRONG_CAP) * 2.0
   return boxWeight(state.box) * recency * recentWrongBoost
 }
 

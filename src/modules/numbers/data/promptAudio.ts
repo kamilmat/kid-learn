@@ -1,0 +1,62 @@
+// Klucz audio polecenia dla pytania — używany przez przycisk 🔊 („powtórz")
+// w status barze sesji. WHY osobna mapa: każde ćwiczenie kolejkuje własny
+// prompt w `useEffect` przy mouncie, ale przycisk powtórki żyje w SessionView
+// i nie ma dostępu do tego efektu.
+
+import type { Question } from '../types'
+
+export function promptAudioKey(question: Question | null): string | null {
+  if (!question) return null
+  const args = (question.payload as { args?: number[] }).args ?? []
+  switch (question.exerciseType) {
+    case 'subitize-flash':
+    case 'match-digit-dots':
+      return 'ask-howmany'
+    case 'number-rhythm':
+      return 'ask-whats-next'
+    case 'concrete-add':
+    case 'doubles':
+    case 'near-doubles':
+    case 'make-10':
+    case 'equal-groups':
+    case 'array-match':
+      return 'ask-howmany-total'
+    case 'number-bond-builder':
+    case 'fact-family-triangle':
+      return 'ask-build-bond'
+    case 'ten-frame-fill':
+      return 'ask-howmany-missing'
+    case 'subtract-maintenance':
+      return 'ask-howmany-left'
+    case 'concrete-add-subtract': {
+      const op = (question.payload as { op?: '+' | '-' }).op
+      return op === '-' ? 'ask-howmany-left' : 'ask-howmany-total'
+    }
+    case 'skip-count-chase': {
+      const step = args[0]
+      if (step === 5) return 'ask-skip-count-5'
+      if (step === 10) return 'ask-skip-count-10'
+      return 'ask-skip-count-2'
+    }
+  }
+}
+
+/**
+ * Iskra „myśli na głos" (competent other, Wygotski) — gra raz na sesję dla
+ * typów ćwiczeń, w których modelowanie strategii ma sens.
+ */
+export function thinkingAloudKey(exerciseType: Question['exerciseType']): string | null {
+  switch (exerciseType) {
+    case 'concrete-add':
+    case 'concrete-add-subtract':
+      return 'iskra-thinking-aloud-fingers'
+    case 'ten-frame-fill':
+    case 'make-10':
+      return 'iskra-thinking-aloud-tenframe'
+    case 'doubles':
+    case 'near-doubles':
+      return 'iskra-thinking-aloud-doubles'
+    default:
+      return null
+  }
+}
