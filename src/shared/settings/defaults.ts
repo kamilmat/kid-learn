@@ -119,7 +119,6 @@ export const defaultSettings: Settings = {
   showCountdownBar: {},
   celebrationTempo: 'medium',
   defaultLevel: 'last-used',
-  voice: 'zofia',
   tilesPerQuestion: {},
   humorMode: 'on' as HumorMode,
   reading: {

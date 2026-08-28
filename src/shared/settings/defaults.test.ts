@@ -101,7 +101,6 @@ describe('defaultSettings (sekcja 13.2)', () => {
     expect(defaultSettings.showCountdownBar).toEqual({})
     expect(defaultSettings.celebrationTempo).toBe('medium')
     expect(defaultSettings.defaultLevel).toBe('last-used')
-    expect(defaultSettings.voice).toBe('zofia')
     expect(defaultSettings.activeLettersOverride).toEqual({})
     expect(defaultSettings.caseMode).toEqual({})
     expect(defaultSettings.styleMode).toEqual({})
