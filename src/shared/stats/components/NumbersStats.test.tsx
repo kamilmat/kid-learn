@@ -32,6 +32,8 @@ describe('formatFactId', () => {
     expect(formatFactId('array-3x4')).toBe('3×4')
     expect(formatFactId('tenframe-7')).toBe('TF·7')
     expect(formatFactId('skip5-step3')).toBe('+5')
+    expect(formatFactId('count5-3')).toBe('Liczenie do 5: 3')
+    expect(formatFactId('count10-8')).toBe('Liczenie do 10: 8')
   })
 
   it('nieznane formaty zwraca jako-jest (no-op defensywny)', () => {

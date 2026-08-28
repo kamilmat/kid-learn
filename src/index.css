@@ -104,7 +104,7 @@
 }
 
 :root {
-  --font-handwritten: 'Kalam', 'Caveat', 'Itim', cursive;
+  --font-handwritten: 'Kalam', cursive;
   --font-block: 'Lexend', system-ui, -apple-system, sans-serif;
   color-scheme: light;
   background-color: #fef9f2;

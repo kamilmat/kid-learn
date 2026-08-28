@@ -368,6 +368,22 @@ export function decideAction(params: {
   return { kind: 'cache-hit' }
 }
 
+/**
+ * Czy jakikolwiek wpis `azure`/`azure-ipa` faktycznie wymaga syntezy w tym
+ * run (`action.kind === 'generate'`). Cache-hity i override'y nie potrzebują
+ * kredencji Azure ani ffmpeg — tylko realna generacja. Pure, testowalne bez IO.
+ */
+export function needsAzureSynthesis(
+  sources: SourceMap,
+  actions: Readonly<Record<string, BuildAction>>,
+): boolean {
+  return Object.entries(sources).some(
+    ([key, entry]) =>
+      (entry.engine === 'azure' || entry.engine === 'azure-ipa') &&
+      actions[key]?.kind === 'generate',
+  )
+}
+
 function expectedHash(entry: {
   text: string
   voice: string
@@ -433,12 +449,8 @@ function runEdgeTts(text: string, voice: string, outPath: string): void {
   }
 }
 
-/** Zwraca dane Azure albo null, gdy żaden wpis ich nie potrzebuje. */
-function ensureAzureAvailable(sources: SourceMap): { key: string; region: string } | null {
-  const needsAzure = Object.values(sources).some(
-    (e) => e.engine === 'azure-ipa' || e.engine === 'azure',
-  )
-  if (!needsAzure) return null
+/** Wołane tylko gdy `needsAzureSynthesis` zwróciło true dla tego runu. */
+function ensureAzureAvailable(): { key: string; region: string } {
   loadEnvLocal(ROOT)
   const credentials = readAzureCredentials()
   if (!credentials) {
@@ -516,13 +528,13 @@ async function runBuild(sources: SourceMap): Promise<void> {
 
   const manifest = readManifest(MANIFEST_PATH)
 
-  // Pre-compute actions so we know, before making any Azure request, whether
-  // ffmpeg (needed for post-processing) will actually be used this run.
+  // Pre-compute actions so we know, before requiring Azure credentials or
+  // ffmpeg, whether this run actually needs to synthesize anything via Azure
+  // (cache-hits and manual overrides need neither).
   const actions: Record<string, BuildAction> = {}
-  let needsAzureGeneration = false
   for (const [key, entry] of Object.entries(sources)) {
     const { text, voice, engine, ipa } = entry
-    const action = decideAction({
+    actions[key] = decideAction({
       hasOverride: existsSync(overridePath(key)),
       hasOutputFile: existsSync(outputPath(key)),
       text,
@@ -531,13 +543,10 @@ async function runBuild(sources: SourceMap): Promise<void> {
       engine,
       ipa,
     })
-    actions[key] = action
-    if (action.kind === 'generate' && (engine === 'azure' || engine === 'azure-ipa')) {
-      needsAzureGeneration = true
-    }
   }
 
-  const azure = ensureAzureAvailable(sources)
+  const needsAzureGeneration = needsAzureSynthesis(sources, actions)
+  const azure = needsAzureGeneration ? ensureAzureAvailable() : null
   if (needsAzureGeneration) ensureFfmpegAvailable()
 
   let generated = 0

@@ -36,6 +36,8 @@ export function formatFactId(id: MathFactId): string {
   const parts = id.split('-')
   const type = parts[0]
   switch (type) {
+    case 'count5': return `Liczenie do 5: ${parts[1]}`
+    case 'count10': return `Liczenie do 10: ${parts[1]}`
     case 'bond': return `${parts[2]}+${parts[3]}`
     case 'add': return `${parts[1]}+${parts[2]}`
     case 'sub': return `${parts[1]}-${parts[2]}`

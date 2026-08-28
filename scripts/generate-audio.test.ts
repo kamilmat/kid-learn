@@ -14,8 +14,10 @@ import {
   hashText,
   loadPronunciationOverrides,
   loadSources,
+  needsAzureSynthesis,
   parseCli,
 } from './generate-audio'
+import type { SourceMap } from './generate-audio'
 
 const DEFAULT_VOICE = 'pl-PL-ZofiaNeural'
 const AGNIESZKA_VOICE = 'pl-PL-AgnieszkaNeural'
@@ -377,6 +379,63 @@ describe('decideAction', () => {
         manifestEntry: { hash: hashEntry(text, voice), updatedAt: 0, source: 'tts' },
       }),
     ).toEqual({ kind: 'cache-hit' })
+  })
+})
+
+describe('needsAzureSynthesis', () => {
+  const azureSources: SourceMap = {
+    a: { text: 'a', voice: DEFAULT_VOICE, engine: 'azure' },
+    lo: { text: 'lo', voice: DEFAULT_VOICE, engine: 'azure-ipa', ipa: 'lɔ' },
+    litera: { text: 'litera', voice: DEFAULT_VOICE, engine: 'edge' },
+  }
+
+  it('is false when all azure entries are cache-hits', () => {
+    expect(
+      needsAzureSynthesis(azureSources, {
+        a: { kind: 'cache-hit' },
+        lo: { kind: 'cache-hit' },
+        litera: { kind: 'cache-hit' },
+      }),
+    ).toBe(false)
+  })
+
+  it('is false when all azure entries are manual overrides', () => {
+    expect(
+      needsAzureSynthesis(azureSources, {
+        a: { kind: 'override' },
+        lo: { kind: 'override' },
+        litera: { kind: 'cache-hit' },
+      }),
+    ).toBe(false)
+  })
+
+  it('is true when an azure entry needs generation', () => {
+    expect(
+      needsAzureSynthesis(azureSources, {
+        a: { kind: 'cache-hit' },
+        lo: { kind: 'generate', reason: 'missing-file' },
+        litera: { kind: 'cache-hit' },
+      }),
+    ).toBe(true)
+  })
+
+  it('ignores edge entries that need generation', () => {
+    expect(
+      needsAzureSynthesis(azureSources, {
+        a: { kind: 'cache-hit' },
+        lo: { kind: 'cache-hit' },
+        litera: { kind: 'generate', reason: 'missing-file' },
+      }),
+    ).toBe(false)
+  })
+
+  it('is false when there are no azure entries at all', () => {
+    expect(
+      needsAzureSynthesis(
+        { litera: { text: 'litera', voice: DEFAULT_VOICE, engine: 'edge' } },
+        { litera: { kind: 'generate', reason: 'missing-file' } },
+      ),
+    ).toBe(false)
   })
 })
 
