@@ -36,6 +36,9 @@ export function formatFactId(id: MathFactId): string {
   const parts = id.split('-')
   const type = parts[0]
   switch (type) {
+    // Legacy (persist v1, przed rozbiciem na count5-/count10-). Migracja
+    // przepisuje id w store, ale wyeksportowane raporty mogą je jeszcze mieć.
+    case 'count': return `Liczenie: ${parts[1]}`
     case 'count5': return `Liczenie do 5: ${parts[1]}`
     case 'count10': return `Liczenie do 10: ${parts[1]}`
     case 'bond': return `${parts[2]}+${parts[3]}`

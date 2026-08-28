@@ -136,7 +136,20 @@ describe('toUnifiedSessions', () => {
   it('counts questions and outcomes per session', () => {
     expect(combined.map((s) => s.questions)).toEqual([2, 2, 1])
     expect(combined.map((s) => s.correct)).toEqual([1, 1, 0])
-    expect(combined.map((s) => s.wrong)).toEqual([1, 1, 1])
+    // I15: „nie wiem" (sesja czytania) nie wpada już do `wrong`.
+    expect(combined.map((s) => s.wrong)).toEqual([0, 1, 1])
+    expect(combined.map((s) => s.dontKnow)).toEqual([1, 0, 0])
+  })
+
+  it('nie wymyśla pól question-start dla modułów bez liter', () => {
+    const start = combined[0]!.events.find((e) => e.type === 'question-start')
+    expect(start).toBeDefined()
+    if (start?.type === 'question-start') {
+      expect(start.style).toBeUndefined()
+      expect(start.case).toBeUndefined()
+      expect(start.distractors).toBeUndefined()
+      expect(start.positions).toBeUndefined()
+    }
   })
 
   it('gives every session a unique id', () => {

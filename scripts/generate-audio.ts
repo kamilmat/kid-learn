@@ -346,6 +346,8 @@ export type BuildAction =
 
 export function decideAction(params: {
   hasOverride: boolean
+  /** Czy katalog `audio-source/manual-overrides/` w ogóle istnieje. */
+  overridesDirExists: boolean
   hasOutputFile: boolean
   text: string
   voice: string
@@ -357,7 +359,17 @@ export function decideAction(params: {
   // Skasowany manual override: plik wyjściowy to nadal skopiowany mp3, a hash
   // w manifeście zgadza się z tekstem — bez tego guardu cache-hit zamroziłby
   // stare nagranie na zawsze. Regenerujemy z TTS.
-  if (params.manifestEntry?.source === 'override') {
+  //
+  // ALE tylko gdy katalog `manual-overrides/` faktycznie istnieje. Gdy go nie
+  // ma (świeży klon, sparse checkout, katalog nie w repo), brak pliku override
+  // niczego nie dowodzi — a regeneracja nadpisałaby ręczne nagrania TTS-em.
+  // Wymagamy też istniejącego pliku wyjściowego: bez niego i tak schodzimy
+  // niżej na `missing-file`.
+  if (
+    params.overridesDirExists &&
+    params.hasOutputFile &&
+    params.manifestEntry?.source === 'override'
+  ) {
     return { kind: 'generate', reason: 'override-removed' }
   }
   if (!params.hasOutputFile) return { kind: 'generate', reason: 'missing-file' }
@@ -486,10 +498,12 @@ function outputPath(key: string): string {
 function runDryRun(sources: SourceMap, overrides: PronunciationOverrides): void {
   const manifest = readManifest(MANIFEST_PATH)
   const counts: Record<string, number> = {}
+  const overridesDirExists = existsSync(MANUAL_OVERRIDES_DIR)
 
   for (const [key, entry] of Object.entries(sources)) {
     const action = decideAction({
       hasOverride: existsSync(overridePath(key)),
+      overridesDirExists,
       hasOutputFile: existsSync(outputPath(key)),
       text: entry.text,
       voice: entry.voice,
@@ -532,10 +546,12 @@ async function runBuild(sources: SourceMap): Promise<void> {
   // ffmpeg, whether this run actually needs to synthesize anything via Azure
   // (cache-hits and manual overrides need neither).
   const actions: Record<string, BuildAction> = {}
+  const overridesDirExists = existsSync(MANUAL_OVERRIDES_DIR)
   for (const [key, entry] of Object.entries(sources)) {
     const { text, voice, engine, ipa } = entry
     actions[key] = decideAction({
       hasOverride: existsSync(overridePath(key)),
+      overridesDirExists,
       hasOutputFile: existsSync(outputPath(key)),
       text,
       voice,

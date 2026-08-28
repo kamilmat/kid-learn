@@ -312,8 +312,10 @@ describe('activeLettersOverride validation on rehydrate', () => {
     return useSettings.getState().settings.activeLettersOverride
   }
 
-  it('drops an override too small for the level tilesPerQuestion', () => {
-    expect(persist({ iskierka: ['a'] })).toEqual({})
+  // I6: merge NIE kasuje override'u za rozmiar — wybór rodzica zostaje w
+  // persistcie, a fallback na domyślną pulę robi dopiero `getActiveLetterPool`.
+  it('keeps an override too small for the level tilesPerQuestion', () => {
+    expect(persist({ iskierka: ['a'] })).toEqual({ iskierka: ['a'] })
   })
 
   it('filters letters outside the level pool but keeps a usable override', () => {

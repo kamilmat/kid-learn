@@ -1,12 +1,23 @@
 /**
- * `play()` rozwiązuje się booleanem zamiast rzucać:
- *   true  — klip dograł do końca (`ended`)
- *   false — anulowany przez `stop()`, brak pliku (404 → `error`) albo
- *           odrzucone `element.play()` (autoplay policy)
+ * `play()` rozwiązuje się booleanem zamiast rzucać. Semantyka to
+ * **"czy ten klucz FAKTYCZNIE zaczął grać"**, nie "czy dograł do końca":
  *
- * Dzięki temu ~60 call-site'ów `void audioBus.play(key)` nie generuje
- * unhandled rejection przy brakującym MP3, a onboardingi mogą palić flagę
- * "widziane" dopiero gdy audio faktycznie zagrało (`.then(ok => ok && ...)`).
+ *   true  — element wystartował odtwarzanie tego klucza (event `playing`,
+ *           `timeupdate` z currentTime > 0, `ended`, albo spełnione
+ *           `element.play()` zanim cokolwiek go anulowało). Późniejszy
+ *           `stop()` NIE zmienia wyniku — dziecko usłyszało początek.
+ *   false — klucz nigdy nie ruszył: zablokowany autoplay (odrzucone
+ *           `play()`), brak/uszkodzony plik (404 → `error`), albo `stop()`
+ *           zanim klip zdążył wystartować (m.in. gdy wciąż siedział w kolejce).
+ *
+ * WHY: onboardingi palą flagę "widziane" przez `.then(ok => ok && markSeen())`.
+ * Przy semantyce "dograł do końca" KAŻDE przerwanie (tap w kafelek, nav cue,
+ * pauza) zostawiało flagę zgaszoną i intro grało w kółko przy każdej wizycie.
+ * Teraz przerwane intro liczy się jako usłyszane (dziecko samo je pominęło),
+ * a tylko realnie niezagrane (blocked/404) wraca przy następnej wizycie.
+ *
+ * Dzięki booleanowi ~60 call-site'ów `void audioBus.play(key)` nie generuje
+ * unhandled rejection przy brakującym MP3.
  */
 export type PlayResult = boolean
 
@@ -34,9 +45,11 @@ export class AudioBus {
   private static instance: AudioBus | null = null
   private queue: QueueItem[] = []
   private element: HTMLAudioElement | null = null
-  private currentEnded: (() => void) | null = null
-  private currentError: (() => void) | null = null
-  private currentResolve: ((played: PlayResult) => void) | null = null
+  // Odpina listenery bieżącego `playOne` (ended/error/playing/timeupdate).
+  private currentDetach: (() => void) | null = null
+  // Anuluje bieżące `playOne`: odpina listenery i settluje jego obietnicę
+  // wartością "czy zdążyło wystartować".
+  private currentCancel: (() => void) | null = null
   private playing = false
   // Token generacji: każdy `stop()` inkrementuje. Zawieszona (na `await`)
   // pętla `drain()` po wznowieniu porównuje swój token z aktualnym i wychodzi
@@ -113,15 +126,9 @@ export class AudioBus {
   }
 
   private clearCurrentListeners(): void {
-    if (!this.element) return
-    if (this.currentEnded) {
-      this.element.removeEventListener('ended', this.currentEnded)
-      this.currentEnded = null
-    }
-    if (this.currentError) {
-      this.element.removeEventListener('error', this.currentError)
-      this.currentError = null
-    }
+    const detach = this.currentDetach
+    this.currentDetach = null
+    detach?.()
   }
 
   stop(): void {
@@ -130,12 +137,12 @@ export class AudioBus {
       this.element.pause()
       this.element.currentTime = 0
     }
-    this.clearCurrentListeners()
-    if (this.currentResolve) {
-      const resolve = this.currentResolve
-      this.currentResolve = null
-      resolve(false)
-    }
+    // Cancel sam odpina listenery i settluje obietnicę `started`-em, więc
+    // NIE wołamy tu clearCurrentListeners (zdjęłoby je przed cancelem).
+    const cancel = this.currentCancel
+    this.currentCancel = null
+    if (cancel) cancel()
+    else this.clearCurrentListeners()
     const pending = this.queue.splice(0, this.queue.length)
     for (const item of pending) {
       item.resolve(false)
@@ -160,8 +167,10 @@ export class AudioBus {
       const played = await this.playOne(item.key)
       if (generation !== this.generation) {
         // stop() w trakcie odtwarzania: element (i flaga `playing`) należą już
-        // do nowszej generacji — settlujemy własny item i milcząco znikamy.
-        item.resolve(false)
+        // do nowszej generacji — settlujemy własny item (wartością z playOne:
+        // przerwany klip, który zdążył wystartować, to nadal `true`) i
+        // milcząco znikamy.
+        item.resolve(played)
         return
       }
       item.resolve(played)
@@ -182,52 +191,76 @@ export class AudioBus {
       const audio = this.getElement()
       // Wyczyść ewentualne listenery z poprzedniego playOne — np. gdy
       // poprzedni naturalny `ended` odpalił drain → next playOne, listener
-      // jest już usunięty w `cleanup()`. Defensywnie czyścimy i tak.
+      // jest już usunięty w `detach()`. Defensywnie czyścimy i tak.
       this.clearCurrentListeners()
       audio.src = `${this.basePath}/${key}.mp3`
       audio.currentTime = 0
-      const cleanup = () => {
-        if (this.currentEnded === onEnded) {
-          audio.removeEventListener('ended', onEnded)
-          this.currentEnded = null
-        }
-        if (this.currentError === onError) {
-          audio.removeEventListener('error', onError)
-          this.currentError = null
-        }
-        if (this.currentResolve === resolve) {
-          this.currentResolve = null
-        }
+      // `started` zapala się przy pierwszym dowodzie, że element naprawdę
+      // odtwarza ten klucz. Raz zapalone nie gaśnie — późniejszy stop() ma
+      // zwrócić `true` (patrz nagłówek klasy).
+      let started = false
+      let settled = false
+      const detach = () => {
+        audio.removeEventListener('ended', onEnded)
+        audio.removeEventListener('error', onError)
+        audio.removeEventListener('playing', onStarted)
+        audio.removeEventListener('timeupdate', onTimeUpdate)
+        if (this.currentDetach === detach) this.currentDetach = null
+        if (this.currentCancel === cancel) this.currentCancel = null
+      }
+      const settle = (played: PlayResult) => {
+        if (settled) return
+        settled = true
+        detach()
+        resolve(played)
+      }
+      const onStarted = () => {
+        started = true
+      }
+      const onTimeUpdate = () => {
+        if (audio.currentTime > 0) started = true
       }
       const onEnded = () => {
-        cleanup()
-        resolve(true)
+        started = true
+        settle(true)
       }
       const onError = () => {
-        cleanup()
+        // Uszkodzony/brakujący plik to zawsze "nie zagrało" — nawet gdyby
+        // element zdążył wypuścić `playing`. Intro ma wrócić przy następnej
+        // wizycie, a nie zostać spalone przez 404.
         this.warnMissing(key)
-        resolve(false)
+        settle(false)
+      }
+      // stop(): klip kończy się przedwcześnie, ale liczy się to, czy zdążył
+      // wystartować.
+      const cancel = () => {
+        settle(started)
       }
       audio.addEventListener('ended', onEnded)
       audio.addEventListener('error', onError)
-      this.currentEnded = onEnded
-      this.currentError = onError
-      this.currentResolve = resolve
+      audio.addEventListener('playing', onStarted)
+      audio.addEventListener('timeupdate', onTimeUpdate)
+      this.currentDetach = detach
+      this.currentCancel = cancel
       const playResult = audio.play() as Promise<void> | undefined
       if (playResult && typeof playResult.then === 'function') {
         playResult.then(
           () => {
             this.unlocked = true
+            // Spełnione `play()` = element ruszył. Gdy obietnica jest już
+            // rozstrzygnięta (stop() przed startem), settle() jest no-opem.
+            started = true
           },
           () => {
             // AbortError (src podmieniony przez stop/kolejny klip) albo
-            // NotAllowedError (autoplay) — nie rzucamy, tylko "nie zagrało".
-            cleanup()
-            resolve(false)
+            // NotAllowedError (autoplay) — nie rzucamy, tylko settlujemy
+            // tym, co faktycznie zagrało.
+            settle(started)
           },
         )
       } else {
         this.unlocked = true
+        started = true
       }
     })
   }

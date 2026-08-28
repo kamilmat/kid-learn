@@ -9,11 +9,15 @@ export type { Level }
 export type SessionEventQuestionStart = {
   type: 'question-start'
   ts: number
+  /** Etykieta pytanego elementu: litera (moduł 1), sylaba/słowo, id faktu. */
   targetLetter: string
-  distractors: string[]
-  positions: number[]
-  style: 'print' | 'handwritten'
-  case: 'upper' | 'lower' | 'pair'
+  // Pola specyficzne dla modułu liter. Moduły 2-3 ich NIE logują — adapter w
+  // `stats/aggregate.ts` je pomija zamiast wstawiać wymyślone wartości
+  // ('print'/'upper' zafałszowywałyby przyszłe statystyki per styl/wielkość).
+  distractors?: string[]
+  positions?: number[]
+  style?: 'print' | 'handwritten'
+  case?: 'upper' | 'lower' | 'pair'
 }
 
 export type SessionEventAnswer = {

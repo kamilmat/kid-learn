@@ -140,6 +140,26 @@ describe('ActiveLettersEditor', () => {
     expect(cb.checked).toBe(true)
   })
 
+  // I12: Ognik pokazuje 8 kafelków — 6 liter to za mało, mimo globalnego MIN=4.
+  it('wymaga tylu liter, ile kafelków ma poziom (Ognik = 8)', () => {
+    const onSave = vi.fn()
+    render(
+      <ActiveLettersEditor level="ognik" onSave={onSave} onCancel={vi.fn()} />,
+    )
+    for (const letter of levelLetterPools.ognik) {
+      fireEvent.click(screen.getByTestId(`letter-checkbox-${letter}`))
+    }
+    for (const letter of ['a', 'm', 'l', 'e', 'o', 't']) {
+      fireEvent.click(screen.getByTestId(`letter-checkbox-${letter}`))
+    }
+    fireEvent.click(screen.getByTestId('active-letters-save'))
+
+    expect(screen.getByTestId('active-letters-error')).toHaveTextContent(
+      /Minimum 8 liter/i,
+    )
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
   it('shows error and does NOT save when fewer than 4 letters selected', () => {
     const onSave = vi.fn()
     render(
@@ -160,7 +180,7 @@ describe('ActiveLettersEditor', () => {
     fireEvent.click(screen.getByTestId('active-letters-save'))
 
     expect(screen.getByTestId('active-letters-error')).toHaveTextContent(
-      /Wybierz co najmniej 4/,
+      /Minimum 4 liter/i,
     )
     expect(onSave).not.toHaveBeenCalled()
     // Override nie został ustawiony.

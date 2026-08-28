@@ -130,6 +130,33 @@ export function exportReportToMarkdown(
   lines.push(`- Streak: ${streak} dni`)
   lines.push('')
 
+  // Rozbicie wyników na poprawne / błędne / „nie wiem" — `rangeAggregate`
+  // liczy tylko pytania i czas, a „nie wiem" nie jest pomyłką.
+  const outcomeRollup = (
+    scoped: UnifiedSession[],
+    fromTs: number,
+    toTs: number,
+  ): { correct: number; wrong: number; dontKnow: number } => {
+    let correct = 0
+    let wrong = 0
+    let dontKnow = 0
+    for (const s of scoped) {
+      if (s.startedAt < fromTs || s.startedAt >= toTs) continue
+      correct += s.correct
+      wrong += s.wrong
+      dontKnow += s.dontKnow
+    }
+    return { correct, wrong, dontKnow }
+  }
+  const weekOutcomes = outcomeRollup(
+    allSessions,
+    weekStart,
+    todayStart + MS_PER_DAY,
+  )
+  lines.push(
+    `- Tydzień — wyniki: ${weekOutcomes.correct} poprawnych, ${weekOutcomes.wrong} błędnych, ${weekOutcomes.dontKnow}× „nie wiem"`,
+  )
+
   const todayByModule = MODULE_ORDER.map((m) => ({
     m,
     agg: rangeAggregate(
@@ -155,7 +182,14 @@ export function exportReportToMarkdown(
   if (weekByModule.length > 0) {
     lines.push('- Tydzień wg modułu:')
     for (const { m, agg: a } of weekByModule) {
-      lines.push(`  - ${STATS_MODULE_LABEL[m]}: ${a.sessions} sesji, ${a.questions} pytań`)
+      const o = outcomeRollup(
+        allSessions.filter((s) => s.module === m),
+        weekStart,
+        todayStart + MS_PER_DAY,
+      )
+      lines.push(
+        `  - ${STATS_MODULE_LABEL[m]}: ${a.sessions} sesji, ${a.questions} pytań (${o.correct} ✓ / ${o.wrong} ✗ / ${o.dontKnow}× „nie wiem")`,
+      )
     }
   }
   lines.push('')

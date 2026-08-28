@@ -184,13 +184,28 @@ export function sanitizeActiveLetterOverride(
   level: Level,
   requiredSize: number,
 ): string[] | null {
+  const filtered = filterOverrideToLevelPool(override, level)
+  if (filtered === null || filtered.length < requiredSize) return null
+  return filtered
+}
+
+/**
+ * Odfiltrowuje z override'u litery spoza puli poziomu (i duplikaty). NIE
+ * ocenia rozmiaru — zwraca `null` tylko gdy wejście nie jest tablicą.
+ *
+ * WHY osobno od `sanitizeActiveLetterOverride`: persist ma zachować wybór
+ * rodzica dosłownie. Kasowanie override'u przy zapisie tylko dlatego, że jest
+ * mniejszy niż aktualne `tilesPerQuestion`, gubiło go BEZPOWROTNIE — po
+ * obniżeniu liczby kafelków nie było już czego przywrócić. Rozmiar sprawdza
+ * dopiero read path (`getActiveLetterPool`), więc fallback jest odwracalny.
+ */
+export function filterOverrideToLevelPool(
+  override: readonly string[] | undefined,
+  level: Level,
+): string[] | null {
   if (!Array.isArray(override)) return null
   const allowed = new Set(levelLetterPools[level])
-  const filtered = Array.from(new Set(override)).filter((letter) =>
-    allowed.has(letter),
-  )
-  if (filtered.length < requiredSize) return null
-  return filtered
+  return Array.from(new Set(override)).filter((letter) => allowed.has(letter))
 }
 
 /**
