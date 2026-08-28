@@ -129,6 +129,8 @@ export const useLetters = create<LettersStore>()(
         lastUsedLevel: state.lastUsedLevel,
       }),
       version: 1,
+      // Bez `migrate` bump wersji wyrzuciłby cały postęp — `merge` sanityzuje shape.
+      migrate: (persisted) => persisted as PersistedLettersShape,
       // Defensywne sklejanie: jeśli zapisany stan nie ma jakiegoś pola
       // (np. po dodaniu nowego do `LetterState` lub `LettersState`), użyj
       // świeżych defaultów zamiast `undefined`.

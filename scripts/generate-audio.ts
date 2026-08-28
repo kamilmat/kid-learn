@@ -339,7 +339,10 @@ export function writeManifest(path: string, manifest: Manifest): void {
 export type BuildAction =
   | { kind: 'override' }
   | { kind: 'cache-hit' }
-  | { kind: 'generate'; reason: 'missing-file' | 'hash-mismatch' | 'no-manifest-entry' }
+  | {
+      kind: 'generate'
+      reason: 'missing-file' | 'hash-mismatch' | 'no-manifest-entry' | 'override-removed'
+    }
 
 export function decideAction(params: {
   hasOverride: boolean
@@ -351,6 +354,12 @@ export function decideAction(params: {
   ipa?: string
 }): BuildAction {
   if (params.hasOverride) return { kind: 'override' }
+  // Skasowany manual override: plik wyjściowy to nadal skopiowany mp3, a hash
+  // w manifeście zgadza się z tekstem — bez tego guardu cache-hit zamroziłby
+  // stare nagranie na zawsze. Regenerujemy z TTS.
+  if (params.manifestEntry?.source === 'override') {
+    return { kind: 'generate', reason: 'override-removed' }
+  }
   if (!params.hasOutputFile) return { kind: 'generate', reason: 'missing-file' }
   if (!params.manifestEntry) return { kind: 'generate', reason: 'no-manifest-entry' }
   if (params.manifestEntry.hash !== expectedHash(params)) {

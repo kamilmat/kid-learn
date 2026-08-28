@@ -160,6 +160,8 @@ export const useReading = create<ReadingState>()(
     {
       name: 'iskierki-reading-v1',
       version: 1,
+      // Bez `migrate` bump wersji wyrzuciłby cały postęp — `merge` sanityzuje shape.
+      migrate: (persisted) => persisted as ReadingState,
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<ReadingState>
         return {

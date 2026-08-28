@@ -283,7 +283,7 @@ export function QuizCard({
         }}
       >
         {question.tiles.map((letter, idx) => {
-          const slot = idx as Slot
+          const slot: Slot = idx
           const s: LetterTileState = tileState?.[slot] ?? 'idle'
           // Dla 5 kafelków: pierwsze 3 na górze (2/6 col-span), 2 na dole (3/6 col-span).
           const tileStyle: CSSProperties | undefined =

@@ -46,7 +46,7 @@ src/
 ├── shared/
 │   ├── audio/             # AudioBus singleton — kolejka FIFO HTMLAudioElement
 │   ├── srs/               # Leitner 5-box, scoring, distractors (generalized BaseItemState)
-│   ├── settings/          # store + math gate + UI; persist key `iskierki-state-v4`
+│   ├── settings/          # store + math gate + UI; persist key `iskierki-state-v1` (persist version: 4)
 │   │                      # settings: humorMode + reading.wordAnimations + reading.wildCelebrationFreq
 │   ├── stats/             # SessionLog/SessionEvent types + raport rodzica UI
 │   │                      # moduł 2: sylaby opanowane/trudne + heatmapa fonemów PL
@@ -84,7 +84,7 @@ public/audio/              # build artifact: 1135 plików mp3 + .manifest.json
 - **Brak fonemów IPA w Edge** — publiczny endpoint Edge TTS nie obsługuje SSML phoneme tags. Dla liter zostały polskie nazwy ("be", "pe", "em") albo manual recordings.
 - **Theme: jeden tryb** — warm light (`#fef9f2` tło, `#2d2d33` tekst), ignoruje `prefers-color-scheme`. Brak dark mode.
 - **No-text UI dla dziecka** — tylko ikony + audio cues. Wszystkie tap-targety ≥60×60. Brak gestów (tylko tap); moduł 2 używa drag-drop (@dnd-kit) dla ćwiczenia Płomyk.
-- **Persist kilka storage**: `iskierki-state-v4` (settings + math gate + humorMode + reading.*), `iskierki-letters-v1` (moduł 1 progres), `iskierki-reading-v1` (moduł 2 progres), `iskierki-numbers-v1` (moduł 3 progres) i `iskierki-czytanki-v1` (moduł 4 progres — openedIds, seenIntros). Reset jednego nie kasuje pozostałych.
+- **Persist kilka storage**: `iskierki-state-v1` (settings + math gate + humorMode + reading.*; klucz `name` to `iskierki-state-v1`, `version: 4` — nie mylić jednego z drugim), `iskierki-letters-v1` (moduł 1 progres), `iskierki-reading-v1` (moduł 2 progres), `iskierki-numbers-v1` (moduł 3 progres) i `iskierki-czytanki-v1` (moduł 4 progres — openedIds, seenIntros). Reset jednego nie kasuje pozostałych.
 - **Ciągłość uczenia**: `BaseItemState` (generalized SRS) persistowany — w **kolejnej sesji** litery/sylaby/słowa z `recentWrong>0` lub niskim `box` mają wyższy score → częściej w pytaniach.
 
 ## Workflow rozwoju
@@ -128,9 +128,9 @@ git push                                              # auto-deploy ~40s przez G
 ## Gdzie ŁATWO się pomylić
 
 - **AudioBus to singleton** — `import { audioBus }` wszędzie gra przez tę samą kolejkę. Stan `playing/queue` przeżywa zmianę route'a. `audioBus.stop()` jest wywoływany w `useSession.start()` żeby wyczyścić leftover z home/intro.
-- **Feedback duration vs audio length** — duration musi pokrywać CAŁĄ kolejkę audio dla wariantu, inaczej audio gra po pojawieniu się następnego pytania. Aktualne wartości w `useSession.ts` i `useReadingSession.ts` w stałej `FEEDBACK_DURATION_BASE_MS`.
+- **Feedback duration vs audio length** — duration musi pokrywać CAŁĄ kolejkę audio dla wariantu, inaczej audio gra po pojawieniu się następnego pytania. Moduł 1: `FEEDBACK_DURATION_BASE_MS` w `useSession.ts`. Moduł 3: `FEEDBACK_DURATION_MS` w `numbers/components/SessionView.tsx`. Moduł 2 NIE ma auto-advance — feedback zamyka `skipFeedback()` (tap).
 - **`tilesPerQuestion` per-level (moduł 1)** — `Partial<Record<Level, TilesPerQuestion>>` z fallback do `levelDefaults`. Domyślnie: Iskierka/Płomyk = 4, Ognik = 5, Pochodnia = 6.
-- **persist `merge` callbacki** — w `settingsStore`, `lettersStore` i `readingStore`. Gdy dodajesz nowe pole, dopisz default w merge inaczej stary localStorage da `undefined`.
+- **persist `merge` + `migrate`** — wszystkie pięć store'ów (`settingsStore`, `lettersStore`, `readingStore`, `numbersStore`, `czytankiStore`). Gdy dodajesz nowe pole, dopisz default w `merge`, inaczej stary localStorage da `undefined`. Każdy store ma też `migrate: (persisted) => persisted` — bez niego zustand ODRZUCA persist przy bumpie `version` (merge dostaje `undefined` → skasowany postęp).
 - **`level` może być nieprawidłowy z URL** — sesje obu modułów filtrują przez `VALID_LEVELS`, redirectują na `index` jeśli zły.
 - **`.test.ts` excludowany z `tsconfig.app.json`** — testy mogą mieć type errors bez zatrzymywania `pnpm build`. Test errors trzeba sprawdzać przez `pnpm test --run`.
 - **@dnd-kit w moduł 2 (Płomyk)** — drag-drop z `useDraggable`/`useDroppable`. DndContext musi opakowywać cały ekran ćwiczenia; `over?.id` to null gdy upuścimy poza target. Nie używać `onDragEnd` do mutacji store — tylko do lokalnego state syllableSlots.

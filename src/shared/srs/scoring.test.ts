@@ -66,6 +66,18 @@ describe('scoreLetter', () => {
     expect(scoreLetter(stateB, now)).toBeCloseTo(boxWeight(1) * 3.0, 6)
   })
 
+  it('clamps recency when the clock went backwards (now < lastSeen)', () => {
+    const oneDay = 24 * 60 * 60 * 1000
+    const state: LetterState = {
+      ...createInitialLetterState('a'),
+      box: 2,
+      lastSeen: now + oneDay,
+    }
+    // Ujemny upływ czasu → recency = 1.0 (baseline), nigdy ujemny score.
+    expect(scoreLetter(state, now)).toBeCloseTo(boxWeight(2) * 1.0, 6)
+    expect(scoreLetter(state, now)).toBeGreaterThan(0)
+  })
+
   it('combines all three multipliers', () => {
     const oneHour = 60 * 60 * 1000
     const state: LetterState = {

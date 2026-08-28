@@ -44,6 +44,8 @@ export const useCzytanki = create<CzytankiState>()(
     {
       name: 'iskierki-czytanki-v1',
       version: 1,
+      // Bez `migrate` bump wersji wyrzuciłby cały postęp — `merge` sanityzuje shape.
+      migrate: (persisted) => persisted as CzytankiState,
       merge: mergeCzytankiState,
     },
   ),
