@@ -1,10 +1,10 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import { KidNav } from '@/shared/ui/KidNav'
 import { CZYTANKI, getCzytankaById } from './data/czytanki'
-import { setPendingCue } from './audio/pendingCue'
+import { setPendingCue, takePendingCue } from './audio/pendingCue'
 import { CzytankaList } from './components/CzytankaList'
 import { CzytankaView } from './components/CzytankaView'
 
@@ -13,12 +13,15 @@ type Bus = Pick<AudioBus, 'play' | 'stop'>
 export function CzytankiModule({ audioBus = defaultAudioBus }: { audioBus?: Bus } = {}) {
   const location = useLocation()
   const navigate = useNavigate()
-  // Po nawigacji strzałkami prev/next w czytance historia rośnie —
-  // "wstecz" ma zawsze wracać do listy, nie cofać po historii ekranów czytanki.
+  // Nawigacja strzałkami prev/next w czytance (i "wstecz" do listy) używa
+  // { replace: true } zamiast pusha — inaczej każdy tap ◀▶ dokłada wpis do
+  // historii i przycisk "wstecz" przeglądarki/systemu musiałby przeklikać
+  // wszystkie odwiedzone czytanki zamiast wyjść od razu do listy.
   const isListRoute = location.pathname === '/czytanki' || location.pathname === '/czytanki/'
+  useEffect(() => () => { takePendingCue() }, [])
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {isListRoute ? <KidNav /> : <KidNav onBack={() => navigate('/czytanki')} />}
+      {isListRoute ? <KidNav /> : <KidNav onBack={() => navigate('/czytanki', { replace: true })} />}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <Routes>
           <Route index element={<ListRoute audioBus={audioBus} />} />
@@ -58,8 +61,8 @@ function ViewRoute({ audioBus }: { audioBus: Bus }) {
       key={czytanka.id}
       czytanka={czytanka}
       audioBus={audioBus}
-      {...(prev ? { onPrev: () => { void navigate(`../${prev.id}`, { relative: 'path' }) } } : {})}
-      {...(next ? { onNext: () => { void navigate(`../${next.id}`, { relative: 'path' }) } } : {})}
+      {...(prev ? { onPrev: () => { void navigate(`../${prev.id}`, { relative: 'path', replace: true }) } } : {})}
+      {...(next ? { onNext: () => { void navigate(`../${next.id}`, { relative: 'path', replace: true }) } } : {})}
     />
   )
 }

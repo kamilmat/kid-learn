@@ -17,6 +17,16 @@ const initialState = {
   seenIntros: [] as string[],
 }
 
+export function mergeCzytankiState(persisted: unknown, current: CzytankiState): CzytankiState {
+  const p = (persisted ?? {}) as Partial<CzytankiState>
+  return {
+    ...current,
+    openedIds: Array.isArray(p.openedIds) ? p.openedIds : [],
+    lastOpenedId: typeof p.lastOpenedId === 'string' ? p.lastOpenedId : null,
+    seenIntros: Array.isArray(p.seenIntros) ? p.seenIntros : [],
+  } as CzytankiState
+}
+
 export const useCzytanki = create<CzytankiState>()(
   persist(
     (set, get) => ({
@@ -34,15 +44,7 @@ export const useCzytanki = create<CzytankiState>()(
     {
       name: 'iskierki-czytanki-v1',
       version: 1,
-      merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<CzytankiState>
-        return {
-          ...current,
-          openedIds: Array.isArray(p.openedIds) ? p.openedIds : [],
-          lastOpenedId: typeof p.lastOpenedId === 'string' ? p.lastOpenedId : null,
-          seenIntros: Array.isArray(p.seenIntros) ? p.seenIntros : [],
-        } as CzytankiState
-      },
+      merge: mergeCzytankiState,
     },
   ),
 )

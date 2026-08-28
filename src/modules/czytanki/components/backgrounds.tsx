@@ -59,7 +59,7 @@ function SkyBg() {
         </linearGradient>
       </defs>
       <rect width="100" height="60" fill="url(#cz-bg-sky)" />
-      <circle className="cz-star" cx="82" cy="12" r="7" fill={SUN} />
+      <circle className="cz-sun" cx="82" cy="12" r="7" fill={SUN} />
       <g className="cz-cloud">
         <ellipse cx="18" cy="14" rx="8" ry="4" fill={CLOUD} />
         <ellipse cx="24" cy="12" rx="6" ry="3.5" fill={CLOUD} />
@@ -102,7 +102,7 @@ function MeadowBg() {
         </linearGradient>
       </defs>
       <rect width="100" height="60" fill="url(#cz-bg-meadow)" />
-      <circle className="cz-star" cx="85" cy="10" r="6" fill={SUN} />
+      <circle className="cz-sun" cx="85" cy="10" r="6" fill={SUN} />
       <rect x="0" y="42" width="100" height="18" fill={GRASS} />
       {[[20, 48], [50, 52], [75, 46]].map(([fx, fy], i) => (
         <g key={i} transform={`translate(${fx} ${fy})`}>
@@ -149,7 +149,7 @@ function BeachBg() {
         </linearGradient>
       </defs>
       <rect width="100" height="60" fill="url(#cz-bg-beach)" />
-      <circle className="cz-star" cx="80" cy="10" r="6" fill={SUN} />
+      <circle className="cz-sun" cx="80" cy="10" r="6" fill={SUN} />
       <rect x="0" y="32" width="100" height="14" fill={SEA} />
       <g className="cz-cloud">
         <path d="M0,36 Q5,33 10,36 T20,36 T30,36" fill="none" stroke={WAVE} strokeWidth="1.5" />

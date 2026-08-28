@@ -22,7 +22,7 @@ if (typeof localStorage === 'undefined' || typeof localStorage.clear !== 'functi
   }
 }
 
-const { useCzytanki } = await import('./czytankiStore')
+const { useCzytanki, mergeCzytankiState } = await import('./czytankiStore')
 
 describe('czytankiStore', () => {
   beforeEach(() => useCzytanki.getState().resetAllProgress())
@@ -36,5 +36,17 @@ describe('czytankiStore', () => {
     expect(useCzytanki.getState().hasSeenIntro('x')).toBe(false)
     useCzytanki.getState().markIntroSeen('x')
     expect(useCzytanki.getState().hasSeenIntro('x')).toBe(true)
+  })
+  it('mergeCzytankiState wraca do defaultów gdy brak persisted state', () => {
+    const merged = mergeCzytankiState({}, useCzytanki.getState())
+    expect(merged.openedIds).toEqual([])
+    expect(merged.lastOpenedId).toBeNull()
+    expect(merged.seenIntros).toEqual([])
+  })
+  it('mergeCzytankiState wraca do defaultów gdy persisted state ma zły typ', () => {
+    const merged = mergeCzytankiState({ openedIds: 'bad', lastOpenedId: 5 }, useCzytanki.getState())
+    expect(merged.openedIds).toEqual([])
+    expect(merged.lastOpenedId).toBeNull()
+    expect(merged.seenIntros).toEqual([])
   })
 })

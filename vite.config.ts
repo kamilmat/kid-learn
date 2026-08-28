@@ -57,7 +57,7 @@ export default defineConfig({
       },
       workbox: {
         // Cache wszystkich assets włącznie z MP3 — pełen offline.
-        // 137 plików audio × ~30 KB = ~4 MB total, mieści się.
+        // 1135 plików audio, ~15 MB total, mieści się.
         globPatterns: ['**/*.{js,css,html,png,svg,ico,mp3,woff2}'],
         // Limit per file (default 2MB) — sfx-mastery-fanfara największy ~50KB,
         // ale podnosimy na zapas.

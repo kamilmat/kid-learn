@@ -125,12 +125,23 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
 
   useLayoutEffect(() => { refit() }, [czytanka.id, refit])
 
+  // resize/orientationchange potrafią odpalić kilka razy pod rząd (np. obrót
+  // iPada) — rAF zbija je do jednego refitu na klatkę zamiast serii rekalkulacji.
   useEffect(() => {
-    window.addEventListener('resize', refit)
-    window.addEventListener('orientationchange', refit)
+    let raf: number | null = null
+    const scheduleRefit = () => {
+      if (raf !== null) cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        raf = null
+        refit()
+      })
+    }
+    window.addEventListener('resize', scheduleRefit)
+    window.addEventListener('orientationchange', scheduleRefit)
     return () => {
-      window.removeEventListener('resize', refit)
-      window.removeEventListener('orientationchange', refit)
+      window.removeEventListener('resize', scheduleRefit)
+      window.removeEventListener('orientationchange', scheduleRefit)
+      if (raf !== null) cancelAnimationFrame(raf)
     }
   }, [refit])
 
@@ -157,7 +168,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
         </button>
       </div>
 
-      <div ref={boxRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+      <div ref={boxRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', overflowY: 'auto' }}>
         <div ref={textRef} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2em', fontSize }}>
           {czytanka.sentences.map((sent, s) => (
             <div key={s} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0 0.7em' }}>

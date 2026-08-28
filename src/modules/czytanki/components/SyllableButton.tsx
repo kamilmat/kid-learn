@@ -45,6 +45,8 @@ export function SyllableButton({ text, color, highlighted, fontSize, onTap, onLo
         userSelect: 'none',
         WebkitUserSelect: 'none',
         WebkitTapHighlightColor: 'transparent',
+        // Long-press na iOS Safari otwiera lupę/callout zamiast wywołać onLongPress.
+        WebkitTouchCallout: 'none',
         cursor: 'pointer',
       }}
     >

@@ -5,8 +5,9 @@
 
 ## Aktualny stan (2026-08-26 — moduł 4 Czytanki)
 
-Zbudowano moduł 4 — **Czytanki**: 60 krótkich zdań (2-3 słowa) podzielonych na
-4 grupy rosnącej trudności, prezentowanych jako sylaby-kafelki. Dziecko
+Zbudowano moduł 4 — **Czytanki**: 60 czytanek: od 1 zdania × 3 słowa (grupa 1)
+do 5–6 zdań × 3–6 słów (grupa 4), podzielonych na 4 grupy rosnącej trudności,
+prezentowanych jako sylaby-kafelki. Dziecko
 dotyka sylaby → słyszy audio sylaby; long-press na słowo → słyszy całe
 słowo; przycisk ▶ czyta całą czytankę po kolei. Każda czytanka ma mini-scenkę
 (tło + animowane emoji-aktorzy). Postęp (które czytanki otwarto) trzymany w
@@ -29,7 +30,8 @@ manual override (`audio-source/manual-overrides/<klucz>.mp3`):
 - `cz-syl-z` / `cz-word-z` (sylaba/słowo „z" — ryzyko „zet")
 
 **Status brancha**: praca na `feat/czytanki`, jeszcze nie zmergowana do
-`main` — czeka na weryfikację w przeglądarce (iPad / chrome-devtools-mcp)
+`main` — zweryfikowane w Chrome (iPad viewport landscape+portrait); do
+sprawdzenia na fizycznym iPadzie: long-press w Safari, przycisk 🔊 nad sceną
 przed mergem i deployem.
 
 ## Następna sesja — visual review round 3 (atrakcyjność dla dziecka)
