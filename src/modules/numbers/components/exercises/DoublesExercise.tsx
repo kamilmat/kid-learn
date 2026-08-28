@@ -1,5 +1,5 @@
 import { useEffect, useMemo, type ReactNode } from 'react'
-import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, type DragEndEvent } from '@dnd-kit/core'
 import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors } from '@/app/theme'
@@ -7,6 +7,8 @@ import { TenFrame } from '../representations/TenFrame'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
 import { buildChoices, NEAR_MISS_OFFSETS } from '../../utils/buildChoices'
+import { DropTarget } from './shared/DropTarget'
+import { clamp } from '../../utils/clamp'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -65,7 +67,7 @@ export function DoublesExercise({ audioBus, payload, onAnswer }: Props) {
           <MathSymbol>+</MathSymbol>
           <TenFrame count={n} dotColor={DOT_COLOR} size={44} />
           <MathSymbol>=</MathSymbol>
-          <DropTarget>
+          <DropTarget droppableId={DROP_TARGET_ID}>
             <span style={{ fontSize: 96, opacity: 0.3, fontFamily: 'var(--font-block)' }}>?</span>
           </DropTarget>
         </div>
@@ -93,31 +95,4 @@ function MathSymbol({ children }: { children: ReactNode }) {
       {children}
     </span>
   )
-}
-
-function DropTarget({ children }: { children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: DROP_TARGET_ID })
-  return (
-    <div
-      ref={setNodeRef}
-      data-testid="drop-target"
-      style={{
-        minWidth: 160,
-        minHeight: 160,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: `4px dashed ${isOver ? '#16a34a' : '#cbd5e1'}`,
-        borderRadius: 16,
-        background: isOver ? '#dcfce7' : '#fff',
-        transition: 'background 120ms',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, Math.floor(n)))
 }

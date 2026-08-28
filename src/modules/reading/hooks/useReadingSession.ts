@@ -100,6 +100,8 @@ type Hook = {
   repeatAudio: () => void
   /** Zapisuje częściowe wyniki sesji (wyjście przez pauzę / SessionEnd). Idempotentne. */
   quit: () => void
+  /** Jak `quit()`, ale bez `audioBus.stop()` — wyjście przez KidNav / unmount. */
+  flush: () => void
   /** Rozwiązuje się gdy kolejka audio feedbacku bieżącego pytania wybrzmiała. */
   waitForFeedbackAudio: () => Promise<void>
 
@@ -395,6 +397,10 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   // Kolejka audio feedbacku bieżącego pytania — overlay czeka na jej koniec (R1)
   const feedbackAudioRef = useRef<Promise<unknown>>(Promise.resolve())
 
+  // Wariant feedbacku w refie — `resume()` musi znać go synchronicznie, żeby
+  // zdecydować czy powtórzyć korektę czy od razu przejść dalej.
+  const feedbackVariantRef = useRef<FeedbackVariant>(null)
+
   // Ostatnia zagrana pochwała — picker nie powtarza jej dwa razy pod rząd
   const lastPraiseRef = useRef<string | null>(null)
 
@@ -405,6 +411,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   statusRef.current = status
   currentQuestionRef.current = currentQuestion
   currentQuestionIndexRef.current = currentQuestionIndex
+  feedbackVariantRef.current = feedbackVariant
 
   // Buduje mapę SRS states dla puli Iskierka (syllables)
   const buildSyllableStates = useCallback((): Record<string, SyllableState> => {
@@ -547,6 +554,22 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     return newBox === 5 && prevBox < 5 && !current.album
   }, [now])
 
+  /**
+   * Kolejkuje audio korekty: prefiks („spróbuj jeszcze raz" / „nie wiesz…")
+   * + ponowne wybrzmienie celu. Wydzielone, bo `resume()` po pauzie złapanej
+   * w trakcie feedbacku musi odegrać to PONOWNIE — `pause()` robi `stop()`,
+   * więc bez tego dziecko nigdy nie usłyszy poprawnej odpowiedzi.
+   */
+  const playCorrectionAudio = useCallback(
+    (variant: 'wrong' | 'dontKnow', q: ReadingQuestion): Promise<unknown>[] => [
+      audioBus.play(variant === 'wrong' ? 'reading-wrong-prefix' : 'reading-dont-know'),
+      q.type === 'syllable-match'
+        ? audioBus.play(getSyllableAudioKey(q.targetSyllable))
+        : audioBus.play(getWordAudioKey(q.targetWord)),
+    ],
+    [audioBus],
+  )
+
   // Obsługuje outcome (correct/wrong/dontKnow) dla aktualnego pytania
   const handleOutcome = useCallback(
     (outcome: Outcome): void => {
@@ -619,21 +642,10 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
         plays.push(audioBus.play(praiseKey))
       } else if (outcome === 'wrong') {
         wrongCountRef.current += 1
-        plays.push(audioBus.play('reading-wrong-prefix'))
-        // Powtórz słowo/sylabę po korekcie
-        plays.push(
-          q.type === 'syllable-match'
-            ? audioBus.play(getSyllableAudioKey(q.targetSyllable))
-            : audioBus.play(getWordAudioKey(q.targetWord)),
-        )
+        plays.push(...playCorrectionAudio('wrong', q))
       } else if (outcome === 'dontKnow') {
         dontKnowCountRef.current += 1
-        plays.push(audioBus.play('reading-dont-know'))
-        plays.push(
-          q.type === 'syllable-match'
-            ? audioBus.play(getSyllableAudioKey(q.targetSyllable))
-            : audioBus.play(getWordAudioKey(q.targetWord)),
-        )
+        plays.push(...playCorrectionAudio('dontKnow', q))
       }
 
       if (unlockedAlbumCard) plays.push(audioBus.play('reading-album-unlock'))
@@ -645,7 +657,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       setStatus('feedback')
       statusRef.current = 'feedback'
     },
-    [audioBus, now, rng, settings, updateSyllableState, updateWordState],
+    [audioBus, now, playCorrectionAudio, rng, settings, updateSyllableState, updateWordState],
   )
 
   // Zapisuje wyniki sesji do store — wołane na końcu sesji ORAZ przy wyjściu
@@ -835,9 +847,33 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     // Pauza w trakcie feedbacku ucięła kolejkę audio (`stop()` w pause), więc
     // po wznowieniu overlay stałby w ciszy — a przy wariancie 'wild' nikt już
     // nie zawołałby skipFeedback i sesja zostawała zakleszczona na zawsze.
-    // Przechodzimy od razu do następnego pytania (odpowiedź jest zalogowana).
-    if (restored === 'feedback') advance()
-  }, [advance, audioBus])
+    if (restored !== 'feedback') return
+
+    const q = currentQuestionRef.current
+    const variant = feedbackVariantRef.current
+    if (q !== null && (variant === 'wrong' || variant === 'dontKnow')) {
+      // Korekta jest sednem feedbacku — samo przejście dalej pozbawiłoby
+      // dziecko jedynej szansy usłyszenia poprawnej sylaby/słowa. Kolejkujemy
+      // ją ponownie (za `nav-resume`) i idziemy dalej dopiero gdy wybrzmi.
+      const replay = Promise.all(playCorrectionAudio(variant, q))
+      feedbackAudioRef.current = replay
+      const questionIndexAtResume = currentQuestionIndexRef.current
+      void replay.then(() => {
+        // Overlay (remountowany po zdjęciu pauzy) mógł już zawołać skipFeedback
+        // — wtedy status/indeks się zmieniły i drugi advance zjadłby pytanie.
+        if (
+          statusRef.current === 'feedback' &&
+          currentQuestionIndexRef.current === questionIndexAtResume
+        ) {
+          advance()
+        }
+      })
+      return
+    }
+    // correct / wild — nie ma czego powtarzać, przechodzimy od razu
+    // (odpowiedź jest już zalogowana).
+    advance()
+  }, [advance, audioBus, playCorrectionAudio])
 
   const repeatAudio = useCallback((): void => {
     const q = currentQuestionRef.current
@@ -846,8 +882,15 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     playPromptAudio(q, audioBus)
   }, [audioBus])
 
-  const quitSession = useCallback((): void => {
+  // Zapis częściowy bez efektów audio — wyjście przez KidNav / unmount.
+  // `stop()` zabiłby świeżo zakolejkowane cue `nav-back` / `nav-home`.
+  const flushSession = useCallback((): void => {
     // Nic nie odpowiedziano — nie zaśmiecamy historii pustą sesją
+    if (finishedRef.current || eventsRef.current.length === 0) return
+    persistSession()
+  }, [persistSession])
+
+  const quitSession = useCallback((): void => {
     if (finishedRef.current || eventsRef.current.length === 0) return
     audioBus.stop()
     persistSession()
@@ -877,6 +920,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     resume,
     repeatAudio,
     quit: quitSession,
+    flush: flushSession,
     waitForFeedbackAudio,
     pickedScene,
   }

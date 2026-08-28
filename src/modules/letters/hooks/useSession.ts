@@ -117,7 +117,13 @@ export type UseSessionApi = {
   dontKnow: () => void
   /** Pomiń wybrzmiewanie feedback i przejdź do następnego pytania od razu. */
   skipFeedback: () => void
+  /** Kończy sesję i pokazuje podsumowanie (przycisk „Wyjdź" na pauzie). */
   quit: () => void
+  /**
+   * Zapisuje częściowy postęp BEZ ekranu podsumowania i bez audio — wyjście
+   * przez KidNav / unmount komponentu. Idempotentne.
+   */
+  flush: () => void
 }
 
 const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
@@ -329,6 +335,10 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   // Pamiętany efektywny duration ostatniego feedbacku (z extra streak/mastery audio)
   // — używany przy resume po pauzie podczas feedback.
   const lastFeedbackEffectiveMsRef = useRef<number>(0)
+  // Feedback w refie — `resume` czyta go imperatywnie; jako dependency
+  // przebudowywał callback po każdej odpowiedzi bez żadnego zysku.
+  const lastFeedbackRef = useRef<FeedbackState | null>(null)
+  lastFeedbackRef.current = lastFeedback
 
   // Init letter states z poolu (lub początkowych jeśli przekazane).
   const initActiveLettersStableRef = useRef<string[]>(activeLetters)
@@ -819,13 +829,14 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     if (pausedDuringFeedbackRef.current) {
       pausedDuringFeedbackRef.current = false
       setStatus('feedback')
-      if (lastFeedback !== null) {
+      const fb = lastFeedbackRef.current
+      if (fb !== null) {
         // `pause()` zrobiło stop() — bez ponownego zakolejkowania overlay
         // odliczałby pełny czas w kompletnej ciszy.
         playFeedbackAudio(
-          lastFeedback.variant,
-          lastFeedback.targetLetter,
-          lastFeedback.chosenLetter,
+          fb.variant,
+          fb.targetLetter,
+          fb.chosenLetter,
           currentStreakRef.current,
         )
         scheduleFeedbackDismissRef.current(lastFeedbackEffectiveMsRef.current)
@@ -843,7 +854,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       questionStartedAtRef.current = cfgRef.current.now()
       startCountdown()
     }
-  }, [lastFeedback, playFeedbackAudio, pushEvent, scheduleBreathThenNext, startCountdown, status])
+  }, [playFeedbackAudio, pushEvent, scheduleBreathThenNext, startCountdown, status])
 
   const answer = useCallback(
     (chosenLetter: string, position: Slot) => {
@@ -891,6 +902,32 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     if (finishedRef.current) return
     finishSession()
   }, [finishSession])
+
+  /**
+   * Wyjście bez ekranu podsumowania (KidNav ⬅️/🏠, unmount). W odróżnieniu od
+   * `quit()` nie ustawia statusu `finished` i nie gra fanfary — tylko utrwala
+   * to, co dziecko zdążyło odpowiedzieć.
+   *
+   * Warunek „choć jedna ODPOWIEDŹ" (a nie „choć jeden event") jest istotny:
+   * `question-start` pojawia się już przy starcie, a StrictMode montuje
+   * komponent dwa razy — bez tego cleanup pierwszego mountu zamykałby sesję
+   * flagą `finishedRef` i realny postęp nigdy by się nie zapisał.
+   */
+  const flush = useCallback(() => {
+    if (finishedRef.current) return
+    if (!eventsRef.current.some((e) => e.type === 'answer')) return
+    finishedRef.current = true
+    clearCountdown()
+    clearFeedbackTimer()
+    const log: SessionLog = {
+      id: sessionIdRef.current,
+      startedAt: startedAtRef.current,
+      endedAt: cfgRef.current.now(),
+      level: cfgRef.current.level,
+      events: eventsRef.current,
+    }
+    cfgRef.current.onSessionEnd?.(log, { ...statesRef.current })
+  }, [clearCountdown, clearFeedbackTimer])
 
   // Cleanup przy unmount
   useEffect(() => {
@@ -941,5 +978,6 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     dontKnow,
     skipFeedback,
     quit,
+    flush,
   }
 }

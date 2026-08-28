@@ -6,6 +6,7 @@ import { NumberBondShape } from '../representations/NumberBondShape'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
 import { shuffled } from '@/shared/srs/distractors'
+import { clamp } from '../../utils/clamp'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -94,10 +95,6 @@ export function NumberBondBuilder({ audioBus, payload, onAnswer }: Props) {
       </div>
     </DndContext>
   )
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, Math.floor(n)))
 }
 
 type BondChoice = { id: string; digit: number }

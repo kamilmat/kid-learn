@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
+import type { ReactNode } from 'react'
 import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
@@ -22,16 +23,34 @@ type Props = { audioBus?: Pick<AudioBus, 'play' | 'stop'> }
 export function NumbersModule({ audioBus = defaultAudioBus }: Props = {}) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <KidNav />
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <Routes>
-          <Route index element={<NumbersIndex audioBus={audioBus} />} />
-          <Route path="session/:level" element={<NumbersSession audioBus={audioBus} />} />
-          <Route path="tree" element={<MasteryTree />} />
-          <Route path="*" element={<Navigate to="." replace />} />
-        </Routes>
-      </div>
+      {/* KidNav renderujemy W ŚRODKU route'ów — ekran sesji podmienia jego
+          akcje (⬅️/🏠 najpierw zapisują częściowy postęp SRS). */}
+      <Routes>
+        <Route index element={<NumbersIndex audioBus={audioBus} />} />
+        <Route path="session/:level" element={<NumbersSession audioBus={audioBus} />} />
+        <Route
+          path="tree"
+          element={
+            <Screen nav={<KidNav />}>
+              <MasteryTree />
+            </Screen>
+          }
+        />
+        <Route path="*" element={<Navigate to="." replace />} />
+      </Routes>
     </div>
+  )
+}
+
+// Wspólny szkielet ekranu modułu: pasek nawigacji + reszta viewportu.
+function Screen({ nav, children }: { nav: ReactNode; children: ReactNode }) {
+  return (
+    <>
+      {nav}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {children}
+      </div>
+    </>
   )
 }
 
@@ -39,17 +58,19 @@ function NumbersIndex({ audioBus }: { audioBus: Pick<AudioBus, 'play' | 'stop'> 
   const navigate = useNavigate()
   const setLastUsed = useNumbers((s) => s.setLastUsedLevel)
   return (
-    <NumbersLevelSelect
-      audioBus={audioBus}
-      onSelect={(level) => {
-        setLastUsed(level)
-        // replace — wyjście z sesji też robi replace na LevelSelect, więc
-        // historia to [Home, sesja] → [Home, LevelSelect]: jedno "wstecz"
-        // wraca do Home zamiast trafiać w duplikat LevelSelect.
-        navigate(`session/${level}`, { replace: true })
-      }}
-      onTree={() => navigate('tree')}
-    />
+    <Screen nav={<KidNav />}>
+      <NumbersLevelSelect
+        audioBus={audioBus}
+        onSelect={(level) => {
+          setLastUsed(level)
+          // replace — wyjście z sesji też robi replace na LevelSelect, więc
+          // historia to [Home, sesja] → [Home, LevelSelect]: jedno "wstecz"
+          // wraca do Home zamiast trafiać w duplikat LevelSelect.
+          navigate(`session/${level}`, { replace: true })
+        }}
+        onTree={() => navigate('tree')}
+      />
+    </Screen>
   )
 }
 
@@ -70,16 +91,31 @@ function NumbersSession({ audioBus }: { audioBus: Pick<AudioBus, 'play' | 'stop'
     navigate('../tree', { replace: true })
   }, [navigate])
 
+  // KidNav w sesji: najpierw zapis częściowego postępu, dopiero potem wyjście.
+  // Bez tego ⬅️ (domyślnie `navigate(-1)`) wyrzucało na Home i gubiło SRS.
+  const quitRef = useRef<(() => void) | null>(null)
+  const handleNavBack = useCallback(() => {
+    quitRef.current?.()
+    navigate('..', { replace: true })
+  }, [navigate])
+  const handleNavHome = useCallback(() => {
+    quitRef.current?.()
+    navigate('/')
+  }, [navigate])
+
   if (!isValid) return <Navigate to=".." replace />
 
   return (
-    <SessionView
-      level={level}
-      audioBus={audioBus}
-      settings={settings}
-      onExit={handleExit}
-      onTree={handleTree}
-    />
+    <Screen nav={<KidNav onBack={handleNavBack} onHome={handleNavHome} />}>
+      <SessionView
+        level={level}
+        audioBus={audioBus}
+        settings={settings}
+        onExit={handleExit}
+        onTree={handleTree}
+        quitRef={quitRef}
+      />
+    </Screen>
   )
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, type ReactNode } from 'react'
-import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, type DragEndEvent } from '@dnd-kit/core'
 import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { TenFrame } from '../representations/TenFrame'
@@ -7,6 +7,8 @@ import { DigitTile } from '../representations/DigitTile'
 import { colors } from '@/app/theme'
 import type { AnswerOutcome } from '../../types'
 import { buildChoices } from '../../utils/buildChoices'
+import { DropTarget } from './shared/DropTarget'
+import { clamp } from '../../utils/clamp'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -91,7 +93,7 @@ export function ConcreteAddSubtract({ audioBus, payload, onAnswer }: Props) {
             )}
           </div>
           <Symbol>=</Symbol>
-          <DropTarget>
+          <DropTarget droppableId={DROP_TARGET_ID} minSize={140}>
             <span style={{ fontSize: 80, opacity: 0.3, fontFamily: 'var(--font-block)' }}>?</span>
           </DropTarget>
         </div>
@@ -118,31 +120,4 @@ function Symbol({ children }: { children: ReactNode }) {
       {children}
     </span>
   )
-}
-
-function DropTarget({ children }: { children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: DROP_TARGET_ID })
-  return (
-    <div
-      ref={setNodeRef}
-      data-testid="drop-target"
-      style={{
-        minWidth: 140,
-        minHeight: 140,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: `4px dashed ${isOver ? '#16a34a' : '#cbd5e1'}`,
-        borderRadius: 16,
-        background: isOver ? '#dcfce7' : '#fff',
-        transition: 'background 120ms',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, Math.floor(n)))
 }

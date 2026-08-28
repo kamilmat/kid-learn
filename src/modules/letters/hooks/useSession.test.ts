@@ -215,6 +215,44 @@ describe('useSession — lifecycle', () => {
     expect(states[q.targetLetter].totalCorrect).toBe(1)
   })
 
+  it('flush() zapisuje częściowy postęp raz — bez podsumowania i bez fanfary', () => {
+    const onSessionEnd = vi.fn()
+    const audioBus = makeAudioBus()
+    const cfg = makeConfig({ sessionLength: 5, onSessionEnd, audioBus })
+    const { result } = renderHook(() => useSession(cfg))
+    act(() => {
+      result.current.start()
+    })
+
+    // Bez żadnej odpowiedzi flush jest no-opem i NIE zamyka sesji
+    act(() => {
+      result.current.flush()
+    })
+    expect(onSessionEnd).not.toHaveBeenCalled()
+
+    const q = result.current.currentQuestion!
+    act(() => {
+      result.current.answer(q.targetLetter, q.targetSlot)
+    })
+
+    audioBus.play.mockClear()
+    act(() => {
+      result.current.flush()
+      result.current.flush()
+    })
+    expect(onSessionEnd).toHaveBeenCalledTimes(1)
+    expect(onSessionEnd.mock.calls[0]![1][q.targetLetter].totalCorrect).toBe(1)
+    // brak ekranu podsumowania i brak `session-end` — to nie jest koniec sesji
+    expect(result.current.status).not.toBe('finished')
+    expect(audioBus.play.mock.calls.map((c) => c[0])).not.toContain('session-end')
+
+    // quit() po flushu nie dokłada drugiego wywołania
+    act(() => {
+      result.current.quit()
+    })
+    expect(onSessionEnd).toHaveBeenCalledTimes(1)
+  })
+
   it('plays praise audio on correct answer', () => {
     const audioBus = makeAudioBus()
     const cfg = makeConfig({ audioBus })

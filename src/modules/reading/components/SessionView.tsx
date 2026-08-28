@@ -6,6 +6,7 @@
 // Phase 12: status bar (iskierki + kropki postępu + pauza), onboarding intro, anti-cheat.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 import { WildCelebration } from './WildCelebration'
 import { pickRandomWildCelebration, type WildCelebrationDef } from '../data/wildCelebrations'
 import type { AudioBus } from '@/shared/audio/AudioBus'
@@ -37,6 +38,11 @@ export type SessionViewProps = {
   onExit: () => void
   onAlbum?: () => void
   onSessionComplete?: () => void
+  /**
+   * Ref, do którego sesja wpina „zapisz częściowy postęp". KidNav w routingu
+   * modułu woła go zanim odejdzie z ekranu — ⬅️/🏠 nie mogą gubić SRS.
+   */
+  quitRef?: RefObject<(() => void) | null>
 }
 
 function getDotColor(
@@ -59,6 +65,7 @@ export function SessionView({
   onExit,
   onAlbum,
   onSessionComplete,
+  quitRef,
 }: SessionViewProps) {
   const session = useReadingSession({ level, audioBus, settings })
   const seenVariants = useReading(s => s.seenSceneVariants)
@@ -91,6 +98,24 @@ export function SessionView({
   })
 
   const pauseHandlers = useTapHandler({ onTap: () => session.pause() })
+
+  // `session` to nowy obiekt co render — flush trzymamy w refie, żeby efekt
+  // unmountu miał zawsze aktualną wersję i nie restartował się co render.
+  const flushFnRef = useRef(session.flush)
+  flushFnRef.current = session.flush
+  const flush = useCallback(() => {
+    flushFnRef.current()
+  }, [])
+
+  // Wyjście dowolną drogą (KidNav ⬅️/🏠, wstecz przeglądarki, zmiana route'a)
+  // musi utrwalić częściowy postęp. `flush` jest idempotentne.
+  useEffect(() => {
+    if (quitRef) quitRef.current = flush
+    return () => {
+      flush()
+      if (quitRef) quitRef.current = null
+    }
+  }, [flush, quitRef])
 
   // Startuj sesję przy mounto
   useEffect(() => {

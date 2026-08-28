@@ -354,7 +354,7 @@ describe('useReadingSession', () => {
     expect(result.current.questionOutcomes[0]).toBe('dontKnow')
   })
 
-  it('pause during feedback → resume przechodzi od razu do następnego pytania', () => {
+  it('pause during feedback → resume powtarza korektę i dopiero potem idzie dalej', async () => {
     const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
     act(() => result.current.start())
 
@@ -367,9 +367,18 @@ describe('useReadingSession', () => {
     expect(result.current.status).toBe('paused')
     expect(result.current.paused).toBe(true)
 
-    // `pause()` zrobiło stop() — po wznowieniu nie ma czego słuchać, więc
-    // idziemy dalej zamiast trzymać niemy overlay (i zakleszczać wariant 'wild').
-    act(() => result.current.resume())
+    // `pause()` zrobiło stop() — po wznowieniu korekta ("spróbuj jeszcze raz"
+    // + cel) leci PONOWNIE, inaczej dziecko nigdy nie usłyszy odpowiedzi.
+    mockAudioBus.play.mockClear()
+    await act(async () => {
+      result.current.resume()
+    })
+    expect(mockAudioBus.play).toHaveBeenCalledWith('reading-wrong-prefix')
+
+    // Dalej przechodzimy dopiero gdy kolejka korekty wybrzmi
+    await act(async () => {
+      await result.current.waitForFeedbackAudio()
+    })
     expect(result.current.paused).toBe(false)
     expect(result.current.status).toBe('asking')
     expect(result.current.currentQuestionIndex).toBe(1)
@@ -484,6 +493,29 @@ describe('useReadingSession', () => {
     const wrongId = useReading.getState().sessions[0]?.events[0]?.targetId as string
     expect(useReading.getState().syllables[wrongId]?.totalWrong).toBe(1)
 
+    act(() => result.current.quit())
+    expect(useReading.getState().sessions).toHaveLength(1)
+  })
+
+  it('flush() zapisuje raz, nie ucisza audio i nie dubluje po quit()', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+
+    // Pusta sesja — flush nic nie zapisuje (i nie zamyka sesji na przyszłość)
+    act(() => result.current.flush())
+    expect(useReading.getState().sessions).toHaveLength(0)
+
+    act(() => result.current.submitAnswer('NIE-ISTNIEJE'))
+    act(() => result.current.skipFeedback())
+
+    // flush nie robi stop() — inaczej zjadłby świeże cue `nav-back`/`nav-home`
+    mockAudioBus.stop.mockClear()
+    act(() => result.current.flush())
+    act(() => result.current.flush())
+    expect(mockAudioBus.stop).not.toHaveBeenCalled()
+    expect(useReading.getState().sessions).toHaveLength(1)
+
+    // quit() po flushu też nie dokłada drugiego wpisu
     act(() => result.current.quit())
     expect(useReading.getState().sessions).toHaveLength(1)
   })

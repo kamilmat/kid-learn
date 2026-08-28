@@ -219,10 +219,10 @@ export function useNumbersSession({
    * wyniki, żeby odpowiedzi dziecka nie przepadły (jak `quit()` w literach).
    */
   const flush = useCallback(() => {
-    if (eventsRef.current.length === 0) {
-      finishedRef.current = true
-      return
-    }
+    // Pusta sesja nie trafia do historii — ale NIE zamykamy jej flagą
+    // `finishedRef`: unmount-safety flush leci też przy podwójnym mouncie
+    // w StrictMode, a to skasowałoby zapis całej realnej sesji.
+    if (eventsRef.current.length === 0) return
     persistResults(true)
   }, [persistResults])
 
@@ -250,6 +250,8 @@ export function useNumbersSession({
 
   return {
     status,
+    /** Status sprzed pauzy — overlay feedbacku zostaje pod pauzą, nie znika. */
+    pausedFrom: pausedFromRef.current,
     questionIdx,
     questionCount,
     currentQuestion,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, RefObject } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import type { Settings, Level } from '@/shared/settings/types'
 import { useIdleDetector } from '@/shared/engagement/useIdleDetector'
@@ -37,6 +37,11 @@ type Props = {
   settings: Settings
   onExit: () => void
   onTree: () => void
+  /**
+   * Ref, do którego sesja wpina „zapisz częściowy postęp". KidNav w routingu
+   * modułu woła go zanim odejdzie z ekranu — ⬅️/🏠 nie mogą gubić SRS.
+   */
+  quitRef?: RefObject<(() => void) | null>
 }
 
 // Minimalny czas overlayu feedbacku. Realne przejście następuje dopiero gdy
@@ -60,7 +65,7 @@ function settled(promise: Promise<unknown> | undefined): Promise<void> {
   )
 }
 
-export function SessionView({ level, audioBus, settings, onExit, onTree }: Props) {
+export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef }: Props) {
   const session = useNumbersSession({
     level,
     audioBus,
@@ -89,13 +94,29 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
     },
   })
 
+  // `session` to nowy obiekt co render — flush trzymamy w refie, żeby efekt
+  // unmountu miał zawsze aktualną wersję i nie restartował się co render.
+  const flushFnRef = useRef(session.flush)
+  flushFnRef.current = session.flush
+  const flush = useCallback(() => {
+    flushFnRef.current()
+  }, [])
+
+  // Wyjście dowolną drogą (KidNav ⬅️/🏠, wstecz przeglądarki, zmiana route'a)
+  // musi utrwalić częściowy postęp. `flush` jest idempotentne.
+  useEffect(() => {
+    if (quitRef) quitRef.current = flush
+    return () => {
+      flush()
+      if (quitRef) quitRef.current = null
+    }
+  }, [flush, quitRef])
+
   // Wyjście w trakcie sesji zapisuje częściowe wyniki (SRS by przepadł).
   const handleQuit = useCallback(() => {
-    session.flush()
+    flush()
     onExit()
-    // flush jest stabilne w obrębie sesji
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.flush, onExit])
+  }, [flush, onExit])
 
   const conceptsIntrosOn = settings.numbers?.conceptIntros ?? true
 
@@ -199,12 +220,16 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
           onAnswer={session.answer}
         />
       </div>
-      {session.status === 'feedback' && (
+      {/* Overlay ZOSTAJE zamontowany pod pauzą — unmount/remount kasował
+          `nav-resume` (stop() w efekcie) i odliczał feedback od zera. */}
+      {(session.status === 'feedback' ||
+        (session.status === 'paused' && session.pausedFrom === 'feedback')) && (
         <FeedbackOverlay
           outcome={session.lastOutcome ?? 'correct'}
           correctValue={extractCorrectValue(session.currentQuestion)}
           audioBus={audioBus}
           onAdvance={session.advance}
+          paused={session.status === 'paused'}
           {...(session.praiseKey !== null ? { praiseKey: session.praiseKey } : {})}
         />
       )}
@@ -403,6 +428,7 @@ export function FeedbackOverlay({
   audioBus,
   onAdvance,
   praiseKey,
+  paused = false,
 }: {
   outcome: AnswerOutcome
   correctValue: number | null
@@ -410,19 +436,36 @@ export function FeedbackOverlay({
   onAdvance: () => void
   /** Pochwała wybrana przez hook sesji (wstrzykiwalne rng + brak powtórki). */
   praiseKey?: NumbersPraiseKey
+  /** Pauza — wstrzymuje odliczanie; po wznowieniu audio leci raz jeszcze. */
+  paused?: boolean
 }) {
   const onAdvanceRef = useRef(onAdvance)
   useEffect(() => {
     onAdvanceRef.current = onAdvance
   }, [onAdvance])
 
+  // Czas już „odsiedziany" na tym feedbacku i informacja czy audio już leciało.
+  // Bez tego pauza resetowała odliczanie do pełnego MIN_FEEDBACK_MS, a stop()
+  // przy wznowieniu zjadał cue `nav-resume`.
+  const elapsedRef = useRef(0)
+  const firstRunRef = useRef(true)
   useEffect(() => {
+    elapsedRef.current = 0
+    firstRunRef.current = true
+  }, [outcome, correctValue, praiseKey])
+
+  useEffect(() => {
+    if (paused) return
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
     let safetyTimer: ReturnType<typeof setTimeout> | undefined
     const startedAt = Date.now()
+    const alreadyElapsed = elapsedRef.current
 
-    audioBus.stop()
+    // stop() tylko przy pierwszym wejściu — po wznowieniu kolejka zawiera
+    // świeże `nav-resume`, którego nie wolno uciąć.
+    if (firstRunRef.current) audioBus.stop()
+    firstRunRef.current = false
     const plays: Array<Promise<unknown>> = []
     if (outcome === 'correct') {
       const praise =
@@ -447,7 +490,7 @@ export function FeedbackOverlay({
 
     void Promise.race([Promise.all(plays), safety]).then(() => {
       if (cancelled) return
-      const elapsed = Date.now() - startedAt
+      const elapsed = alreadyElapsed + (Date.now() - startedAt)
       timer = setTimeout(
         () => {
           if (!cancelled) onAdvanceRef.current()
@@ -458,10 +501,11 @@ export function FeedbackOverlay({
 
     return () => {
       cancelled = true
+      elapsedRef.current = alreadyElapsed + (Date.now() - startedAt)
       if (timer !== undefined) clearTimeout(timer)
       if (safetyTimer !== undefined) clearTimeout(safetyTimer)
     }
-  }, [outcome, correctValue, audioBus, praiseKey])
+  }, [outcome, correctValue, audioBus, praiseKey, paused])
 
   const bg =
     outcome === 'correct' ? 'rgba(22, 163, 74, 0.85)' : 'rgba(239, 68, 68, 0.85)'

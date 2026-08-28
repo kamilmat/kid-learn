@@ -24,6 +24,11 @@ export type FeedbackOverlayProps = {
   minDurationMs?: number
 }
 
+// Twardy limit czekania na kolejkę audio — overlay nigdy nie może zablokować
+// sesji, gdyby `play()` nie domknęło obietnicy (element bez `ended`/`error`).
+// Tak samo jak w module Cyferek.
+const MAX_FEEDBACK_MS = 12_000
+
 type VariantConfig = {
   background: string
   icon: string
@@ -69,7 +74,17 @@ export function FeedbackOverlay({
     if (paused) return
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
-    const audioDone = waitRef.current?.() ?? Promise.resolve()
+    let safetyTimer: ReturnType<typeof setTimeout> | undefined
+    const safety = new Promise<void>((resolve) => {
+      safetyTimer = setTimeout(resolve, MAX_FEEDBACK_MS)
+    })
+    const audioDone = Promise.race([
+      Promise.resolve(waitRef.current?.()).then(
+        () => undefined,
+        () => undefined,
+      ),
+      safety,
+    ])
     const minElapsed = new Promise<void>((resolve) => {
       timer = setTimeout(resolve, minDurationMs)
     })
@@ -79,6 +94,7 @@ export function FeedbackOverlay({
     return () => {
       cancelled = true
       if (timer !== undefined) clearTimeout(timer)
+      if (safetyTimer !== undefined) clearTimeout(safetyTimer)
     }
   }, [variant, paused, minDurationMs])
 

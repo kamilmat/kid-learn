@@ -3,6 +3,7 @@ import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors, radii } from '@/app/theme'
 import type { AnswerOutcome } from '../../types'
 import { shuffled } from '@/shared/srs/distractors'
+import { clamp } from '../../utils/clamp'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -178,10 +179,6 @@ function Corner({
       {value}
     </div>
   )
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, Math.floor(n)))
 }
 
 function buildEquations(a: number, b: number, whole: number): Equation[] {

@@ -9,11 +9,12 @@
 //   - `quiz-intro`        1× przy pierwszym wejściu na ekran sesji
 //   - `dont-know-intro`   1× w sekwencji po `quiz-intro`
 //
-// KidNav — wpięty w sticky pasku górnym przez App.tsx; tu nie duplikujemy
-// (App już renderuje `<KidNav />` poza `<Routes />`). Zostawiamy hook do
-// mountu lokalnego KidNav tylko gdyby moduł był używany standalone.
+// KidNav jest renderowany W ŚRODKU komponentów route'ów (nie nad `<Routes/>`),
+// bo ekran sesji musi podmienić jego akcje: ⬅️/🏠 najpierw zapisują częściowy
+// postęp, a ⬅️ wraca do wyboru poziomu zamiast `navigate(-1)` na Home.
 
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import type { ReactNode } from 'react'
 import {
   Navigate,
   Route,
@@ -73,18 +74,27 @@ export function LettersModule({
       data-testid="letters-module"
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
     >
-      {showNav && <KidNav />}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <Routes>
-          <Route index element={<LettersIndex audioBus={audioBus} />} />
-          <Route
-            path="session/:level"
-            element={<LettersSession audioBus={audioBus} />}
-          />
-          <Route path="*" element={<Navigate to="." replace />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route index element={<LettersIndex audioBus={audioBus} showNav={showNav} />} />
+        <Route
+          path="session/:level"
+          element={<LettersSession audioBus={audioBus} showNav={showNav} />}
+        />
+        <Route path="*" element={<Navigate to="." replace />} />
+      </Routes>
     </div>
+  )
+}
+
+// Wspólny szkielet ekranu modułu: pasek nawigacji + reszta viewportu.
+function Screen({ nav, children }: { nav: ReactNode; children: ReactNode }) {
+  return (
+    <>
+      {nav}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {children}
+      </div>
+    </>
   )
 }
 
@@ -92,9 +102,10 @@ export function LettersModule({
 
 type LettersIndexProps = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
+  showNav: boolean
 }
 
-function LettersIndex({ audioBus }: LettersIndexProps) {
+function LettersIndex({ audioBus, showNav }: LettersIndexProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const setLastUsedLevel = useLetters((s) => s.setLastUsedLevel)
@@ -142,16 +153,21 @@ function LettersIndex({ audioBus }: LettersIndexProps) {
     [navigate, setLastUsedLevel],
   )
 
-  return <LevelSelect onSelect={handleSelect} audioBus={audioBus} />
+  return (
+    <Screen nav={showNav ? <KidNav /> : null}>
+      <LevelSelect onSelect={handleSelect} audioBus={audioBus} />
+    </Screen>
+  )
 }
 
 // ---------- Session — pojedyncza sesja dla danego poziomu ----------
 
 type LettersSessionProps = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
+  showNav: boolean
 }
 
-function LettersSession({ audioBus }: LettersSessionProps) {
+function LettersSession({ audioBus, showNav }: LettersSessionProps) {
   const params = useParams<{ level: string }>()
   const navigate = useNavigate()
 
@@ -192,6 +208,18 @@ function LettersSession({ audioBus }: LettersSessionProps) {
     navigate('..', { state: { fromExit: true }, replace: true })
   }, [navigate])
 
+  // KidNav w sesji: najpierw zapis częściowego postępu, dopiero potem wyjście.
+  // Bez tego ⬅️ (domyślnie `navigate(-1)`) wyrzucało na Home i gubiło SRS.
+  const quitRef = useRef<(() => void) | null>(null)
+  const handleNavBack = useCallback(() => {
+    quitRef.current?.()
+    navigate('..', { state: { fromExit: true }, replace: true })
+  }, [navigate])
+  const handleNavHome = useCallback(() => {
+    quitRef.current?.()
+    navigate('/')
+  }, [navigate])
+
   const handleSessionComplete = useCallback(
     (log: SessionLog, updatedStates: Record<string, LetterState>) => {
       applySessionResults(updatedStates, log)
@@ -204,14 +232,19 @@ function LettersSession({ audioBus }: LettersSessionProps) {
   }
 
   return (
-    <SessionView
-      level={level}
-      settings={settings}
-      initialStates={initialStates}
-      onExit={handleExit}
-      onSessionComplete={handleSessionComplete}
-      audioBus={audioBus}
-    />
+    <Screen
+      nav={showNav ? <KidNav onBack={handleNavBack} onHome={handleNavHome} /> : null}
+    >
+      <SessionView
+        level={level}
+        settings={settings}
+        initialStates={initialStates}
+        onExit={handleExit}
+        onSessionComplete={handleSessionComplete}
+        audioBus={audioBus}
+        quitRef={quitRef}
+      />
+    </Screen>
   )
 }
 
