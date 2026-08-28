@@ -12,7 +12,7 @@ function clamp(value: number, min: number, max: number): number {
 
 function SceneActor({ actor }: { actor: Actor }) {
   const [poke, setPoke] = useState(false)
-  const left = clamp(actor.x, 8, 92)
+  const left = clamp(actor.x, 12, 86)
   const top = clamp(actor.y, 15, 85)
   return (
     <div

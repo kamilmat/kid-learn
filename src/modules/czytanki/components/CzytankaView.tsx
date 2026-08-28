@@ -171,16 +171,29 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
       <div ref={boxRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', overflowY: 'auto' }}>
         <div ref={textRef} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2em', fontSize }}>
           {czytanka.sentences.map((sent, s) => (
-            <div key={s} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0 0.7em' }}>
+            <div key={s} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.3em 0.55em' }}>
               {sent.map((word, w) => {
                 const isActive = (activeWord?.s === s && activeWord.w === w) || (heldWord?.s === s && heldWord.w === w)
                 return (
-                  <span key={w} style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.15em' }}>
-                    {word.syllables.map((syl, i) => (
-                      <SyllableButton key={i} text={syl} color={getSyllableColor(i)} fontSize={fontSize} highlighted={isActive}
-                        onTap={() => tapSyllable(syl)} onLongPress={() => holdWord(s, w, word.syllables)} />
-                    ))}
-                    {word.punct && <span aria-hidden="true" style={{ fontFamily: 'var(--font-block)', fontWeight: 700, fontSize, color: colors.text }}>{word.punct}</span>}
+                  <span key={w} style={{ display: 'inline-flex', alignItems: 'baseline' }}>
+                    {/* Obwolutka wyrazu — dziecko widzi, które sylaby tworzą jedno słowo. */}
+                    <span
+                      data-testid="word"
+                      style={{
+                        display: 'inline-flex', alignItems: 'baseline', gap: '0.12em',
+                        padding: '0.04em 0.22em', borderRadius: '0.4em',
+                        background: isActive ? '#fde047' : '#ffffff',
+                        border: `3px solid ${isActive ? '#f59e0b' : '#cfd8e6'}`,
+                        boxShadow: '0 2px 0 #e2e8f0',
+                        transition: 'background 150ms, border-color 150ms',
+                      }}
+                    >
+                      {word.syllables.map((syl, i) => (
+                        <SyllableButton key={i} text={syl} color={getSyllableColor(i)} fontSize={fontSize} highlighted={false}
+                          onTap={() => tapSyllable(syl)} onLongPress={() => holdWord(s, w, word.syllables)} />
+                      ))}
+                    </span>
+                    {word.punct && <span aria-hidden="true" style={{ fontFamily: 'var(--font-block)', fontWeight: 700, fontSize, color: colors.text, marginLeft: '0.08em' }}>{word.punct}</span>}
                   </span>
                 )
               })}
