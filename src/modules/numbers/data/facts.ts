@@ -18,13 +18,13 @@ export function generateFactsForConcept(conceptId: ConceptId): Fact[] {
         args: [i + 1],
       }))
 
-    // 6..10 — liczenie powyżej piątki (ten frame / conceptual subitizing).
-    // Wartości 1..5 są domeną iskierka-counting-5.
+    // 1..10 — pełny zakres kropek do dziesięciu (match-digit-dots); wartości
+    // 1..5 powtarzają się z counting-5 celowo, ale pod własnym id.
     case 'iskierka-counting-10':
-      return Array.from({ length: 5 }, (_, i) => ({
-        id: `count10-${i + 6}`,
+      return Array.from({ length: 10 }, (_, i) => ({
+        id: `count10-${i + 1}`,
         conceptId,
-        args: [i + 6],
+        args: [i + 1],
       }))
 
     case 'iskierka-subitizing-6':

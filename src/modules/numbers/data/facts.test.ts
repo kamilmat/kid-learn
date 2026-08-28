@@ -15,16 +15,12 @@ describe('generateFactsForConcept', () => {
     expect(facts[4]?.id).toBe('count5-5')
   })
 
-  it('iskierka-counting-10 liczy 6..10 pod własnym prefiksem', () => {
+  it('iskierka-counting-10 liczy 1..10 pod własnym prefiksem', () => {
     const facts = generateFactsForConcept('iskierka-counting-10')
-    expect(facts.map((f) => f.id)).toEqual([
-      'count10-6',
-      'count10-7',
-      'count10-8',
-      'count10-9',
-      'count10-10',
-    ])
-    expect(facts.map((f) => f.args[0])).toEqual([6, 7, 8, 9, 10])
+    expect(facts.map((f) => f.id)).toEqual(
+      Array.from({ length: 10 }, (_, i) => `count10-${i + 1}`),
+    )
+    expect(facts.map((f) => f.args[0])).toEqual(Array.from({ length: 10 }, (_, i) => i + 1))
   })
 
   it('plomyk-bonds-5 generates 2 bonds (1+4, 2+3)', () => {
