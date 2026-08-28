@@ -6,7 +6,7 @@ import type { Settings } from '@/shared/settings/types'
 
 function makeAudioBus() {
   return {
-    play: vi.fn(() => Promise.resolve()),
+    play: vi.fn(() => Promise.resolve(true)),
     stop: vi.fn(),
   }
 }

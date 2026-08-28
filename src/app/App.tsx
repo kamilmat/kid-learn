@@ -46,7 +46,9 @@ export function App() {
   const isCzytanki = location.pathname.startsWith('/czytanki')
   const showKidNav = !isHome && !isLetters && !isReading && !isNumbers && !isCzytanki
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    // h-screen (100vh) to fallback; inline 100dvh wygrywa tam gdzie jest
+    // wspierane i nie skacze pod paskiem URL Safari na iPadzie.
+    <div className="h-screen flex flex-col overflow-hidden" style={{ height: '100dvh' }}>
       {showKidNav && <KidNav />}
       <main
         className={`flex-1 min-h-0 ${isHome ? '' : 'p-4'} ${isLetters || isReading || isNumbers || isCzytanki ? 'overflow-hidden' : 'overflow-auto'}`}

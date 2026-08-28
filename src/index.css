@@ -127,6 +127,14 @@ body,
   color: #2d2d33;
 }
 
+/* iPad/PWA: bez rubber-band i bez scrolla dokumentu — layout aplikacji
+   sam zarządza przewijaniem wewnątrz <main>. */
+html,
+body {
+  overscroll-behavior: none;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;

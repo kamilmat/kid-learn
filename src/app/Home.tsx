@@ -357,6 +357,9 @@ export function Home() {
           position: 'fixed',
           right: tapTargets.minMargin,
           bottom: tapTargets.minMargin,
+          // viewport-fit=cover → bez insetów guziki wchodzą pod home-indicator.
+          paddingRight: 'env(safe-area-inset-right, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           display: 'flex',
           gap: 8,
           opacity: 0.85,

@@ -13,7 +13,7 @@
 // (App już renderuje `<KidNav />` poza `<Routes />`). Zostawiamy hook do
 // mountu lokalnego KidNav tylko gdyby moduł był używany standalone.
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import {
   Navigate,
   Route,
@@ -158,10 +158,21 @@ function LettersSession({ audioBus }: LettersSessionProps) {
   const markIntroSeen = useLetters((s) => s.markIntroSeen)
   const hasSeenIntro = useLetters((s) => s.hasSeenIntro)
 
-  // Wyciągamy całe state'y liter raz — selektor robi lazy init dla aktywnej puli
-  const lettersStateRaw = useLetters()
+  // Selektory zamiast subskrypcji całego store'u — bez tego każdy zapis
+  // (markIntroSeen, applySessionResults…) przerenderowywał sesję i przebudowywał
+  // initialStates.
+  const letters = useLetters((s) => s.letters)
+  const sessions = useLetters((s) => s.sessions)
+  const seenIntros = useLetters((s) => s.seenIntros)
+  const lastUsedLevel = useLetters((s) => s.lastUsedLevel)
   const level = (params.level ?? '') as Level
   const isValidLevel = VALID_LEVELS.has(level)
+
+  // Lazy init aktywnej puli — gwarancja że każda aktywna litera ma initial state
+  const initialStates = useMemo(() => {
+    const snapshot: LettersState = { letters, sessions, seenIntros, lastUsedLevel }
+    return selectLetterStateMap(snapshot, isValidLevel ? level : 'iskierka', settings)
+  }, [isValidLevel, lastUsedLevel, letters, level, seenIntros, sessions, settings])
 
   // Onboardingi sesji — `quiz-intro` + `dont-know-intro`, sekwencja, 1× per klucz.
   useEffect(() => {
@@ -183,7 +194,8 @@ function LettersSession({ audioBus }: LettersSessionProps) {
   const handleExit = useCallback(() => {
     // state.fromExit informuje LettersIndex że to powrót, żeby nie aktywował
     // auto-navigate na defaultLevel (zapętlenie sesji).
-    navigate('..', { state: { fromExit: true } })
+    // replace — inaczej ⬅️ z LevelSelect wraca do sesji, która auto-startuje.
+    navigate('..', { state: { fromExit: true }, replace: true })
   }, [navigate])
 
   const handleSessionComplete = useCallback(
@@ -196,15 +208,6 @@ function LettersSession({ audioBus }: LettersSessionProps) {
   if (!isValidLevel) {
     return <Navigate to=".." replace />
   }
-
-  // Lazy init aktywnej puli — gwarancja że każda aktywna litera ma initial state
-  const snapshot: LettersState = {
-    letters: lettersStateRaw.letters,
-    sessions: lettersStateRaw.sessions,
-    seenIntros: lettersStateRaw.seenIntros,
-    lastUsedLevel: lettersStateRaw.lastUsedLevel,
-  }
-  const initialStates = selectLetterStateMap(snapshot, level, settings)
 
   return (
     <SessionView

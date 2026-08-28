@@ -19,9 +19,21 @@ export function CzytankiModule({ audioBus = defaultAudioBus }: { audioBus?: Bus 
   // wszystkie odwiedzone czytanki zamiast wyjść od razu do listy.
   const isListRoute = location.pathname === '/czytanki' || location.pathname === '/czytanki/'
   useEffect(() => () => { takePendingCue() }, [])
+  // Wstecz z czytanki: cofnij w historii (strzałki ◀▶ robią replace, więc
+  // poprzedni wpis to lista). `navigate('/czytanki', { replace: true })`
+  // zostawiało duplikat listy w historii. Gdy weszliśmy deep-linkiem
+  // (brak wcześniejszego wpisu) — replace na listę.
+  const backToList = useCallback(() => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx
+    if (typeof idx === 'number' && idx > 0) {
+      navigate(-1)
+    } else {
+      navigate('/czytanki', { replace: true })
+    }
+  }, [navigate])
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {isListRoute ? <KidNav /> : <KidNav onBack={() => navigate('/czytanki', { replace: true })} />}
+      {isListRoute ? <KidNav /> : <KidNav onBack={backToList} />}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <Routes>
           <Route index element={<ListRoute audioBus={audioBus} />} />

@@ -436,7 +436,10 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     }, COUNTDOWN_TICK_MS)
   }, [clearCountdown])
 
-  const generateNextQuestion = useCallback(() => {
+  // `num` przekazujemy jawnie — `questionNumber` ze state'u jest stale w
+  // momencie wywołania (setQuestionNumber jeszcze nie przerenderowało), przez
+  // co indeksy pytań szły 0,0,1,2… i psuły alternację stylu w Ogniku.
+  const generateNextQuestion = useCallback((num: number) => {
     const cfg = cfgRef.current
     const states = Object.values(statesRef.current)
     const target = pickNextLetter(
@@ -468,10 +471,10 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       distractorCount,
     )
     const tiles = shuffleInPlace([target, ...distractors], cfg.rng)
-    const targetSlot = tiles.indexOf(target) as Slot
+    const targetSlot: Slot = tiles.indexOf(target)
     const chosenStyle = pickStyleForQuestion(
       cfg.styleMode,
-      questionNumber,
+      num,
       cfg.rng,
     )
     const chosenCase = pickCaseForQuestion(cfg.caseMode, cfg.rng)
@@ -479,7 +482,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     questionStartedAtRef.current = ts
 
     const question: Question = {
-      index: questionNumber,
+      index: num,
       targetLetter: target,
       tiles,
       targetSlot,
@@ -496,7 +499,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       ts,
       targetLetter: target,
       distractors,
-      positions: tiles.map((_, i) => i as Slot),
+      positions: tiles.map((_, i): Slot => i),
       style: chosenStyle,
       case: deriveDisplayCase(cfg.caseMode, chosenCase),
     })
@@ -510,7 +513,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
 
     // Timer
     startCountdown()
-  }, [pushEvent, questionNumber, startCountdown])
+  }, [pushEvent, startCountdown])
 
   const finishSession = useCallback(() => {
     if (finishedRef.current) return
@@ -705,6 +708,26 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   // Pipeline po feedbacku: timer1 (effectiveMs) zamyka overlay i utrzymuje
   // status='feedback' przez wdech (kafelki disabled — chroni przed re-tap).
   // Timer2 (POST_FEEDBACK_BREATH_MS) flipuje na 'playing' i generuje next.
+  // Timer2 — "wdech" po zamknięciu overlaya. Wydzielony, bo resume po pauzie
+  // złapanej w tej fazie ma wznowić sam wdech, a nie odtwarzać od nowa pełny
+  // (już niewidoczny) feedback.
+  const scheduleBreathThenNext = useCallback(
+    (nextNum: number) => {
+      clearFeedbackTimer()
+      feedbackTimerRef.current = setTimeout(() => {
+        feedbackTimerRef.current = null
+        // Czyścimy kolejkę audio przed nowym promptem (urywa ewentualny
+        // ogon streak audio — dla 7-latka 100-200ms ucięcia niedostrzegalne).
+        cfgRef.current.audioBus.stop()
+        questionNumberRef.current = nextNum
+        setQuestionNumber(nextNum)
+        setStatus('playing')
+        generateNextQuestion(nextNum)
+      }, POST_FEEDBACK_BREATH_MS)
+    },
+    [clearFeedbackTimer, generateNextQuestion],
+  )
+
   const scheduleFeedbackDismiss = useCallback(
     (effectiveMs: number) => {
       clearFeedbackTimer()
@@ -718,19 +741,10 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
         // Zamykamy overlay (lastFeedback=null) ale status pozostaje 'feedback'
         // — kafelki disabled, dziecko nie może re-tapnąć starego pytania.
         setLastFeedback(null)
-        feedbackTimerRef.current = setTimeout(() => {
-          feedbackTimerRef.current = null
-          // Czyścimy kolejkę audio przed nowym promptem (urywa ewentualny
-          // ogon streak audio — dla 7-latka 100-200ms ucięcia niedostrzegalne).
-          cfgRef.current.audioBus.stop()
-          questionNumberRef.current = nextNum
-          setQuestionNumber(nextNum)
-          setStatus('playing')
-          generateNextQuestion()
-        }, POST_FEEDBACK_BREATH_MS)
+        scheduleBreathThenNext(nextNum)
       }, effectiveMs)
     },
-    [clearFeedbackTimer, finishSession, generateNextQuestion],
+    [clearFeedbackTimer, finishSession, scheduleBreathThenNext],
   )
   scheduleFeedbackDismissRef.current = scheduleFeedbackDismiss
 
@@ -771,7 +785,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     statesRef.current = next
 
     setStatus('playing')
-    generateNextQuestion()
+    generateNextQuestion(0)
   }, [generateNextQuestion, initialStates, status, uuid])
 
   const pause = useCallback(
@@ -783,6 +797,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       clearCountdown()
       clearFeedbackTimer()
       pushEvent({ type: 'pause', ts: cfgRef.current.now(), reason })
+      // Najpierw stop() — inaczej prompt/feedback mówi dalej pod overlayem pauzy
+      // (najbardziej widoczne przy auto-pauzie z visibility/idle).
+      cfgRef.current.audioBus.stop()
       void cfgRef.current.audioBus.play('nav-pause')
       setStatus('paused')
     },
@@ -800,7 +817,13 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     if (pausedDuringFeedbackRef.current) {
       pausedDuringFeedbackRef.current = false
       setStatus('feedback')
-      scheduleFeedbackDismissRef.current(lastFeedbackEffectiveMsRef.current)
+      if (lastFeedback !== null) {
+        scheduleFeedbackDismissRef.current(lastFeedbackEffectiveMsRef.current)
+      } else {
+        // Overlay był już zamknięty — pauza złapała "wdech". Odtwarzanie
+        // pełnego timera feedbacku oznaczałoby kilka sekund pustego ekranu.
+        scheduleBreathThenNext(questionNumberRef.current + 1)
+      }
       return
     }
 
@@ -810,7 +833,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       questionStartedAtRef.current = cfgRef.current.now()
       startCountdown()
     }
-  }, [pushEvent, startCountdown, status])
+  }, [lastFeedback, pushEvent, scheduleBreathThenNext, startCountdown, status])
 
   const answer = useCallback(
     (chosenLetter: string, position: Slot) => {
@@ -842,7 +865,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     questionNumberRef.current = nextNum
     setQuestionNumber(nextNum)
     setStatus('playing')
-    generateNextQuestion()
+    generateNextQuestion(nextNum)
   }, [finishSession, generateNextQuestion, status])
 
   const dontKnow = useCallback(() => {
