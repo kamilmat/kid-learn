@@ -3,7 +3,14 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { describe, expect, it } from 'vitest'
 
-import { decideAction, hashEntry, hashText, loadSources } from './generate-audio'
+import {
+  decideAction,
+  hashEntry,
+  hashEntryAzure,
+  hashText,
+  loadSources,
+  parseCli,
+} from './generate-audio'
 
 const DEFAULT_VOICE = 'pl-PL-ZofiaNeural'
 
@@ -50,9 +57,9 @@ describe('loadSources', () => {
       writeFileSync(b, JSON.stringify({ 'word-balon': 'balon' }))
       const merged = loadSources([a, b])
       expect(merged).toEqual({
-        'letter-a': { text: 'a', voice: DEFAULT_VOICE },
-        'letter-b': { text: 'by', voice: DEFAULT_VOICE },
-        'word-balon': { text: 'balon', voice: DEFAULT_VOICE },
+        'letter-a': { text: 'a', voice: DEFAULT_VOICE, engine: 'edge' },
+        'letter-b': { text: 'by', voice: DEFAULT_VOICE, engine: 'edge' },
+        'word-balon': { text: 'balon', voice: DEFAULT_VOICE, engine: 'edge' },
       })
     } finally {
       rmSync(dir, { recursive: true, force: true })
@@ -66,7 +73,7 @@ describe('loadSources', () => {
       writeFileSync(a, JSON.stringify({ _voice: 'marek', 'iskra-test': 'test' }))
       const merged = loadSources([a])
       expect(merged).toEqual({
-        'iskra-test': { text: 'test', voice: 'pl-PL-MarekNeural' },
+        'iskra-test': { text: 'test', voice: 'pl-PL-MarekNeural', engine: 'edge' },
       })
     } finally {
       rmSync(dir, { recursive: true, force: true })
@@ -118,6 +125,61 @@ describe('loadSources', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
+  })
+
+  it('reads _engine metadata and precomputes IPA', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'iskierki-audio-'))
+    try {
+      const a = join(dir, 'syl.json')
+      writeFileSync(a, JSON.stringify({ _voice: 'zofia', _engine: 'azure-ipa', 'cz-syl-lo': 'lo' }))
+      const merged = loadSources([a])
+      expect(merged['cz-syl-lo']).toEqual({
+        text: 'lo',
+        voice: DEFAULT_VOICE,
+        engine: 'azure-ipa',
+        ipa: 'l\u02C8\u0254',
+      })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('throws on unknown _engine value', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'iskierki-audio-'))
+    try {
+      const a = join(dir, 'bad.json')
+      writeFileSync(a, JSON.stringify({ _engine: 'piper', 'test-key': 'value' }))
+      expect(() => loadSources([a])).toThrow(/unknown _engine/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('hashEntryAzure', () => {
+  it('differs from the edge hash for the same text+voice', () => {
+    expect(hashEntryAzure('lo', DEFAULT_VOICE, 'l\u02C8\u0254')).not.toBe(
+      hashEntry('lo', DEFAULT_VOICE),
+    )
+  })
+
+  it('changes when IPA changes', () => {
+    expect(hashEntryAzure('lo', DEFAULT_VOICE, 'l\u02C8\u0254')).not.toBe(
+      hashEntryAzure('lo', DEFAULT_VOICE, 'l\u0254'),
+    )
+  })
+})
+
+describe('parseCli', () => {
+  it('parses mode without flags', () => {
+    expect(parseCli(['node', 'script', 'build'])).toEqual({ mode: 'build', dryRun: false })
+  })
+
+  it('parses --dry-run in any position', () => {
+    expect(parseCli(['node', 'script', '--dry-run', 'build'])).toEqual({
+      mode: 'build',
+      dryRun: true,
+    })
   })
 })
 
@@ -184,6 +246,39 @@ describe('decideAction', () => {
           updatedAt: 0,
           source: 'tts',
         },
+      }),
+    ).toEqual({ kind: 'generate', reason: 'hash-mismatch' })
+  })
+
+  it('uses the azure hash when engine is azure-ipa', () => {
+    expect(
+      decideAction({
+        hasOverride: false,
+        hasOutputFile: true,
+        text: 'lo',
+        voice,
+        engine: 'azure-ipa',
+        ipa: 'l\u02C8\u0254',
+        manifestEntry: {
+          hash: hashEntryAzure('lo', voice, 'l\u02C8\u0254'),
+          updatedAt: 0,
+          source: 'tts',
+          engine: 'azure-ipa',
+        },
+      }),
+    ).toEqual({ kind: 'cache-hit' })
+  })
+
+  it('regenerates an azure entry whose IPA changed', () => {
+    expect(
+      decideAction({
+        hasOverride: false,
+        hasOutputFile: true,
+        text: 'lo',
+        voice,
+        engine: 'azure-ipa',
+        ipa: 'l\u02C8\u0254',
+        manifestEntry: { hash: hashEntry('lo', voice), updatedAt: 0, source: 'tts' },
       }),
     ).toEqual({ kind: 'generate', reason: 'hash-mismatch' })
   })

@@ -20,8 +20,8 @@ Task 10 (ta integracja) doczepił moduł 4 do reszty appki:
 - **Raport rodzica**: nowa sekcja `CzytankiStats` (po `NumbersStats`) — „Otwarte: X/60" + per-grupa breakdown + lista otwartych tytułów z emoji
 - **Eksport MD**: `exportReportToMarkdown` przyjmuje opcjonalny 6. parametr `czytankiSnapshot`, dopisuje sekcję `## Czytanki`
 
-**Testy**: 586/586 zielone (`pnpm test --run`), `pnpm tsc -b` czysto, `pnpm build` zielony.
-**Audio**: 1135 plików mp3 w `public/audio/`, `pnpm audio:check` potwierdza 1128 wymaganych kluczy na miejscu (10 source plików, w tym nowy `czytanki.json` generowany przez `pnpm audio:czytanki` z `data/czytanki.ts`).
+**Testy**: 653/653 zielone (`pnpm test --run`), `pnpm tsc -b` czysto.
+**Audio**: 1135 plików mp3 w `public/audio/`, `pnpm audio:check` potwierdza 1128 wymaganych kluczy na miejscu (11 source plików; `czytanki.json` rozbity na `czytanki-syllables.json` + `czytanki-words.json`, oba generowane przez `pnpm audio:czytanki` z `data/czytanki.ts`).
 
 **Do odsłuchu / manual override** — TTS może odczytać pojedyncze litery jako
 *nazwy* liter zamiast dźwięku sylaby, sprawdzić w przeglądarce i ew. nagrać
@@ -33,6 +33,47 @@ manual override (`audio-source/manual-overrides/<klucz>.mp3`):
 `main` — zweryfikowane w Chrome (iPad viewport landscape+portrait); do
 sprawdzenia na fizycznym iPadzie: long-press w Safari, przycisk 🔊 nad sceną
 przed mergem i deployem.
+
+## Wymowa izolowanych sylab — backend `azure-ipa` (2026-08-26)
+
+**Problem**: Edge TTS (darmowy endpoint, bez SSML) czyta izolowane sylaby
+czytanek jako *nazwy liter* albo zmyślone słowa: „lo" → „elo", „ka" → „ka a",
+„ry" → „ri". Dla modułu 4, gdzie dziecko dotyka sylaby żeby usłyszeć dokładnie
+ten kawałek słowa, to psuje sens ćwiczenia.
+
+**Ewaluacja ASR** (Whisper jako sędzia — transkrypcja wygenerowanych mp3 i
+porównanie z oczekiwaną sylabą):
+- Edge TTS: **52%** trafień na izolowanych sylabach (na całych słowach i zdaniach
+  Edge jest w porządku — problem dotyczy tylko sylab bez kontekstu)
+- Piper (lokalny, model pl): jakość nie do użycia dla dziecka — odrzucony
+- **Decyzja: Azure Speech** — ten sam głos (pl-PL-ZofiaNeural), ale SSML
+  `<phoneme alphabet="ipa" ph="…">` podaje wymowę wprost i całkowicie omija
+  G2P silnika. Darmowy tier F0 pokrywa cały korpus.
+
+**Co jest zrobione**:
+- `scripts/polishG2p.ts` — deterministyczny G2P polski (`toIpa`): dwuznaki,
+  zmiękczenia przez „i", nosówki ą/ę zależnie od kontekstu, ubezdźwięcznienie
+  wygłosowe, regresywna asymilacja w zbitkach, akcent główny. 375/375 sylab
+  czytanek daje IPA ze zbioru pl-PL Azure (test w `scripts/polishG2p.test.ts`,
+  wyrywkowo skonfrontowany z `espeak-ng -v pl --ipa -q`).
+- `scripts/azureTts.ts` — `buildSsml` + REST (`synthesizeAzure`, retry na 429/5xx)
+  + mini-loader `.env.local`.
+- `scripts/generate-audio.ts` — metadane `_engine: "edge" | "azure-ipa"` per plik
+  źródłowy, osobny hash dla azure (zawiera IPA), tryb `--dry-run`.
+- `audio-source/czytanki-syllables.json` (375, `azure-ipa`) i
+  `audio-source/czytanki-words.json` (407, edge) zamiast jednego `czytanki.json`.
+
+**Następne kroki**:
+1. Wpisać klucz do `.env.local` (`AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION=westeurope`,
+   zasób Speech w tierze F0; wzór w `.env.example`).
+2. `pnpm audio:dry` — sprawdzić plan (375 sylab „generate", słowa „cache-hit").
+3. `pnpm audio:build` — wygenerować 375 mp3 przez Azure (~kilka minut).
+4. **Odsłuchać sylaby kontrolne**: `lo`, `ka`, `ry`, `drze`, `ptak`, `w`, `z`,
+   `dzi`, `cię`, `żół` — to one najczęściej wychodziły źle na Edge. Jeśli któraś
+   brzmi nienaturalnie: poprawić regułę w `polishG2p.ts` (uwaga: zmiana reguły
+   regeneruje wszystkie 375) albo nagrać manual override.
+5. Jeśli wyjdzie dobrze — przełączyć `audio-source/syllables.json` (23 sylaby
+   modułu 2) na `_engine: azure-ipa` tym samym mechanizmem.
 
 ## Następna sesja — visual review round 3 (atrakcyjność dla dziecka)
 

@@ -9,19 +9,28 @@
  *      If not, invoke `edge-tts` with the appropriate voice to (re)generate the mp3
  *      and update the manifest.
  *
- * Each JSON file may have a `_voice` field (default: 'zofia'). Keys starting with `_`
- * are treated as metadata and skipped during audio generation.
+ * Each JSON file may have a `_voice` field (default: 'zofia') and an `_engine`
+ * field (default: 'edge'). Keys starting with `_` are treated as metadata and
+ * skipped during audio generation.
  *
  * Voice map:
  *   zofia → pl-PL-ZofiaNeural  (default, lektor)
  *   marek → pl-PL-MarekNeural  (Iskra mascot)
  *
+ * Engines:
+ *   edge       — edge-tts CLI, darmowy, bez SSML (domyślny)
+ *   azure-ipa  — Azure Speech REST + SSML <phoneme alphabet="ipa">; IPA liczone
+ *                z ortografii przez scripts/polishG2p.ts. WHY: Edge zgaduje
+ *                wymowę izolowanych sylab i myli się ("lo" → "elo").
+ *                Wymaga AZURE_SPEECH_KEY / AZURE_SPEECH_REGION w `.env.local`.
+ *
  * Modes:
- *   build  — generate everything missing or changed
+ *   build  — generate everything missing or changed (`--dry-run`: tylko wypisz plan)
  *   check  — only verify all keys have an mp3 (exits 1 if any missing); generates nothing
  *
  * Run:
  *   pnpm exec tsx scripts/generate-audio.ts build
+ *   pnpm exec tsx scripts/generate-audio.ts build --dry-run
  *   pnpm exec tsx scripts/generate-audio.ts check
  */
 
@@ -38,12 +47,24 @@ import {
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import {
+  buildSsml,
+  loadEnvLocal,
+  MISSING_CREDENTIALS_MESSAGE,
+  readAzureCredentials,
+  synthesizeAzure,
+} from './azureTts'
+import { toIpa } from './polishG2p'
+
 // ---------- types ----------
+
+export type Engine = 'edge' | 'azure-ipa'
 
 export type ManifestEntry = {
   hash: string
   updatedAt: number
   source: 'tts' | 'override'
+  engine?: Engine
 }
 
 export type Manifest = Record<string, ManifestEntry>
@@ -51,11 +72,17 @@ export type Manifest = Record<string, ManifestEntry>
 export type SourceEntry = {
   text: string
   voice: string
+  engine: Engine
+  /** Wypełnione tylko dla engine 'azure-ipa' — wymowa podawana wprost do SSML. */
+  ipa?: string
 }
 
 export type SourceMap = Record<string, SourceEntry>
 
 type Mode = 'build' | 'check'
+
+const ENGINES: readonly Engine[] = ['edge', 'azure-ipa']
+const DEFAULT_ENGINE: Engine = 'edge'
 
 // ---------- voice map ----------
 
@@ -123,6 +150,15 @@ export function loadSources(filePaths: readonly string[]): SourceMap {
     resolveVoice(voiceKey)
     const edgeTtsVoice = resolveVoice(voiceKey)
 
+    const engineKey =
+      typeof obj['_engine'] === 'string' ? (obj['_engine'] as string) : DEFAULT_ENGINE
+    if (!ENGINES.includes(engineKey as Engine)) {
+      throw new Error(
+        `${filePath}: unknown _engine "${engineKey}". Valid engines: ${ENGINES.join(', ')}`,
+      )
+    }
+    const engine = engineKey as Engine
+
     for (const [key, value] of Object.entries(obj)) {
       // Skip metadata keys.
       if (key.startsWith('_')) continue
@@ -133,7 +169,10 @@ export function loadSources(filePaths: readonly string[]): SourceMap {
       if (key in merged) {
         throw new Error(`Duplicate audio key "${key}" (also defined elsewhere)`)
       }
-      merged[key] = { text: value, voice: edgeTtsVoice }
+      merged[key] =
+        engine === 'azure-ipa'
+          ? { text: value, voice: edgeTtsVoice, engine, ipa: toIpa(value) }
+          : { text: value, voice: edgeTtsVoice, engine }
     }
   }
   return merged
@@ -145,6 +184,16 @@ export function loadSources(filePaths: readonly string[]): SourceMap {
  */
 export function hashEntry(text: string, voice: string): string {
   return createHash('sha256').update(`${voice}\n${text}`, 'utf8').digest('hex')
+}
+
+/**
+ * Hash dla wpisów azure-ipa. Zawiera silnik i IPA, więc zmiana reguł w
+ * polishG2p.ts (albo przejście edge → azure) wymusza regenerację pliku.
+ */
+export function hashEntryAzure(text: string, voice: string, ipa: string): string {
+  return createHash('sha256')
+    .update(`azure-ipa\n${voice}\n${ipa}\n${text}`, 'utf8')
+    .digest('hex')
 }
 
 /** @deprecated Use hashEntry instead. Kept for backward compatibility in tests. */
@@ -188,14 +237,27 @@ export function decideAction(params: {
   text: string
   voice: string
   manifestEntry: ManifestEntry | undefined
+  engine?: Engine
+  ipa?: string
 }): BuildAction {
   if (params.hasOverride) return { kind: 'override' }
   if (!params.hasOutputFile) return { kind: 'generate', reason: 'missing-file' }
   if (!params.manifestEntry) return { kind: 'generate', reason: 'no-manifest-entry' }
-  if (params.manifestEntry.hash !== hashEntry(params.text, params.voice)) {
+  if (params.manifestEntry.hash !== expectedHash(params)) {
     return { kind: 'generate', reason: 'hash-mismatch' }
   }
   return { kind: 'cache-hit' }
+}
+
+function expectedHash(entry: {
+  text: string
+  voice: string
+  engine?: Engine
+  ipa?: string
+}): string {
+  return entry.engine === 'azure-ipa'
+    ? hashEntryAzure(entry.text, entry.voice, entry.ipa ?? '')
+    : hashEntry(entry.text, entry.voice)
 }
 
 // ---------- IO helpers ----------
@@ -252,6 +314,19 @@ function runEdgeTts(text: string, voice: string, outPath: string): void {
   }
 }
 
+/** Zwraca dane Azure albo null, gdy żaden wpis ich nie potrzebuje. */
+function ensureAzureAvailable(sources: SourceMap): { key: string; region: string } | null {
+  const needsAzure = Object.values(sources).some((e) => e.engine === 'azure-ipa')
+  if (!needsAzure) return null
+  loadEnvLocal(ROOT)
+  const credentials = readAzureCredentials()
+  if (!credentials) {
+    console.error(MISSING_CREDENTIALS_MESSAGE)
+    process.exit(1)
+  }
+  return credentials
+}
+
 function overridePath(key: string): string {
   return join(MANUAL_OVERRIDES_DIR, `${key}.mp3`)
 }
@@ -262,8 +337,39 @@ function outputPath(key: string): string {
 
 // ---------- main flows ----------
 
-function runBuild(sources: SourceMap): void {
+/** Plan buildu bez dotykania TTS — działa bez klucza Azure i bez edge-tts. */
+function runDryRun(sources: SourceMap): void {
+  const manifest = readManifest(MANIFEST_PATH)
+  const counts: Record<string, number> = {}
+
+  for (const [key, entry] of Object.entries(sources)) {
+    const action = decideAction({
+      hasOverride: existsSync(overridePath(key)),
+      hasOutputFile: existsSync(outputPath(key)),
+      text: entry.text,
+      voice: entry.voice,
+      manifestEntry: manifest[key],
+      engine: entry.engine,
+      ipa: entry.ipa,
+    })
+    const label = action.kind === 'generate' ? `generate (${action.reason})` : action.kind
+    const ipa = entry.ipa ? ` ipa="${entry.ipa}"` : ''
+    console.log(`${key}\tengine=${entry.engine}\ttext="${entry.text}"${ipa}\t${label}`)
+    const bucket = `${entry.engine}/${action.kind}`
+    counts[bucket] = (counts[bucket] ?? 0) + 1
+  }
+
+  console.log('')
+  console.log('DRY RUN — nic nie wygenerowano.')
+  for (const bucket of Object.keys(counts).sort()) {
+    console.log(`  ${bucket}: ${counts[bucket]}`)
+  }
+  console.log(`  total: ${Object.keys(sources).length}`)
+}
+
+async function runBuild(sources: SourceMap): Promise<void> {
   ensureEdgeTtsAvailable()
+  const azure = ensureAzureAvailable(sources)
   mkdirSync(PUBLIC_AUDIO_DIR, { recursive: true })
 
   const manifest = readManifest(MANIFEST_PATH)
@@ -272,7 +378,8 @@ function runBuild(sources: SourceMap): void {
   let cached = 0
   let failed = 0
 
-  for (const [key, { text, voice }] of Object.entries(sources)) {
+  for (const [key, entry] of Object.entries(sources)) {
+    const { text, voice, engine, ipa } = entry
     const out = outputPath(key)
     const ovr = overridePath(key)
     const action = decideAction({
@@ -281,15 +388,18 @@ function runBuild(sources: SourceMap): void {
       text,
       voice,
       manifestEntry: manifest[key],
+      engine,
+      ipa,
     })
 
     try {
       if (action.kind === 'override') {
         copyFileSync(ovr, out)
         manifest[key] = {
-          hash: hashEntry(text, voice),
+          hash: expectedHash(entry),
           updatedAt: Date.now(),
           source: 'override',
+          engine,
         }
         copied += 1
         console.log(`→ ${key} (override copied)`)
@@ -297,12 +407,26 @@ function runBuild(sources: SourceMap): void {
         cached += 1
         console.log(`✓ ${key} (cache hit)`)
       } else {
-        console.log(`→ ${key} (generuję, ${action.reason}, voice=${voice})`)
-        runEdgeTts(text, voice, out)
+        console.log(
+          `→ ${key} (generuję, ${action.reason}, engine=${engine}, voice=${voice}` +
+            `${ipa ? `, ipa=${ipa}` : ''})`,
+        )
+        if (engine === 'azure-ipa') {
+          if (!azure) throw new Error('brak danych logowania Azure')
+          await synthesizeAzure({
+            ssml: buildSsml({ voice, ipa: ipa ?? '', text }),
+            key: azure.key,
+            region: azure.region,
+            outPath: out,
+          })
+        } else {
+          runEdgeTts(text, voice, out)
+        }
         manifest[key] = {
-          hash: hashEntry(text, voice),
+          hash: expectedHash(entry),
           updatedAt: Date.now(),
           source: 'tts',
+          engine,
         }
         generated += 1
       }
@@ -339,23 +463,31 @@ function runCheck(sources: SourceMap): void {
   process.exit(1)
 }
 
-function parseMode(argv: readonly string[]): Mode {
-  const arg = argv[2]
-  if (arg === 'build' || arg === 'check') return arg
-  console.error('Usage: tsx scripts/generate-audio.ts <build|check>')
+export function parseCli(argv: readonly string[]): { mode: Mode; dryRun: boolean } {
+  const args = argv.slice(2)
+  const mode = args.find((a) => !a.startsWith('-'))
+  const dryRun = args.includes('--dry-run')
+  if (mode === 'build' || mode === 'check') return { mode, dryRun }
+  console.error('Usage: tsx scripts/generate-audio.ts <build|check> [--dry-run]')
   process.exit(1)
 }
 
-function main(): void {
-  const mode = parseMode(process.argv)
+async function main(): Promise<void> {
+  const { mode, dryRun } = parseCli(process.argv)
   const sourceFilePaths = discoverSourceFiles(AUDIO_SOURCE_DIR)
   console.log(`Discovered source files: ${sourceFilePaths.map((p) => p.split('/').pop()).join(', ')}`)
   const sources = loadSources(sourceFilePaths)
 
-  if (mode === 'build') runBuild(sources)
-  else runCheck(sources)
+  if (mode === 'check') runCheck(sources)
+  else if (dryRun) runDryRun(sources)
+  else await runBuild(sources)
 }
 
 // Run only when executed as a script (not when imported by tests).
 const isEntry = process.argv[1] && resolve(process.argv[1]) === resolve(__filename)
-if (isEntry) main()
+if (isEntry) {
+  main().catch((err: unknown) => {
+    console.error(err instanceof Error ? err.message : String(err))
+    process.exit(1)
+  })
+}

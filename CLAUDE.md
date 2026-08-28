@@ -63,12 +63,15 @@ audio-source/              # source teksty dla TTS
 ├── reading-ui-strings.json # pochwały czytania, scenki, wild celebrations (moduł 2)
 ├── iskra-reactions.json   # reakcje Iskry: easter eggs, silly, fail (moduł 2; głos Marek)
 ├── numbers.json / math-ui-strings.json # koncepty, fakty, UI (moduł 3)
-├── czytanki.json           # generowany przez `pnpm audio:czytanki` z data/czytanki.ts (cz-syl-*/cz-word-*)
+├── czytanki-syllables.json # generowany (`pnpm audio:czytanki`); `_engine: azure-ipa` — sylaby cz-syl-*
+├── czytanki-words.json     # generowany (`pnpm audio:czytanki`); Edge TTS — słowa cz-word-*
 ├── czytanki-ui-strings.json # intro, nawigacja, cue (moduł 4)
 └── manual-overrides/*.mp3 # wygrywa nad TTS (jeśli istnieje plik)
 
-scripts/generate-audio.ts  # idempotentny: hash text vs manifest, wykrywa edge-tts w wielu lokacjach
-scripts/czytanki-audio-source.ts # generuje audio-source/czytanki.json z data/czytanki.ts (sylaby+słowa)
+scripts/generate-audio.ts  # idempotentny: hash text vs manifest, dwa silniki (edge | azure-ipa)
+scripts/polishG2p.ts       # ortografia PL → IPA (toIpa) dla `_engine: azure-ipa`
+scripts/azureTts.ts        # SSML <phoneme alphabet="ipa"> + REST Azure Speech + loader .env.local
+scripts/czytanki-audio-source.ts # generuje czytanki-syllables.json (azure-ipa) + czytanki-words.json (edge)
 public/audio/              # build artifact: 1135 plików mp3 + .manifest.json
 ```
 
@@ -76,7 +79,8 @@ public/audio/              # build artifact: 1135 plików mp3 + .manifest.json
 
 - **Modułowa architektura** — kolejne moduły (sylaby, cyfry, kolory) doklejają się jako `src/modules/<nazwa>/`. Reużywają shared/ (SRS, audio, settings, stats, engagement, ui).
 - **Audio — Edge TTS przez Python wrapper** (`scripts/tts.py` + CLI). User edytuje `audio-source/*.json`, woła `pnpm audio:build`. Manual override przez `audio-source/manual-overrides/<klucz>.mp3` wygrywa nad TTS.
-- **Brak fonemów IPA** — Edge TTS publiczny endpoint nie obsługuje SSML phoneme tags. Zostały polskie nazwy liter ("be", "pe", "em") albo manual recordings dla pełnej kontroli.
+- **Dwa silniki TTS** — plik `audio-source/*.json` deklaruje `_engine`: `edge` (domyślny, darmowy CLI, bez SSML) albo `azure-ipa`. `azure-ipa` idzie do Azure Speech REST tym samym głosem (pl-PL-ZofiaNeural) z SSML `<phoneme alphabet="ipa" ph="…">`, gdzie IPA liczy `scripts/polishG2p.ts` z ortografii. WHY: Edge zgaduje wymowę **izolowanych sylab** i myli się ("lo" → "elo", "ka" → "ka a", "ry" → "ri"), a IPA omija ten zgadywacz. Używane przez `czytanki-syllables.json`; całe słowa i zdania zostają na Edge. Wymaga `.env.local` (gitignore) z `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION=westeurope` — darmowy tier F0 wystarcza; wzór w `.env.example`. Podgląd planu bez klucza: `pnpm audio:dry` (wypisuje engine, tekst, IPA i akcję dla każdego klucza).
+- **Brak fonemów IPA w Edge** — publiczny endpoint Edge TTS nie obsługuje SSML phoneme tags. Dla liter zostały polskie nazwy ("be", "pe", "em") albo manual recordings.
 - **Theme: jeden tryb** — warm light (`#fef9f2` tło, `#2d2d33` tekst), ignoruje `prefers-color-scheme`. Brak dark mode.
 - **No-text UI dla dziecka** — tylko ikony + audio cues. Wszystkie tap-targety ≥60×60. Brak gestów (tylko tap); moduł 2 używa drag-drop (@dnd-kit) dla ćwiczenia Płomyk.
 - **Persist kilka storage**: `iskierki-state-v4` (settings + math gate + humorMode + reading.*), `iskierki-letters-v1` (moduł 1 progres), `iskierki-reading-v1` (moduł 2 progres), `iskierki-numbers-v1` (moduł 3 progres) i `iskierki-czytanki-v1` (moduł 4 progres — openedIds, seenIntros). Reset jednego nie kasuje pozostałych.
@@ -96,8 +100,9 @@ pnpm dev              # dev server z HMR
 pnpm build            # production build (lokalnie base='/'; CI ustawia VITE_BASE=/kid-learn/)
 pnpm tsc -b           # type check
 pnpm test --run       # testy (586/586 zielone)
-pnpm audio:czytanki   # generuj audio-source/czytanki.json z data/czytanki.ts (moduł 4)
-pnpm audio:build      # audio:czytanki + generuj/aktualizuj mp3
+pnpm audio:czytanki   # generuj czytanki-syllables.json + czytanki-words.json z data/czytanki.ts (moduł 4)
+pnpm audio:build      # audio:czytanki + generuj/aktualizuj mp3 (azure-ipa wymaga .env.local)
+pnpm audio:dry        # plan buildu bez TTS: engine + tekst + IPA + akcja (nie wymaga klucza)
 pnpm audio:check      # sprawdź czy wszystkie klucze mają plik (1128 plików)
 
 # GitHub
@@ -129,6 +134,7 @@ git push                                              # auto-deploy ~40s przez G
 - **`.test.ts` excludowany z `tsconfig.app.json`** — testy mogą mieć type errors bez zatrzymywania `pnpm build`. Test errors trzeba sprawdzać przez `pnpm test --run`.
 - **@dnd-kit w moduł 2 (Płomyk)** — drag-drop z `useDraggable`/`useDroppable`. DndContext musi opakowywać cały ekran ćwiczenia; `over?.id` to null gdy upuścimy poza target. Nie używać `onDragEnd` do mutacji store — tylko do lokalnego state syllableSlots.
 - **wildCelebrationCounter i jitter** — licznik i ostatni stan w `readingStore`. Reset na nową sesję, nie per-pytanie. Jitter ±2 zapobiega przewidywalności.
+- **Zmiana reguł w `polishG2p.ts` = regeneracja 375 sylab** — hash `azure-ipa` zawiera IPA, więc każda poprawka G2P wymusza ponowny build tych kluczy (i zużycie limitu F0). Najpierw `pnpm audio:dry`, potem build.
 
 ## Konwencje kodu
 
