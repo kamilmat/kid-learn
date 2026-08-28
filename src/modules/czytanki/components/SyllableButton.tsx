@@ -13,6 +13,7 @@ type Props = {
 
 export function SyllableButton({ text, color, highlighted, fontSize, onTap, onLongPress }: Props) {
   const [bounce, setBounce] = useState(0)
+  const tapSize = Math.max(48, Math.min(60, Math.round(fontSize * 1.5)))
   const press = useSyllablePress({
     onTap: () => {
       setBounce((n) => n + 1)
@@ -30,8 +31,9 @@ export function SyllableButton({ text, color, highlighted, fontSize, onTap, onLo
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minWidth: 60,
-        minHeight: 60,
+        // Tap-target skaluje się z czcionką (auto-fit), ale nie schodzi poniżej 48 px.
+        minWidth: tapSize,
+        minHeight: tapSize,
         padding: '0 0.08em',
         fontFamily: 'var(--font-block)',
         fontWeight: 700,

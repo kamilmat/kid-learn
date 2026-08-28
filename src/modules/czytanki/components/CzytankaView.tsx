@@ -16,6 +16,8 @@ const FONT_BY_GROUP: Record<CzytankaGroup, number> = { 1: 64, 2: 54, 3: 46, 4: 4
 // Dłuższe czytanki dostają mniejszą scenę — tekst jest tu treścią, scena tłem.
 const SCENE_PCT_BY_GROUP: Record<CzytankaGroup, number> = { 1: 40, 2: 40, 3: 38, 4: 34 }
 const MIN_FONT = 26
+const SCENE_BASIS_MIN = 18
+const SCENE_BASIS_STEP = 6
 const FONT_STEP = 2
 const WORD_HIGHLIGHT_MS = 600
 
@@ -117,11 +119,15 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   // Bump wymusza ponowny pomiar także wtedy, gdy fontSize się nie zmienia
   // (reset do baseFont po obrocie ekranu) — inaczej efekt z deps nie odpali.
   const [fitPass, setFitPass] = useState(0)
+  // Gdy tekst nie mieści się nawet przy MIN_FONT (długie czytanki w portrait),
+  // oddajemy mu miejsce kosztem sceny — scena jest tłem, tekst jest celem.
+  const [sceneBasis, setSceneBasis] = useState(SCENE_PCT_BY_GROUP[czytanka.group])
 
   const refit = useCallback(() => {
     setFontSize(baseFont)
+    setSceneBasis(SCENE_PCT_BY_GROUP[czytanka.group])
     setFitPass((n) => n + 1)
-  }, [baseFont])
+  }, [baseFont, czytanka.group])
 
   useLayoutEffect(() => { refit() }, [czytanka.id, refit])
 
@@ -151,14 +157,17 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     if (!box || !text) return
     const available = box.clientHeight
     if (available <= 0) return
-    if (text.offsetHeight > available && fontSize > MIN_FONT) {
+    if (text.offsetHeight <= available) return
+    if (fontSize > MIN_FONT) {
       setFontSize((f) => Math.max(MIN_FONT, f - FONT_STEP))
+    } else if (sceneBasis > SCENE_BASIS_MIN) {
+      setSceneBasis((b) => Math.max(SCENE_BASIS_MIN, b - SCENE_BASIS_STEP))
     }
-  }, [fontSize, fitPass])
+  }, [fontSize, sceneBasis, fitPass])
 
   return (
     <div data-testid="czytanka-view" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 12, padding: `0 ${tapTargets.minMargin}px ${tapTargets.minMargin}px`, position: 'relative' }}>
-      <div style={{ flex: `0 0 ${SCENE_PCT_BY_GROUP[czytanka.group]}%`, minHeight: 0, position: 'relative' }}>
+      <div style={{ flex: `0 0 ${sceneBasis}%`, minHeight: 0, position: 'relative' }}>
         <CzytankaScene scene={czytanka.scene} />
         {onPrev && <button type="button" aria-label="Poprzednia czytanka" {...prevTap} style={{ ...roundBtn, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)' }}>◀</button>}
         {onNext && <button type="button" aria-label="Następna czytanka" {...nextTap} style={{ ...roundBtn, position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>▶</button>}
@@ -168,10 +177,10 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
         </button>
       </div>
 
-      <div ref={boxRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', overflowY: 'auto' }}>
-        <div ref={textRef} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2em', fontSize }}>
+      <div ref={boxRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
+        <div ref={textRef} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2em', fontSize, margin: 'auto 0' }}>
           {czytanka.sentences.map((sent, s) => (
-            <div key={s} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.3em 0.55em' }}>
+            <div key={s} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.2em 0.5em' }}>
               {sent.map((word, w) => {
                 const isActive = (activeWord?.s === s && activeWord.w === w) || (heldWord?.s === s && heldWord.w === w)
                 return (
