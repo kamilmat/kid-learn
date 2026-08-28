@@ -1,5 +1,6 @@
 import { useEffect, useMemo, type ReactNode } from 'react'
 import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors } from '@/app/theme'
 import { DigitTile } from '../representations/DigitTile'
@@ -34,7 +35,7 @@ export function ArrayMatchExercise({ audioBus, payload, onAnswer }: Props) {
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} onDragEnd={handleDragEnd}>
       <div
         data-testid="exercise-array-match"
         style={{

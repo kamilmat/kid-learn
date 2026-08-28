@@ -185,11 +185,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
         />
       )}
       {session.status === 'paused' && (
-        <PauseOverlay
-          audioBus={audioBus}
-          onResume={session.resume}
-          onExit={handleQuit}
-        />
+        <PauseOverlay onResume={session.resume} onExit={handleQuit} />
       )}
     </div>
   )

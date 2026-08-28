@@ -1,86 +1,83 @@
-import { useEffect } from 'react'
-import type { AudioBus } from '@/shared/audio/AudioBus'
-import { useTapHandler } from '@/shared/ui/useTapHandler'
-import { colors, radii } from '@/app/theme'
+// PauseOverlay — modal "Pauza" modułu Cyferek.
+// No-text dla dziecka: same ikony (▶ / 🏠) + audio cue z sesji (nav-pause /
+// nav-resume), tak jak w module liter. Tap-targety ≥ 60×60.
+// Wyciszenie kolejki robi `useNumbersSession.pause()` — overlay nic nie gra.
 
-type Props = {
-  audioBus: Pick<AudioBus, 'play' | 'stop'>
+import { colors, radii } from '@/app/theme'
+import { useTapHandler } from '@/shared/ui/useTapHandler'
+
+export type PauseOverlayProps = {
   onResume: () => void
   onExit: () => void
 }
 
-export function PauseOverlay({ audioBus, onResume, onExit }: Props) {
-  useEffect(() => {
-    audioBus.stop()
-  }, [audioBus])
+const tapStyleExtras = {
+  touchAction: 'manipulation' as const,
+  userSelect: 'none' as const,
+  WebkitUserSelect: 'none' as const,
+  WebkitTapHighlightColor: 'transparent',
+}
 
+export function PauseOverlay({ onResume, onExit }: PauseOverlayProps) {
   const resumeTap = useTapHandler({ onTap: onResume })
   const exitTap = useTapHandler({ onTap: onExit })
 
   return (
     <div
       data-testid="pause-overlay"
+      role="dialog"
+      aria-label="Pauza"
       style={{
         position: 'absolute',
         inset: 0,
-        background: 'rgba(0,0,0,0.55)',
+        zIndex: 100,
+        background: '#2d2d33dd',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 100,
+        flexDirection: 'column',
+        gap: 24,
       }}
     >
-      <div
+      <div aria-hidden="true" style={{ fontSize: 96, color: '#ffffff' }}>⏸</div>
+      <button
+        type="button"
+        aria-label="Wznów"
+        data-testid="pause-resume"
+        {...resumeTap}
         style={{
-          background: '#fff',
-          padding: 32,
-          borderRadius: radii.kid * 1.5,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 24,
-          minWidth: 280,
+          width: 140,
+          height: 140,
+          borderRadius: radii.kid,
+          background: colors.accentGreen,
+          border: 'none',
+          fontSize: 72,
+          color: '#ffffff',
+          cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          ...tapStyleExtras,
         }}
       >
-        <div aria-hidden="true" style={{ fontSize: 80 }}>
-          ⏸️
-        </div>
-        <button
-          type="button"
-          data-testid="pause-resume"
-          aria-label="Wznów"
-          {...resumeTap}
-          style={btnStyle('#dcfce7', '#16a34a', '#166534')}
-        >
-          ▶ Wznów
-        </button>
-        <button
-          type="button"
-          data-testid="pause-exit"
-          aria-label="Wyjdź"
-          {...exitTap}
-          style={btnStyle('#fff', colors.accentBlue, colors.text)}
-        >
-          → Wyjdź
-        </button>
-      </div>
+        <span aria-hidden="true">▶</span>
+      </button>
+      <button
+        type="button"
+        aria-label="Wyjdź"
+        data-testid="pause-exit"
+        {...exitTap}
+        style={{
+          width: 80,
+          height: 80,
+          borderRadius: radii.kid,
+          background: '#ffffff',
+          border: `3px solid ${colors.accentOrange}`,
+          fontSize: 36,
+          cursor: 'pointer',
+          ...tapStyleExtras,
+        }}
+      >
+        <span aria-hidden="true">🏠</span>
+      </button>
     </div>
   )
-}
-
-function btnStyle(bg: string, border: string, color: string) {
-  return {
-    minHeight: 64,
-    minWidth: 200,
-    padding: '0 24px',
-    borderRadius: radii.kid,
-    background: bg,
-    color,
-    border: `3px solid ${border}`,
-    fontSize: 24,
-    fontFamily: 'var(--font-handwritten)',
-    cursor: 'pointer',
-    touchAction: 'manipulation',
-    WebkitTapHighlightColor: 'transparent',
-  } as const
 }

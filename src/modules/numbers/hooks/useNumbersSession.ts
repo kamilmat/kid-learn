@@ -193,6 +193,8 @@ export function useNumbersSession({
       pausedFromRef.current = status
       antiCheatRef.current.push({ type: 'pause', ts: now(), reason })
       audioBus.stop()
+      // "Każdy klik mówi co zrobił" — cue jak w module liter.
+      void audioBus.play('nav-pause')
       setStatus('paused')
     },
     [status, now, audioBus],
@@ -201,10 +203,11 @@ export function useNumbersSession({
   const resume = useCallback(() => {
     if (status !== 'paused') return
     antiCheatRef.current.push({ type: 'resume', ts: now() })
+    void audioBus.play('nav-resume')
     // Wracamy do stanu sprzed pauzy — pauza w trakcie feedbacku nie może
     // zgubić przejścia do następnego pytania (odpowiedź jest już zalogowana).
     setStatus(pausedFromRef.current)
-  }, [status, now])
+  }, [status, now, audioBus])
 
   return {
     status,

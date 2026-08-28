@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import { useSyllablePress } from '../hooks/useSyllablePress'
 import './scene.css'
 
@@ -14,18 +15,27 @@ type Props = {
 export function SyllableButton({ text, color, highlighted, fontSize, onTap, onLongPress }: Props) {
   const [bounce, setBounce] = useState(0)
   const tapSize = Math.max(52, Math.min(60, Math.round(fontSize * 1.5)))
-  const press = useSyllablePress({
-    onTap: () => {
-      setBounce((n) => n + 1)
-      onTap()
+  const handleTap = useCallback(() => {
+    setBounce((n) => n + 1)
+    onTap()
+  }, [onTap])
+  const press = useSyllablePress({ onTap: handleTap, onLongPress })
+  // `role="button"` na divie nie dostaje natywnej aktywacji Enter/Spacją.
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return
+      e.preventDefault()
+      handleTap()
     },
-    onLongPress,
-  })
+    [handleTap],
+  )
   return (
     <div
       role="button"
       aria-label={text}
       data-testid="syllable"
+      tabIndex={0}
+      onKeyDown={onKeyDown}
       {...press}
       style={{
         display: 'inline-flex',

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors } from '@/app/theme'
 import { TenFrame } from '../representations/TenFrame'
@@ -49,7 +50,7 @@ export function Make10Exercise({ audioBus, payload, onAnswer }: Props) {
   // "wystrzeliwującą" kropki transfer w kolorze TRANSFER_COLOR.
   // Faza odpowiedzi: pełny TenFrame(10) + leftover TenFrame jako static state.
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} onDragEnd={handleDragEnd}>
       <div
         data-testid="exercise-make10"
         style={{

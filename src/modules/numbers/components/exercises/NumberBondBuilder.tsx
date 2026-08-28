@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DndContext, type DragEndEvent } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { NumberBondShape } from '../representations/NumberBondShape'
 import { DigitTile } from '../representations/DigitTile'
@@ -58,7 +59,7 @@ export function NumberBondBuilder({ audioBus, payload, onAnswer }: Props) {
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} onDragEnd={handleDragEnd}>
       <div
         data-testid="exercise-number-bond-builder"
         style={{

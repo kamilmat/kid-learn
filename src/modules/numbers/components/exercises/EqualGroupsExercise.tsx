@@ -1,5 +1,6 @@
 import { useEffect, useMemo, type ReactNode } from 'react'
 import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors } from '@/app/theme'
 import { ConcreteIcons } from '../representations/ConcreteIcons'
@@ -38,7 +39,7 @@ export function EqualGroupsExercise({ audioBus, payload, onAnswer }: Props) {
   const additionExpr = Array.from({ length: n }, () => String(m)).join(' + ')
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} onDragEnd={handleDragEnd}>
       <div
         data-testid="exercise-equal-groups"
         style={{

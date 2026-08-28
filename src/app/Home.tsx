@@ -13,6 +13,7 @@
 import { useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { audioBus } from '@/shared/audio/AudioBus'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { IskraHero } from '@/shared/ui/IskraHero'
 import { colors, radii, tapTargets } from '@/app/theme'
@@ -36,20 +37,19 @@ export function Home() {
   useEffect(() => {
     // Flagę "widziane" palimy dopiero gdy intro faktycznie dograło (play()
     // → true). Inaczej pierwszy wjazd z zablokowanym autoplay / brakiem pliku
-    // kasował onboarding na zawsze.
-    const playIntro = (key: string, mark: (k: string) => void) => {
-      void audioBus.play(key).then((played) => {
-        if (played) mark(key)
-      })
+    // kasował onboarding na zawsze. `playIntroOnce` dokłada guard na czas
+    // trwania play() — bez niego podwójny efekt StrictMode grał intro dwa razy.
+    const playIntro = (key: string, seen: boolean, mark: (k: string) => void) => {
+      void playIntroOnce(audioBus, key, () => seen, mark)
     }
     if (!lettersIntroSeen) {
-      playIntro('home-letters-intro', markLettersIntro)
+      playIntro('home-letters-intro', lettersIntroSeen, markLettersIntro)
     } else if (!readingIntroSeen) {
-      playIntro('home-reading-intro', markReadingIntro)
+      playIntro('home-reading-intro', readingIntroSeen, markReadingIntro)
     } else if (!numbersIntroSeen) {
-      playIntro('home-numbers-intro', markNumbersIntro)
+      playIntro('home-numbers-intro', numbersIntroSeen, markNumbersIntro)
     } else if (!czytankiIntroSeen) {
-      playIntro('home-czytanki-intro', markCzytankiIntro)
+      playIntro('home-czytanki-intro', czytankiIntroSeen, markCzytankiIntro)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -98,7 +98,9 @@ export function Home() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 32,
+        // Siatka 2×2 kafelków musi zmieścić się bez scrolla na iPadzie
+        // w orientacji poziomej (820 px wysokości) — stąd ciasne odstępy.
+        gap: 24,
         background: colors.bg,
       }}
     >
@@ -130,10 +132,10 @@ export function Home() {
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 16,
+          gap: 12,
           width: '100%',
           maxWidth: 820,
-          marginTop: 16,
+          marginTop: 4,
         }}
       >
         {/* Kafelek: Litery (moduł 1) — wizualnie kolorowe ABC dla nieczytających */}
@@ -143,8 +145,8 @@ export function Home() {
           aria-label="Litery"
           {...lettersTap}
           style={{
-            minHeight: 220,
-            padding: 24,
+            minHeight: 196,
+            padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#fef3c7',
             border: '4px solid #f59e0b',
@@ -195,8 +197,8 @@ export function Home() {
           aria-label="Czytanie"
           {...readingTap}
           style={{
-            minHeight: 220,
-            padding: 24,
+            minHeight: 196,
+            padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#dbeafe',
             border: '4px solid #3b82f6',
@@ -245,8 +247,8 @@ export function Home() {
           aria-label="Cyferki"
           {...numbersTap}
           style={{
-            minHeight: 220,
-            padding: 24,
+            minHeight: 196,
+            padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#dcfce7',
             border: '4px solid #16a34a',
@@ -297,8 +299,8 @@ export function Home() {
           aria-label="Czytanki"
           {...czytankiTap}
           style={{
-            minHeight: 220,
-            padding: 24,
+            minHeight: 196,
+            padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#f3e8ff',
             border: '4px solid #9333ea',

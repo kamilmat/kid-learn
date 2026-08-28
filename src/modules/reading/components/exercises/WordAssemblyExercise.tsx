@@ -11,6 +11,7 @@ import {
   useDraggable,
   type DragEndEvent,
 } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { useDragSyllable } from '../../hooks/useDragSyllable'
 import { DropSlot } from '../DropSlot'
@@ -170,7 +171,7 @@ export function WordAssemblyExercise({
   const dkHandlers = useTapHandler({ onTap: onDontKnow })
 
   return (
-    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} sensors={sensors} onDragEnd={onDragEnd}>
       <div
         data-testid="word-assembly-exercise"
         style={{

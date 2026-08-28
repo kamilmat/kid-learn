@@ -25,6 +25,7 @@ import {
 
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
 import { useSettings } from '@/shared/settings/settingsStore'
 import type { Level } from '@/shared/settings/types'
 import { KidNav } from '@/shared/ui/KidNav'
@@ -115,19 +116,16 @@ function LettersIndex({ audioBus }: LettersIndexProps) {
       defaultLevel === 'last-used' ? lastUsedLevel : defaultLevel
     if (targetLevel) {
       setLastUsedLevel(targetLevel)
-      // Push (nie replace) — żeby Wróć z sesji wracało do LevelSelect, nie Home.
-      navigate(`session/${targetLevel}`)
+      // replace — patrz handleSelect: wyjście z sesji samo robi replace na
+      // LevelSelect, więc push zostawiałby duplikat w historii.
+      navigate(`session/${targetLevel}`, { replace: true })
     }
   }, [defaultLevel, lastUsedLevel, location.state, navigate, setLastUsedLevel])
 
   // Onboarding `letters-intro` — 1× per `seenIntros`.
   useEffect(() => {
-    if (!hasSeenIntro(LETTERS_INTRO_KEY)) {
-      // Flaga "widziane" dopiero po faktycznym odtworzeniu (play() → true).
-      void audioBus.play(LETTERS_INTRO_KEY).then((played) => {
-        if (played) markIntroSeen(LETTERS_INTRO_KEY)
-      })
-    }
+    // Flaga "widziane" dopiero po faktycznym odtworzeniu (play() → true).
+    void playIntroOnce(audioBus, LETTERS_INTRO_KEY, hasSeenIntro, markIntroSeen)
     // mount-only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -135,7 +133,11 @@ function LettersIndex({ audioBus }: LettersIndexProps) {
   const handleSelect = useCallback(
     (level: Level) => {
       setLastUsedLevel(level)
-      navigate(`session/${level}`)
+      // replace — wejście w sesję podmienia LevelSelect zamiast go dokładać.
+      // Wyjście z sesji też robi replace (na LevelSelect), więc historia to
+      // [Home, sesja] → [Home, LevelSelect]: jedno "wstecz" wraca do Home.
+      // Push w obie strony dawał [Home, LevelSelect, LevelSelect].
+      navigate(`session/${level}`, { replace: true })
     },
     [navigate, setLastUsedLevel],
   )
@@ -177,16 +179,8 @@ function LettersSession({ audioBus }: LettersSessionProps) {
   // Onboardingi sesji — `quiz-intro` + `dont-know-intro`, sekwencja, 1× per klucz.
   useEffect(() => {
     if (!isValidLevel) return
-    if (!hasSeenIntro(QUIZ_INTRO_KEY)) {
-      void audioBus.play(QUIZ_INTRO_KEY).then((played) => {
-        if (played) markIntroSeen(QUIZ_INTRO_KEY)
-      })
-    }
-    if (!hasSeenIntro(DONT_KNOW_INTRO_KEY)) {
-      void audioBus.play(DONT_KNOW_INTRO_KEY).then((played) => {
-        if (played) markIntroSeen(DONT_KNOW_INTRO_KEY)
-      })
-    }
+    void playIntroOnce(audioBus, QUIZ_INTRO_KEY, hasSeenIntro, markIntroSeen)
+    void playIntroOnce(audioBus, DONT_KNOW_INTRO_KEY, hasSeenIntro, markIntroSeen)
     // mount-only (nawet jeśli level zmieni się w URL — i tak remountujemy przez key)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isValidLevel])

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { getSyllableColor } from '@/shared/ui/syllableColors'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
@@ -54,12 +55,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     const mountTimeout = window.setTimeout(() => {
       const cue = takePendingCue()
       if (cue) void audioBus.play(cue)
-      if (!hasSeenIntro('czytanka-first')) {
-        // Flaga dopiero po faktycznym odtworzeniu (play() → true).
-        void audioBus.play('czytanki-intro').then((played) => {
-          if (played) markIntroSeen('czytanka-first')
-        })
-      }
+      void playIntroOnce(audioBus, 'czytanka-first', hasSeenIntro, markIntroSeen, 'czytanki-intro')
     }, 0)
     return () => window.clearTimeout(mountTimeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps

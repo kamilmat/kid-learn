@@ -12,6 +12,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
 import type { Level, Settings } from '@/shared/settings/types'
 import type {
   ReadingQuestion,
@@ -736,11 +737,12 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     // SessionView), bo `stop()` powyżej ucinał intro w tym samym mouncie i palił
     // flagę na zawsze. Flaga zapala się dopiero gdy audio dograło do końca.
     const introKey = `reading-${level}-intro`
-    if (!useReading.getState().hasSeenIntro(introKey)) {
-      void audioBus.play(introKey).then((played) => {
-        if (played) useReading.getState().markIntroSeen(introKey)
-      })
-    }
+    void playIntroOnce(
+      audioBus,
+      introKey,
+      (k) => useReading.getState().hasSeenIntro(k),
+      (k) => useReading.getState().markIntroSeen(k),
+    )
 
     // Prompt pierwszego pytania dokleja się za intro (kolejka FIFO)
     generateQuestion(0)

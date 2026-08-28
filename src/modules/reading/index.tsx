@@ -41,7 +41,10 @@ function ReadingIndex({ audioBus }: { audioBus: Pick<AudioBus, 'play' | 'stop'> 
       audioBus={audioBus}
       onSelect={(level) => {
         setLastUsed(level)
-        navigate(`session/${level}`)
+        // replace — wyjście z sesji też robi replace na LevelSelect, więc
+        // historia to [Home, sesja] → [Home, LevelSelect]: jedno "wstecz"
+        // wraca do Home zamiast trafiać w duplikat LevelSelect.
+        navigate(`session/${level}`, { replace: true })
       }}
     />
   )
