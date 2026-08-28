@@ -288,7 +288,7 @@ export function ReportScreen({
     }
     const md = exportReportToMarkdown(
       letters,
-      sessions,
+      allSessions,
       settings,
       now(),
       numbersSnapshot,
@@ -302,7 +302,7 @@ export function ReportScreen({
       setCopyStatus('error')
       window.setTimeout(() => setCopyStatus('idle'), COPY_FEEDBACK_MS)
     }
-  }, [copyToClipboard, letters, sessions, settings, now])
+  }, [copyToClipboard, letters, allSessions, settings, now])
 
   const handleCancel = useCallback(() => {
     if (onExit) onExit()

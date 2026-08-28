@@ -4,6 +4,14 @@ import { createInitialLetterState } from '@/shared/srs/createInitialLetterState'
 import { defaultSettings } from '@/shared/settings/defaults'
 import type { LetterState } from '@/shared/srs/types'
 import type { SessionEvent, SessionLog } from '@/shared/stats/types'
+import {
+  fromLettersLog,
+  fromNumbersLog,
+  fromReadingLog,
+  type ReadingSessionLog,
+  type UnifiedSession,
+} from './aggregate'
+import type { NumbersSessionLog } from '@/modules/numbers/types'
 
 function makeLetter(
   letter: string,
@@ -44,6 +52,15 @@ function fakeSession(
   }
 }
 
+/** Skrót: SessionLog modułu 1 -> UnifiedSession, tak jak w ReportScreen. */
+function fakeUnifiedSession(
+  startedAt: number,
+  numAnswers: number,
+  durationMs: number = 60_000,
+): UnifiedSession {
+  return fromLettersLog(fakeSession(startedAt, numAnswers, durationMs))
+}
+
 const NOW = new Date(2023, 6, 28, 12, 0, 0).getTime()
 
 describe('exportReportToMarkdown', () => {
@@ -52,7 +69,7 @@ describe('exportReportToMarkdown', () => {
       a: makeLetter('a', { totalSeen: 5, totalCorrect: 4, totalWrong: 1, box: 3 }),
       b: makeLetter('b', { totalSeen: 5, totalCorrect: 1, totalWrong: 4, box: 1 }),
     }
-    const sessions: SessionLog[] = [fakeSession(NOW, 5)]
+    const sessions: UnifiedSession[] = [fakeUnifiedSession(NOW, 5)]
     const md = exportReportToMarkdown(letters, sessions, defaultSettings, NOW)
 
     expect(md).toContain('# Raport Iskierki')
@@ -85,9 +102,9 @@ describe('exportReportToMarkdown', () => {
   })
 
   it('liczy "Dziś" i "Wczoraj" oraz Streak', () => {
-    const sessions: SessionLog[] = [
-      fakeSession(NOW, 5),
-      fakeSession(NOW - 24 * 60 * 60 * 1000, 3),
+    const sessions: UnifiedSession[] = [
+      fakeUnifiedSession(NOW, 5),
+      fakeUnifiedSession(NOW - 24 * 60 * 60 * 1000, 3),
     ]
     const md = exportReportToMarkdown({}, sessions, defaultSettings, NOW)
     expect(md).toContain('Dziś: 5 pytań')
@@ -134,16 +151,78 @@ describe('exportReportToMarkdown', () => {
       { type: 'answer', ts: 200, outcome: 'correct', responseMs: 600 },
       { type: 'answer', ts: 300, outcome: 'wrong', responseMs: 700 },
     ]
-    const sessions: SessionLog[] = [
-      {
+    const sessions: UnifiedSession[] = [
+      fromLettersLog({
         id: 's1',
         startedAt: NOW,
         endedAt: NOW + 1000,
         level: 'iskierka',
         events: fast,
-      },
+      }),
     ]
     const md = exportReportToMarkdown({}, sessions, defaultSettings, NOW)
     expect(md).toContain('Szybkie klikanie')
+  })
+
+  it('sekcja Aktywność pokazuje sesję czytania z etykietą modułu i policzoną dzisiaj', () => {
+    const readingLog: ReadingSessionLog = {
+      startedAt: NOW,
+      endedAt: NOW + 30_000,
+      level: 'plomyk',
+      events: [
+        {
+          questionIndex: 0,
+          exerciseType: 'word-assembly',
+          targetId: 'word-SOWA',
+          outcome: 'correct',
+          responseMs: 3_000,
+          timestamp: NOW + 5_000,
+        },
+      ],
+    }
+    const sessions: UnifiedSession[] = [fromReadingLog(readingLog, 0)]
+    const md = exportReportToMarkdown({}, sessions, defaultSettings, NOW)
+    expect(md).toContain('## Aktywność')
+    expect(md).toContain('- Dziś wg modułu:')
+    expect(md).toContain('Czytanie: 1 sesji, 1 pytań')
+  })
+
+  it('sekcja Flagi anti-cheat pokazuje event modułu Cyferki z etykietą modułu', () => {
+    const numbersLog: NumbersSessionLog = {
+      startedAt: NOW,
+      endedAt: NOW + 1_000,
+      level: 'ognik',
+      events: [
+        {
+          factId: 'add-5-2',
+          conceptId: 'ognik-doubles',
+          exerciseType: 'doubles',
+          outcome: 'correct',
+          responseMs: 500,
+          timestamp: NOW + 100,
+        },
+        {
+          factId: 'add-5-2',
+          conceptId: 'ognik-doubles',
+          exerciseType: 'doubles',
+          outcome: 'correct',
+          responseMs: 600,
+          timestamp: NOW + 200,
+        },
+        {
+          factId: 'add-5-2',
+          conceptId: 'ognik-doubles',
+          exerciseType: 'doubles',
+          outcome: 'wrong',
+          responseMs: 700,
+          timestamp: NOW + 300,
+        },
+      ],
+    }
+    const sessions: UnifiedSession[] = [fromNumbersLog(numbersLog, 0)]
+    const md = exportReportToMarkdown({}, sessions, defaultSettings, NOW)
+    expect(md).toContain('## Flagi zaangażowania')
+    expect(md).toContain('Szybkie klikanie')
+    expect(md).toContain('Cyferki')
   })
 })
