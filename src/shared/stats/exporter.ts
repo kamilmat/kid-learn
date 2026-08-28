@@ -33,6 +33,7 @@ import type {
   ConceptMastery,
   MathFactState,
 } from '@/modules/numbers/types'
+import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '@/modules/czytanki/data/czytanki'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1_000
 
@@ -66,12 +67,17 @@ export type NumbersSnapshot = {
   concepts: Partial<Record<ConceptId, ConceptMastery>>
 }
 
+export type CzytankiSnapshot = {
+  openedIds: string[]
+}
+
 export function exportReportToMarkdown(
   letters: Record<string, LetterState>,
   sessions: SessionLog[],
   settings: Settings,
   now: number,
   numbersSnapshot?: NumbersSnapshot,
+  czytankiSnapshot?: CzytankiSnapshot,
 ): string {
   const lines: string[] = []
   lines.push('# Raport Iskierki')
@@ -208,6 +214,19 @@ export function exportReportToMarkdown(
       )
     } else {
       lines.push('- **Najtrudniejsze fakty**: brak — wszystko idzie!')
+    }
+    lines.push('')
+  }
+
+  // ---- Czytanki ----
+  if (czytankiSnapshot) {
+    lines.push('## Czytanki')
+    lines.push('')
+    lines.push(`- **Otwarte**: ${czytankiSnapshot.openedIds.length}/${CZYTANKI.length}`)
+    for (const g of GROUP_ORDER) {
+      const inGroup = getCzytankiByGroup(g)
+      const n = inGroup.filter((c) => czytankiSnapshot.openedIds.includes(c.id)).length
+      lines.push(`  - Grupa ${g}: ${n}/${inGroup.length}`)
     }
     lines.push('')
   }

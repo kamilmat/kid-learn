@@ -1,8 +1,10 @@
 # Iskierki — context for Claude
 
-Webowa platforma edukacyjna dla dzieci. **Dwa moduły:**
+Webowa platforma edukacyjna dla dzieci. **Cztery moduły:**
 - **Moduł 1:** rozpoznawanie liter polskiego alfabetu dla 7-latka (zerówka)
 - **Moduł 2:** nauka czytania słów (sylaby + wyrazy, drag-drop, SRS)
+- **Moduł 3:** matematyka (liczenie, rozkłady, dodawanie/odejmowanie, mnożenie — drzewko konceptów)
+- **Moduł 4:** czytanki — 60 krótkich zdań (4 grupy trudności), tap sylaby → audio, długi tap → całe słowo, ▶ czyta całość
 
 Tablet-first (iPad 10"), RWD wszędzie. Bez backendu, postęp w `localStorage`.
 
@@ -33,6 +35,14 @@ src/
 │   ├── hooks/             # useReadingSession (orkiestrator), useDragSyllable
 │   ├── store/             # readingStore (Zustand + persist) — persist key `iskierki-reading-v1`
 │   └── index.tsx          # entry: routes reading/ + reading/session/:level + reading/album
+├── modules/numbers/       # moduł 3 — kompletny, działa (drzewko konceptów matematycznych)
+├── modules/czytanki/      # moduł 4 — czytanki: tap sylaby → audio, long-press → słowo, ▶ czyta całość; 60 czytanek, 4 grupy
+│   ├── components/        # CzytankaList, CzytankaTile, CzytankaView, CzytankaScene, SyllableButton
+│   ├── data/               # czytanki (60), types, audioKeys (slugPl → cz-syl-*/cz-word-*)
+│   ├── hooks/              # useReadAloud, useSyllablePress (tap/long-press)
+│   ├── audio/               # pendingCue — cue odtwarzane po zamontowaniu docelowego ekranu
+│   ├── store/              # czytankiStore (Zustand + persist) — persist key `iskierki-czytanki-v1`
+│   └── index.tsx           # entry: routes czytanki/ + czytanki/:id
 ├── shared/
 │   ├── audio/             # AudioBus singleton — kolejka FIFO HTMLAudioElement
 │   ├── srs/               # Leitner 5-box, scoring, distractors (generalized BaseItemState)
@@ -42,7 +52,7 @@ src/
 │   │                      # moduł 2: sylaby opanowane/trudne + heatmapa fonemów PL
 │   ├── engagement/        # idle, page-visibility, fast-click, anti-cheat flags
 │   └── ui/                # KidNav, Button, IskraMascot, HandwrittenLetter
-├── app/                   # App.tsx (routes), Home (2 kafelki), theme tokens
+├── app/                   # App.tsx (routes), Home (4 kafelki), theme tokens
 └── main.tsx
 
 audio-source/              # source teksty dla TTS
@@ -52,10 +62,14 @@ audio-source/              # source teksty dla TTS
 ├── syllables.json         # 23 sylaby + intros poziomów (moduł 2)
 ├── reading-ui-strings.json # pochwały czytania, scenki, wild celebrations (moduł 2)
 ├── iskra-reactions.json   # reakcje Iskry: easter eggs, silly, fail (moduł 2; głos Marek)
+├── numbers.json / math-ui-strings.json # koncepty, fakty, UI (moduł 3)
+├── czytanki.json           # generowany przez `pnpm audio:czytanki` z data/czytanki.ts (cz-syl-*/cz-word-*)
+├── czytanki-ui-strings.json # intro, nawigacja, cue (moduł 4)
 └── manual-overrides/*.mp3 # wygrywa nad TTS (jeśli istnieje plik)
 
 scripts/generate-audio.ts  # idempotentny: hash text vs manifest, wykrywa edge-tts w wielu lokacjach
-public/audio/              # build artifact: 227 plików mp3 + .manifest.json
+scripts/czytanki-audio-source.ts # generuje audio-source/czytanki.json z data/czytanki.ts (sylaby+słowa)
+public/audio/              # build artifact: 1135 plików mp3 + .manifest.json
 ```
 
 ## Kluczowe decyzje (już zaakceptowane)
@@ -65,7 +79,7 @@ public/audio/              # build artifact: 227 plików mp3 + .manifest.json
 - **Brak fonemów IPA** — Edge TTS publiczny endpoint nie obsługuje SSML phoneme tags. Zostały polskie nazwy liter ("be", "pe", "em") albo manual recordings dla pełnej kontroli.
 - **Theme: jeden tryb** — warm light (`#fef9f2` tło, `#2d2d33` tekst), ignoruje `prefers-color-scheme`. Brak dark mode.
 - **No-text UI dla dziecka** — tylko ikony + audio cues. Wszystkie tap-targety ≥60×60. Brak gestów (tylko tap); moduł 2 używa drag-drop (@dnd-kit) dla ćwiczenia Płomyk.
-- **Persist trzy storage**: `iskierki-state-v4` (settings + math gate + humorMode + reading.*), `iskierki-letters-v1` (moduł 1 progres) i `iskierki-reading-v1` (moduł 2 progres). Reset jednego nie kasuje pozostałych.
+- **Persist kilka storage**: `iskierki-state-v4` (settings + math gate + humorMode + reading.*), `iskierki-letters-v1` (moduł 1 progres), `iskierki-reading-v1` (moduł 2 progres), `iskierki-numbers-v1` (moduł 3 progres) i `iskierki-czytanki-v1` (moduł 4 progres — openedIds, seenIntros). Reset jednego nie kasuje pozostałych.
 - **Ciągłość uczenia**: `BaseItemState` (generalized SRS) persistowany — w **kolejnej sesji** litery/sylaby/słowa z `recentWrong>0` lub niskim `box` mają wyższy score → częściej w pytaniach.
 
 ## Workflow rozwoju
@@ -81,9 +95,10 @@ public/audio/              # build artifact: 227 plików mp3 + .manifest.json
 pnpm dev              # dev server z HMR
 pnpm build            # production build (lokalnie base='/'; CI ustawia VITE_BASE=/kid-learn/)
 pnpm tsc -b           # type check
-pnpm test --run       # testy (527/527 zielone)
-pnpm audio:build      # generuj/aktualizuj mp3
-pnpm audio:check      # sprawdź czy wszystkie klucze mają plik (227 plików)
+pnpm test --run       # testy (586/586 zielone)
+pnpm audio:czytanki   # generuj audio-source/czytanki.json z data/czytanki.ts (moduł 4)
+pnpm audio:build      # audio:czytanki + generuj/aktualizuj mp3
+pnpm audio:check      # sprawdź czy wszystkie klucze mają plik (1128 plików)
 
 # GitHub
 gh run list --repo kamilmat/kid-learn --limit 3      # status ostatnich deploy
@@ -132,8 +147,8 @@ git push                                              # auto-deploy ~40s przez G
 - **Multi-profile** — jeden profil per urządzenie/przeglądarka (LocalStorage)
 - **Sync między urządzeniami** — brak (no backend)
 - **SFX biblioteka (moduł 2)** — placeholder; używa SFX z modułu 1 gdzie potrzeba. Dedykowane SFX dla drag-drop i wild celebrations do nagrania/pobrania.
-- **Moduł 3+** — cyfry, kolory, kształty — architektura gotowa (`src/modules/<nazwa>/`)
-- **Zdania / krótkie teksty** — moduł czytania na razie do poziomu słów (syllables + words). Zdania w v3.
+- **Moduł 5+** — kolory, kształty — architektura gotowa (`src/modules/<nazwa>/`)
+- **Zdania / krótkie teksty w module 2** — moduł czytania (sylaby+słowa) nadal do poziomu słów; zdania obsługuje osobny moduł 4 (Czytanki)
 
 ## Przy starcie nowej sesji
 

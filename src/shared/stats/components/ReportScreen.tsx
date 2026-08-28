@@ -11,8 +11,10 @@ import { useSettings } from '@/shared/settings/settingsStore'
 import { useLetters } from '@/modules/letters/store/lettersStore'
 import { useReading } from '@/modules/reading/store/readingStore'
 import { useNumbers } from '@/modules/numbers/store/numbersStore'
+import { useCzytanki } from '@/modules/czytanki/store/czytankiStore'
 import { ALL_WORDS } from '@/modules/reading/data/words'
 import { ALL_SYLLABLES } from '@/modules/reading/data/syllables'
+import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '@/modules/czytanki/data/czytanki'
 import { exportReportToMarkdown } from '@/shared/stats/exporter'
 import { LettersSection } from './LettersSection'
 import { ActivitySection } from './ActivitySection'
@@ -153,6 +155,53 @@ function ReadingStats() {
   )
 }
 
+function CzytankiStats() {
+  const openedIds = useCzytanki((s) => s.openedIds)
+
+  const openedList = CZYTANKI.filter((c) => openedIds.includes(c.id))
+
+  const sectionStyle = {
+    padding: 16,
+    background: '#ffffff',
+    border: '1px solid #e2e2e8',
+    borderRadius: 12,
+  }
+
+  return (
+    <section
+      data-testid="czytanki-stats-section"
+      style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}
+    >
+      <h2 style={{ margin: 0, fontSize: 20 }}>Czytanki (moduł 4)</h2>
+
+      <div style={sectionStyle}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>Otwarte czytanki</h3>
+        <p style={{ margin: '0 0 4px' }}>
+          Otwarte: {openedIds.length} / {CZYTANKI.length}
+        </p>
+        {GROUP_ORDER.map((g) => {
+          const inGroup = getCzytankiByGroup(g)
+          const n = inGroup.filter((c) => openedIds.includes(c.id)).length
+          return (
+            <p key={g} style={{ margin: '0 0 2px', fontSize: 13, color: '#6b7280' }}>
+              Grupa {g}: {n}/{inGroup.length}
+            </p>
+          )
+        })}
+        {openedList.length > 0 ? (
+          <p style={{ margin: '8px 0 0', fontSize: 13, color: '#6b7280' }}>
+            {openedList.map((c) => `${c.emoji} ${c.title}`).join(', ')}
+          </p>
+        ) : (
+          <p style={{ margin: '8px 0 0', color: '#6b7280' }}>
+            Brak danych (żadna czytanka nie została jeszcze otwarta)
+          </p>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export type ReportScreenProps = {
   onExit?: () => void
   /** Wstrzykiwane dla determinizmu testów. */
@@ -202,7 +251,17 @@ export function ReportScreen({
       facts: useNumbers.getState().facts,
       concepts: useNumbers.getState().concepts,
     }
-    const md = exportReportToMarkdown(letters, sessions, settings, now(), numbersSnapshot)
+    const czytankiSnapshot = {
+      openedIds: useCzytanki.getState().openedIds,
+    }
+    const md = exportReportToMarkdown(
+      letters,
+      sessions,
+      settings,
+      now(),
+      numbersSnapshot,
+      czytankiSnapshot,
+    )
     try {
       await copyToClipboard(md)
       setCopyStatus('copied')
@@ -308,6 +367,7 @@ export function ReportScreen({
         <AntiCheatSection sessions={sessions} />
         <ReadingStats />
         <NumbersStats />
+        <CzytankiStats />
       </div>
 
     </div>

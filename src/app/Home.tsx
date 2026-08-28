@@ -3,7 +3,7 @@
  *
  * Layout:
  *   - Tytuł "Iskierki"
- *   - Siatka 2 kafelków: Litery (moduł 1) + Czytanie (moduł 2)
+ *   - Siatka 4 kafelków: Litery (moduł 1), Czytanie (moduł 2), Cyferki (moduł 3), Czytanki (moduł 4)
  *   - Para "rodzicowa" (⚙ + 📊) w prawym dolnym rogu, mała i przytłumiona
  *
  * Onboarding głosowy (1× per klucz z lettersStore/readingStore seenIntros).
@@ -19,15 +19,18 @@ import { colors, radii, tapTargets } from '@/app/theme'
 import { useLetters } from '@/modules/letters/store/lettersStore'
 import { useReading } from '@/modules/reading/store/readingStore'
 import { useNumbers } from '@/modules/numbers/store/numbersStore'
+import { useCzytanki } from '@/modules/czytanki/store/czytankiStore'
 
 export function Home() {
   const navigate = useNavigate()
   const lettersIntroSeen = useLetters((s) => s.hasSeenIntro('home-letters-intro'))
   const readingIntroSeen = useReading((s) => s.hasSeenIntro('home-reading-intro'))
   const numbersIntroSeen = useNumbers((s) => s.hasSeenIntro('home-numbers-intro'))
+  const czytankiIntroSeen = useCzytanki((s) => s.hasSeenIntro('home-czytanki-intro'))
   const markLettersIntro = useLetters((s) => s.markIntroSeen)
   const markReadingIntro = useReading((s) => s.markIntroSeen)
   const markNumbersIntro = useNumbers((s) => s.markIntroSeen)
+  const markCzytankiIntro = useCzytanki((s) => s.markIntroSeen)
 
   // Onboarding głosowy — pierwsze odwiedzenie home wymaga jednego z intro
   useEffect(() => {
@@ -40,6 +43,9 @@ export function Home() {
     } else if (!numbersIntroSeen) {
       void audioBus.play('home-numbers-intro')
       markNumbersIntro('home-numbers-intro')
+    } else if (!czytankiIntroSeen) {
+      void audioBus.play('home-czytanki-intro')
+      markCzytankiIntro('home-czytanki-intro')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -60,9 +66,15 @@ export function Home() {
     navigate('/numbers')
   }, [navigate])
 
+  const handleCzytanki = useCallback(() => {
+    audioBus.stop()
+    navigate('/czytanki')
+  }, [navigate])
+
   const lettersTap = useTapHandler({ onTap: handleLetters })
   const readingTap = useTapHandler({ onTap: handleReading })
   const numbersTap = useTapHandler({ onTap: handleNumbers })
+  const czytankiTap = useTapHandler({ onTap: handleCzytanki })
   const settingsTap = useTapHandler({ onTap: () => navigate('/settings') })
   const reportTap = useTapHandler({ onTap: () => navigate('/report') })
 
@@ -107,10 +119,10 @@ export function Home() {
         data-testid="home-modules"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(2, 1fr)',
           gap: 16,
           width: '100%',
-          maxWidth: 1080,
+          maxWidth: 820,
           marginTop: 16,
         }}
       >
@@ -121,7 +133,7 @@ export function Home() {
           aria-label="Litery"
           {...lettersTap}
           style={{
-            minHeight: 280,
+            minHeight: 220,
             padding: 24,
             borderRadius: radii.kid * 1.5,
             background: '#fef3c7',
@@ -173,7 +185,7 @@ export function Home() {
           aria-label="Czytanie"
           {...readingTap}
           style={{
-            minHeight: 280,
+            minHeight: 220,
             padding: 24,
             borderRadius: radii.kid * 1.5,
             background: '#dbeafe',
@@ -223,7 +235,7 @@ export function Home() {
           aria-label="Cyferki"
           {...numbersTap}
           style={{
-            minHeight: 280,
+            minHeight: 220,
             padding: 24,
             borderRadius: radii.kid * 1.5,
             background: '#dcfce7',
@@ -265,6 +277,65 @@ export function Home() {
             }}
           >
             Cyferki
+          </span>
+        </button>
+
+        {/* Kafelek: Czytanki (moduł 4) — wizualnie zdanie z kolorowanymi sylabami */}
+        <button
+          type="button"
+          data-testid="module-czytanki"
+          aria-label="Czytanki"
+          {...czytankiTap}
+          style={{
+            minHeight: 220,
+            padding: 24,
+            borderRadius: radii.kid * 1.5,
+            background: '#f3e8ff',
+            border: '4px solid #9333ea',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            color: '#6b21a8',
+            touchAction: 'manipulation',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <div aria-hidden="true" style={{ fontSize: 96, lineHeight: 1 }}>📚</div>
+          <div
+            aria-hidden="true"
+            style={{
+              fontFamily: 'var(--font-block)',
+              fontSize: 28,
+              fontWeight: 800,
+              letterSpacing: '0.06em',
+              lineHeight: 1,
+              display: 'flex',
+              gap: 6,
+            }}
+          >
+            <span>
+              <span style={{ color: '#1d4ed8' }}>TA</span>
+              <span style={{ color: '#dc2626' }}>TA</span>
+            </span>
+            <span style={{ color: '#1d4ed8' }}>MA</span>
+            <span>
+              <span style={{ color: '#1d4ed8' }}>KO</span>
+              <span style={{ color: '#dc2626' }}>TA</span>
+            </span>
+          </div>
+          <span
+            style={{
+              fontFamily: 'var(--font-handwritten)',
+              fontSize: 32,
+              fontWeight: 700,
+            }}
+          >
+            Czytanki
           </span>
         </button>
       </div>

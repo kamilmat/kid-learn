@@ -120,6 +120,13 @@ describe('Home', () => {
     expect(tile.textContent).toContain('Czytanie')
   })
 
+  it('renders the "Czytanki" module tile', () => {
+    renderHome()
+    const tile = screen.getByTestId('module-czytanki')
+    expect(tile).toBeInTheDocument()
+    expect(tile.textContent).toContain('Czytanki')
+  })
+
   it('renders parent zone with settings (⚙) and report (📊) buttons', () => {
     renderHome()
     expect(screen.getByTestId('parent-zone')).toBeInTheDocument()
@@ -139,6 +146,12 @@ describe('Home', () => {
     renderHome()
     screen.getByTestId('module-reading').click()
     expect(navigateMock).toHaveBeenCalledWith('/reading')
+  })
+
+  it('clicking "Czytanki" navigates to /czytanki', () => {
+    renderHome()
+    screen.getByTestId('module-czytanki').click()
+    expect(navigateMock).toHaveBeenCalledWith('/czytanki')
   })
 
   it('clicking ⚙ navigates to /settings', () => {

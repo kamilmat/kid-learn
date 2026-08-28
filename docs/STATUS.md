@@ -3,6 +3,35 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
+## Aktualny stan (2026-08-26 — moduł 4 Czytanki)
+
+Zbudowano moduł 4 — **Czytanki**: 60 krótkich zdań (2-3 słowa) podzielonych na
+4 grupy rosnącej trudności, prezentowanych jako sylaby-kafelki. Dziecko
+dotyka sylaby → słyszy audio sylaby; long-press na słowo → słyszy całe
+słowo; przycisk ▶ czyta całą czytankę po kolei. Każda czytanka ma mini-scenkę
+(tło + animowane emoji-aktorzy). Postęp (które czytanki otwarto) trzymany w
+`iskierki-czytanki-v1` (Zustand + persist), bez SRS/scoringu — to moduł
+czytania na głos, nie quiz.
+
+Task 10 (ta integracja) doczepił moduł 4 do reszty appki:
+- **Home**: 4. kafelek fioletowy (📚, `TATA MA KOTA` z kolorowanymi sylabami), grid 2×2 (`repeat(2, 1fr)`, maxWidth 820, kafelki minHeight 220), onboarding audio `home-czytanki-intro` (kolejność: litery → czytanie → cyferki → czytanki)
+- **App.tsx**: route `/czytanki/*` → `CzytankiModule`; `isCzytanki` dołączony do `showKidNav`/`overflow-hidden`; reset postępu czytanek dopięty do jedynego globalnego przycisku resetu w `SettingsScreen` (bez osobnego przycisku)
+- **Raport rodzica**: nowa sekcja `CzytankiStats` (po `NumbersStats`) — „Otwarte: X/60" + per-grupa breakdown + lista otwartych tytułów z emoji
+- **Eksport MD**: `exportReportToMarkdown` przyjmuje opcjonalny 6. parametr `czytankiSnapshot`, dopisuje sekcję `## Czytanki`
+
+**Testy**: 586/586 zielone (`pnpm test --run`), `pnpm tsc -b` czysto, `pnpm build` zielony.
+**Audio**: 1135 plików mp3 w `public/audio/`, `pnpm audio:check` potwierdza 1128 wymaganych kluczy na miejscu (10 source plików, w tym nowy `czytanki.json` generowany przez `pnpm audio:czytanki` z `data/czytanki.ts`).
+
+**Do odsłuchu / manual override** — TTS może odczytać pojedyncze litery jako
+*nazwy* liter zamiast dźwięku sylaby, sprawdzić w przeglądarce i ew. nagrać
+manual override (`audio-source/manual-overrides/<klucz>.mp3`):
+- `cz-syl-w` / `cz-word-w` (sylaba/słowo „w" — ryzyko „wu")
+- `cz-syl-z` / `cz-word-z` (sylaba/słowo „z" — ryzyko „zet")
+
+**Status brancha**: praca na `feat/czytanki`, jeszcze nie zmergowana do
+`main` — czeka na weryfikację w przeglądarce (iPad / chrome-devtools-mcp)
+przed mergem i deployem.
+
 ## Następna sesja — visual review round 3 (atrakcyjność dla dziecka)
 
 User poprosił o kolejny review skupiony na "atrakcyjniejszych wizualnie treściach dla dziecka". Round 1+2 v3.1 polish (gwiazdki, kolory poziomów, drzewko stages, mini-ikony konceptów, mastery filter) już wypchnięty (commits do `0b74ec4`).
