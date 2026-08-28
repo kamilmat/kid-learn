@@ -12,6 +12,11 @@ const inFlight = new Set<string>()
 type IntroBus = { play: (key: string) => Promise<boolean> }
 
 /**
+ * Flaga zapala się gdy `play()` zwróci `true` — czyli gdy audio FAKTYCZNIE
+ * wystartowało (patrz nagłówek `AudioBus`). Intro przerwane tapem dziecka
+ * liczy się jako usłyszane; zablokowany autoplay albo brak pliku (`false`)
+ * zostawia flagę zgaszoną i intro wraca przy następnej wizycie.
+ *
  * @param key klucz flagi "widziane" (i domyślnie klucz audio)
  * @param audioKey gdy plik audio nazywa się inaczej niż flaga
  */
@@ -24,13 +29,19 @@ export async function playIntroOnce(
 ): Promise<void> {
   if (hasSeen(key) || inFlight.has(key)) return
   inFlight.add(key)
+  // `.finally` PROSTO na obietnicy play(), a nie na tej funkcji async: guard
+  // znika w pierwszym microtasku po rozstrzygnięciu, zanim ta funkcja zdąży
+  // się wznowić po `await`. WHY: StrictMode montuje efekt dwa razy —
+  // cleanup pierwszego woła `audioBus.stop()`, więc pierwsze odtworzenie
+  // rozstrzyga się `false` (anulowane przed startem). Drugie wywołanie musi
+  // móc wtedy zagrać intro, a nie odbić się od nieposprzątanego guardu.
+  const pending = audioBus.play(audioKey).finally(() => {
+    inFlight.delete(key)
+  })
   try {
-    const played = await audioBus.play(audioKey)
-    if (played) markSeen(key)
+    if (await pending) markSeen(key)
   } catch {
     // Brak pliku / przerwane odtwarzanie — intro zostaje nieoznaczone i
     // zagra przy następnej wizycie.
-  } finally {
-    inFlight.delete(key)
   }
 }

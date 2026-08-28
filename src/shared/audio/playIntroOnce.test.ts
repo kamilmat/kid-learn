@@ -65,6 +65,25 @@ describe('playIntroOnce', () => {
     expect(markSeen).toHaveBeenCalledExactlyOnceWith('retry-intro')
   })
 
+  it('po anulowaniu przed startem drugie wywołanie może zagrać (StrictMode remount)', async () => {
+    const { bus, play, resolve } = makeDeferredBus()
+    const markSeen = vi.fn()
+    // 1. mount: intro rusza. Cleanup StrictMode woła stop() → play() → false.
+    const first = playIntroOnce(bus, 'level-intro', () => false, markSeen)
+    expect(play).toHaveBeenCalledTimes(1)
+    resolve(false)
+    // Jeden tick — `.finally` na obietnicy play() zdążył zwolnić guard,
+    // zanim `playIntroOnce` wznowiło się po `await`.
+    await Promise.resolve()
+
+    // 2. mount: ten sam klucz, flaga wciąż zgaszona → musi zagrać ponownie.
+    const second = playIntroOnce(bus, 'level-intro', () => false, markSeen)
+    expect(play).toHaveBeenCalledTimes(2)
+    resolve(true)
+    await Promise.all([first, second])
+    expect(markSeen).toHaveBeenCalledExactlyOnceWith('level-intro')
+  })
+
   it('audioKey pozwala grać inny plik niż klucz flagi (czytanka-first → czytanki-intro)', async () => {
     const { bus, play, resolve } = makeDeferredBus()
     const markSeen = vi.fn()

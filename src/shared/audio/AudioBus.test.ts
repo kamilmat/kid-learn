@@ -142,6 +142,26 @@ describe('AudioBus', () => {
     warn.mockRestore()
   })
 
+  it('resolves true gdy klip wystartował, choć został przerwany przez stop()', async () => {
+    const bus = AudioBus.getInstance()
+    const promise = bus.play('a')
+    await Promise.resolve()
+    created[0]!.fire('playing')
+    bus.stop()
+    await expect(promise).resolves.toBe(true)
+  })
+
+  it('resolves false gdy klucz czekał w kolejce i nigdy nie ruszył', async () => {
+    const bus = AudioBus.getInstance()
+    const first = bus.play('a')
+    const queued = bus.play('b')
+    await Promise.resolve()
+    expect(created[0]!.src).toContain('/audio/a.mp3')
+    bus.stop()
+    await expect(queued).resolves.toBe(false)
+    await first
+  })
+
   it('resolves true gdy klip dograł do końca', async () => {
     const bus = AudioBus.getInstance()
     const promise = bus.play('a')
@@ -159,7 +179,8 @@ describe('AudioBus', () => {
 
     bus.stop()
     const pB = bus.play('b')
-    await expect(pA).resolves.toBe(false)
+    // A zdążyło wystartować (play() spełnione) → true mimo przerwania.
+    await expect(pA).resolves.toBe(true)
     await Promise.resolve()
     expect(el.src).toContain('/audio/b.mp3')
 
@@ -188,7 +209,8 @@ describe('AudioBus', () => {
 
     bus.stop()
     await Promise.all([pA, pB, pC])
-    expect(settled.sort()).toEqual(['a:false', 'b:false', 'c:false'])
+    // A grało (przerwane → true); B i C nigdy nie opuściły kolejki → false.
+    expect(settled.sort()).toEqual(['a:true', 'b:false', 'c:false'])
 
     // Bus dalej działa po stopie — kolejny play startuje nową generację.
     const pD = bus.play('d')

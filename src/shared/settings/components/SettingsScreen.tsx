@@ -27,6 +27,7 @@ import type {
   TimeLimit,
   WordAnimations,
 } from '@/shared/settings/types'
+import { DEFAULT_QUESTIONS_PER_SESSION as DEFAULT_READING_QUESTIONS_PER_SESSION } from '@/modules/reading/constants'
 import { ActiveLettersEditor } from './ActiveLettersEditor'
 import { MathGate } from './MathGate'
 
@@ -175,8 +176,6 @@ const SESSION_LENGTH_OPTIONS: SessionLength[] = [5, 10, 15]
 const TIME_LIMIT_OPTIONS: TimeLimit[] = ['off', 10, 15, 20, 25]
 const TILES_PER_QUESTION_OPTIONS: TilesPerQuestion[] = [3, 4, 5, 6, 8, 10]
 const READING_QUESTIONS_PER_SESSION_OPTIONS = [6, 8, 10] as const
-// Zsynchronizowane z DEFAULT_QUESTIONS_PER_SESSION w useReadingSession.ts.
-const DEFAULT_READING_QUESTIONS_PER_SESSION = 8
 const CELEBRATION_OPTIONS: CelebrationTempo[] = ['short', 'medium', 'long']
 const CELEBRATION_LABELS: Record<CelebrationTempo, string> = {
   short: 'krótka',

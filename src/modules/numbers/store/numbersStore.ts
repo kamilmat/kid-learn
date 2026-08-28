@@ -39,6 +39,74 @@ export type NumbersState = {
 // Tyle sesji trzymamy w localStorage (jak MAX_SESSION_HISTORY w lettersStore).
 const MAX_SESSION_HISTORY = 50
 
+/**
+ * v1 → v2: fakty liczenia miały wspólny prefiks `count-N`, dziś rozbite na
+ * dwa koncepty (`count5-N` dla 1..5, `count10-N` dla 6..10). Bez mapowania
+ * cały postęp w liczeniu zaczynał się od zera, a osierocone id nigdy już nie
+ * trafiały do puli pytań (`levelFacts` ich nie zna).
+ *
+ * Zwraca `null` dla id, którego nie umiemy przypisać — takie wpisy wypadają.
+ */
+export function migrateLegacyFactId(id: string): MathFactId | null {
+  const match = /^count-(\d+)$/.exec(id)
+  if (!match) return id
+  const n = Number(match[1])
+  if (!Number.isInteger(n) || n < 1 || n > 10) return null
+  return n <= 5 ? `count5-${n}` : `count10-${n}`
+}
+
+/** Koncept, do którego należy zmigrowany fakt liczenia. */
+function conceptForMigratedFact(id: MathFactId): ConceptId | null {
+  if (id.startsWith('count5-')) return 'iskierka-counting-5'
+  if (id.startsWith('count10-')) return 'iskierka-counting-10'
+  return null
+}
+
+type PersistedNumbers = Partial<NumbersState>
+
+/**
+ * Przepisuje id faktów w persistcie na aktualny schemat. Działa też na logach
+ * sesji — inaczej raport rodzica pokazywałby `count-3` obok `count5-3` jako
+ * dwa różne fakty.
+ */
+export function migrateNumbersPersist(persisted: unknown): PersistedNumbers {
+  const p = (persisted ?? {}) as PersistedNumbers
+  const facts = p.facts
+  const migratedFacts: Record<MathFactId, MathFactState> = {}
+  if (facts && typeof facts === 'object' && !Array.isArray(facts)) {
+    for (const [oldId, state] of Object.entries(facts)) {
+      const newId = migrateLegacyFactId(oldId)
+      if (!newId || !state) continue
+      // Kolizja (persist ma i `count-3`, i `count5-3`) — wygrywa wpis już
+      // zapisany pod nowym id, bo pochodzi z nowszej sesji.
+      if (migratedFacts[newId]) continue
+      migratedFacts[newId] = {
+        ...state,
+        id: newId,
+        conceptId: conceptForMigratedFact(newId) ?? state.conceptId,
+      }
+    }
+  }
+  if (!Array.isArray(p.sessions)) return { ...p, facts: migratedFacts }
+  const sessions: NumbersSessionLog[] = p.sessions.map((log) => ({
+    ...log,
+    events: Array.isArray(log?.events)
+      ? log.events.flatMap((ev) => {
+          const newId = migrateLegacyFactId(ev.factId)
+          if (!newId) return []
+          return [
+            {
+              ...ev,
+              factId: newId,
+              conceptId: conceptForMigratedFact(newId) ?? ev.conceptId,
+            },
+          ]
+        })
+      : [],
+  }))
+  return { ...p, facts: migratedFacts, sessions }
+}
+
 const initialState = {
   facts: {} as Record<MathFactId, MathFactState>,
   concepts: {} as Partial<Record<ConceptId, ConceptMastery>>,
@@ -121,9 +189,12 @@ export const useNumbers = create<NumbersState>()(
     }),
     {
       name: 'iskierki-numbers-v1',
-      version: 1,
+      version: 2,
       // Bez `migrate` bump wersji wyrzuciłby cały postęp — `merge` sanityzuje shape.
-      migrate: (persisted) => persisted as NumbersState,
+      migrate: (persisted, version) =>
+        (version < 2
+          ? migrateNumbersPersist(persisted)
+          : persisted) as NumbersState,
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<NumbersState>
         return {

@@ -10,8 +10,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import {
   ALL_LEVELS,
   defaultSettings,
-  getEffectiveTilesPerQuestion,
-  sanitizeActiveLetterOverride,
+  filterOverrideToLevelPool,
 } from './defaults'
 import {
   applyAttempt,
@@ -178,9 +177,12 @@ export const useSettings = create<SettingsStore>()(
           ...defaultSettings,
           ...sanitizedSettings,
         } as Settings
-        // Override puli aktywnych liter mógł zdezaktualizować się od czasu zapisu
-        // (zmiana puli poziomu albo `tilesPerQuestion`). Sanityzujemy tutaj, żeby
-        // niepoprawny blob z localStorage nie zagłodził generatora dystraktorów.
+        // Override puli aktywnych liter: z persistu wyrzucamy WYŁĄCZNIE litery,
+        // których dany poziom nie zna (zmieniła się pula w kodzie). Rozmiaru NIE
+        // oceniamy — override mniejszy niż `tilesPerQuestion` zostaje zapisany,
+        // a `getActiveLetterPool` (read path) i tak zwróci wtedy domyślną pulę.
+        // WHY: wcześniej merge kasował taki override na zawsze, więc obniżenie
+        // liczby kafelków w ustawieniach nie przywracało wyboru rodzica.
         const persistedOverrides = mergedSettings.activeLettersOverride
         const rawOverrides: Partial<Record<Level, string[]>> =
           persistedOverrides &&
@@ -190,12 +192,8 @@ export const useSettings = create<SettingsStore>()(
             : {}
         const validOverrides: Partial<Record<Level, string[]>> = {}
         for (const level of ALL_LEVELS) {
-          const sanitized = sanitizeActiveLetterOverride(
-            rawOverrides[level],
-            level,
-            getEffectiveTilesPerQuestion(mergedSettings, level),
-          )
-          if (sanitized) validOverrides[level] = sanitized
+          const filtered = filterOverrideToLevelPool(rawOverrides[level], level)
+          if (filtered) validOverrides[level] = filtered
         }
         mergedSettings.activeLettersOverride = validOverrides
         return {

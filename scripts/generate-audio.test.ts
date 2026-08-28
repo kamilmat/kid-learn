@@ -265,6 +265,7 @@ describe('decideAction', () => {
     expect(
       decideAction({
         hasOverride: true,
+        overridesDirExists: true,
         hasOutputFile: false,
         text,
         voice,
@@ -276,6 +277,7 @@ describe('decideAction', () => {
   it('generates when output file is missing', () => {
     const action = decideAction({
       hasOverride: false,
+      overridesDirExists: true,
       hasOutputFile: false,
       text,
       voice,
@@ -288,6 +290,7 @@ describe('decideAction', () => {
     expect(
       decideAction({
         hasOverride: false,
+        overridesDirExists: true,
         hasOutputFile: true,
         text,
         voice,
@@ -300,6 +303,7 @@ describe('decideAction', () => {
     expect(
       decideAction({
         hasOverride: false,
+        overridesDirExists: true,
         hasOutputFile: true,
         text,
         voice,
@@ -312,6 +316,7 @@ describe('decideAction', () => {
     expect(
       decideAction({
         hasOverride: false,
+        overridesDirExists: true,
         hasOutputFile: true,
         text,
         voice,
@@ -328,6 +333,7 @@ describe('decideAction', () => {
     expect(
       decideAction({
         hasOverride: false,
+        overridesDirExists: true,
         hasOutputFile: true,
         text: 'lo',
         voice,
@@ -347,6 +353,7 @@ describe('decideAction', () => {
     expect(
       decideAction({
         hasOverride: false,
+        overridesDirExists: true,
         hasOutputFile: true,
         text: 'lo',
         voice,
@@ -357,10 +364,26 @@ describe('decideAction', () => {
     ).toEqual({ kind: 'generate', reason: 'hash-mismatch' })
   })
 
+  // I7: bez katalogu manual-overrides/ brak pliku override niczego nie dowodzi
+  // — regeneracja nadpisałaby ręczne nagranie TTS-em.
+  it('nie regeneruje gdy katalog manual-overrides/ w ogóle nie istnieje', () => {
+    expect(
+      decideAction({
+        hasOverride: false,
+        overridesDirExists: false,
+        hasOutputFile: true,
+        text,
+        voice,
+        manifestEntry: { hash: hashEntry(text, voice), updatedAt: 0, source: 'override' },
+      }),
+    ).toEqual({ kind: 'cache-hit' })
+  })
+
   it('regenerates when a manual override was deleted (manifest still says override)', () => {
     expect(
       decideAction({
         hasOverride: false,
+        overridesDirExists: true,
         hasOutputFile: true,
         text,
         voice,
@@ -373,6 +396,7 @@ describe('decideAction', () => {
     expect(
       decideAction({
         hasOverride: false,
+        overridesDirExists: true,
         hasOutputFile: true,
         text,
         voice,

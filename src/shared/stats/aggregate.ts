@@ -8,7 +8,9 @@
 // `aggregatePerDay`, `rangeAggregate`) już go rozumieją.
 //
 // Czego adapter NIE robi: nie udaje danych, których moduł nie loguje. Czytanie
-// nie ma eventów pauzy → jego sesje po prostu nie generują flag pauzowych.
+// nie ma eventów pauzy → jego sesje po prostu nie generują flag pauzowych, a
+// pola `question-start` specyficzne dla liter (styl, wielkość, dystraktory)
+// zostają NIEUSTAWIONE zamiast dostać wymyślone 'print'/'upper'.
 
 import type { NumbersSessionLog } from '@/modules/numbers/types'
 import type { ReadingSessionEvent } from '@/modules/reading/types'
@@ -35,7 +37,10 @@ export type UnifiedSession = SessionLog & {
   /** Liczba odpowiedzi (eventy `answer`). */
   questions: number
   correct: number
+  /** Błędne odpowiedzi i timeouty — BEZ „nie wiem". */
   wrong: number
+  /** Świadome „nie wiem" — to nie to samo co pomyłka, nie mieszamy do `wrong`. */
+  dontKnow: number
 }
 
 /** Kształt logu sesji modułu 2 — `readingStore` trzyma go jako typ lokalny. */
@@ -59,21 +64,27 @@ function summarize(events: SessionEvent[]): {
   questions: number
   correct: number
   wrong: number
+  dontKnow: number
 } {
   let questions = 0
   let correct = 0
   let wrong = 0
+  let dontKnow = 0
   for (const ev of events) {
     if (ev.type !== 'answer') continue
     questions++
     if (ev.outcome === 'correct') correct++
+    else if (ev.outcome === 'dontKnow') dontKnow++
     else wrong++
   }
-  return { questions, correct, wrong }
+  return { questions, correct, wrong, dontKnow }
 }
 
 function withSummary(
-  base: Omit<UnifiedSession, 'questions' | 'correct' | 'wrong' | 'moduleLabel'>,
+  base: Omit<
+    UnifiedSession,
+    'questions' | 'correct' | 'wrong' | 'dontKnow' | 'moduleLabel'
+  >,
 ): UnifiedSession {
   return {
     ...base,
@@ -98,10 +109,6 @@ export function fromReadingLog(
       type: 'question-start',
       ts: ev.timestamp - ev.responseMs,
       targetLetter: readingTargetLabel(ev.targetId),
-      distractors: [],
-      positions: [],
-      style: 'print',
-      case: 'upper',
     })
     events.push({
       type: 'answer',
@@ -130,10 +137,6 @@ export function fromNumbersLog(
       type: 'question-start',
       ts: ev.timestamp - ev.responseMs,
       targetLetter: ev.factId,
-      distractors: [],
-      positions: [],
-      style: 'print',
-      case: 'upper',
     })
     events.push({
       type: 'answer',

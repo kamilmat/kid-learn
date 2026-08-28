@@ -22,7 +22,7 @@ if (typeof localStorage === 'undefined' || typeof localStorage.clear !== 'functi
   }
 }
 
-const { useNumbers } = await import('./numbersStore')
+const { useNumbers, migrateNumbersPersist } = await import('./numbersStore')
 
 describe('numbersStore', () => {
   beforeEach(() => {
@@ -96,5 +96,52 @@ describe('numbersStore', () => {
     expect(s.facts['add-1-1']?.box).toBe(2)
     expect(s.concepts['plomyk-addsub-10']?.state).toBe('learning')
     expect(s.sessions).toHaveLength(1)
+  })
+})
+
+// I13: v1 → v2 — `count-N` rozbite na `count5-N` / `count10-N`.
+describe('migracja persistu v1 → v2', () => {
+  const v1Blob = {
+    facts: {
+      'count-3': { id: 'count-3', conceptId: 'iskierka-counting-5', box: 4, lastSeen: 111, recentWrong: 2 },
+      'count-8': { id: 'count-8', conceptId: 'iskierka-counting-10', box: 2, lastSeen: 222, recentWrong: 0 },
+      'count-42': { id: 'count-42', conceptId: 'iskierka-counting-10', box: 1, lastSeen: 0, recentWrong: 0 },
+      'add-2-3': { id: 'add-2-3', conceptId: 'plomyk-add-within-10', box: 3, lastSeen: 333, recentWrong: 1 },
+    },
+    sessions: [
+      {
+        startedAt: 1, endedAt: 2, level: 'iskierka',
+        events: [
+          { factId: 'count-3', conceptId: 'iskierka-counting-5', exerciseType: 'match-digit-dots', outcome: 'correct', responseMs: 900, timestamp: 2 },
+          { factId: 'count-42', conceptId: 'iskierka-counting-10', exerciseType: 'match-digit-dots', outcome: 'wrong', responseMs: 900, timestamp: 3 },
+        ],
+      },
+    ],
+  }
+
+  it('mapuje count-N na count5-/count10- zachowując stan SRS', () => {
+    const out = migrateNumbersPersist(v1Blob)
+    expect(out.facts?.['count5-3']).toMatchObject({ id: 'count5-3', box: 4, lastSeen: 111, recentWrong: 2, conceptId: 'iskierka-counting-5' })
+    expect(out.facts?.['count10-8']).toMatchObject({ id: 'count10-8', box: 2, conceptId: 'iskierka-counting-10' })
+    // Nie-liczące fakty zostają nietknięte.
+    expect(out.facts?.['add-2-3']).toMatchObject({ id: 'add-2-3', box: 3 })
+    // Sierota poza zakresem 1..10 wypada.
+    expect(out.facts?.['count-42']).toBeUndefined()
+    expect(Object.keys(out.facts ?? {})).toHaveLength(3)
+  })
+
+  it('przepisuje id faktów w zapisanych logach sesji', () => {
+    const out = migrateNumbersPersist(v1Blob)
+    const events = out.sessions?.[0]?.events ?? []
+    expect(events.map((e) => e.factId)).toEqual(['count5-3'])
+  })
+
+  it('rehydratuje blob v1 z localStorage bez utraty postępu', () => {
+    localStorage.setItem('iskierki-numbers-v1', JSON.stringify({ state: v1Blob, version: 1 }))
+    useNumbers.persist.rehydrate()
+    const facts = useNumbers.getState().facts
+    expect(facts['count5-3']?.box).toBe(4)
+    expect(facts['count10-8']?.box).toBe(2)
+    expect(facts['count-3']).toBeUndefined()
   })
 })
