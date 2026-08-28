@@ -58,7 +58,6 @@ export type Settings = {
     wordAnimations: WordAnimations
     wildCelebrationFreq: number                           // 3-15, default 8
     questionsPerSession: Partial<Record<Level, number>>  // default 8 dla wszystkich poziomów
-    timeLimit: Partial<Record<Level, TimeLimit>>         // default 'off' dla czytania
   }
   // Ustawienia modułu matematyki (moduł 3)
   numbers: NumbersSettings

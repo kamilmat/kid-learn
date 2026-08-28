@@ -111,7 +111,6 @@ describe('defaultSettings (sekcja 13.2)', () => {
       wordAnimations: 'on',
       wildCelebrationFreq: 8,
       questionsPerSession: {},
-      timeLimit: {},
     })
   })
 })

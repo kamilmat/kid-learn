@@ -43,6 +43,9 @@ export type ReadingState = {
   reset: () => void
 }
 
+// Ile sesji trzymamy w historii (raport rodzica + limit localStorage)
+const MAX_SESSION_HISTORY = 50
+
 const initialState = {
   syllables: {},
   words: {},
@@ -109,7 +112,8 @@ export const useReading = create<ReadingState>()(
         set((s) => ({
           syllables: { ...s.syllables, ...updatedSyllables },
           words: { ...s.words, ...updatedWords },
-          sessions: [...s.sessions, log],
+          // Cap jak w lettersStore — localStorage nie jest nieskończony
+          sessions: [...s.sessions, log].slice(-MAX_SESSION_HISTORY),
         }))
       },
 
