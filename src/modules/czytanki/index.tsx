@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import { KidNav } from '@/shared/ui/KidNav'
 import { CZYTANKI, getCzytankaById } from './data/czytanki'
+import { setPendingCue } from './audio/pendingCue'
 import { CzytankaList } from './components/CzytankaList'
 import { CzytankaView } from './components/CzytankaView'
 
@@ -31,18 +32,13 @@ export function CzytankiModule({ audioBus = defaultAudioBus }: { audioBus?: Bus 
 
 function ListRoute({ audioBus }: { audioBus: Bus }) {
   const navigate = useNavigate()
-  const cueTimeoutRef = useRef<number | null>(null)
 
-  useEffect(() => () => {
-    if (cueTimeoutRef.current !== null) window.clearTimeout(cueTimeoutRef.current)
-  }, [])
-
-  // stop() zabija kolejkę AudioBus — grając cue synchronicznie zaraz po stop()
-  // nigdy by nie wystartowało. Odkładamy je o jeden tick.
+  // Lista znika w tym samym tick'u co nawigacja — cue odbierze i odtworzy
+  // dopiero docelowy ekran (CzytankaView) po zamontowaniu, przez pendingCue.
   const onOpen = useCallback((id: string) => {
     audioBus.stop()
+    setPendingCue('czytanki-ui-open')
     navigate(id)
-    cueTimeoutRef.current = window.setTimeout(() => { void audioBus.play('czytanki-ui-open') }, 0)
   }, [audioBus, navigate])
   return <CzytankaList audioBus={audioBus} onOpen={onOpen} />
 }

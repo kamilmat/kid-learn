@@ -7,6 +7,7 @@ import { usePageVisibility } from '@/shared/engagement/usePageVisibility'
 import type { Czytanka, CzytankaGroup } from '../data/types'
 import { syllableAudioKey, wordAudioKey } from '../data/audioKeys'
 import { useCzytanki } from '../store/czytankiStore'
+import { setPendingCue, takePendingCue } from '../audio/pendingCue'
 import { SyllableButton } from './SyllableButton'
 import { CzytankaScene } from './CzytankaScene'
 import { useReadAloud } from '../hooks/useReadAloud'
@@ -35,33 +36,32 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   const [heldWord, setHeldWord] = useState<{ s: number; w: number } | null>(null)
   const { activeWord, reading, toggle, stop } = useReadAloud({ czytanka, audioBus })
   const holdTimeoutRef = useRef<number | null>(null)
-  const navCueTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
     markOpened(czytanka.id)
     audioBus.stop()
-    // Odtwarzamy intro z opóźnieniem PO stop() — a flagę "widziane" ustawiamy
-    // dopiero w tym samym deferred callbacku, żeby StrictMode w dev (mount →
-    // unmount → mount) nie spalił jednorazowego intro na pierwszym, odrzuconym mouncie.
-    let introTimeout: number | undefined
-    if (!hasSeenIntro('czytanka-first')) {
-      introTimeout = window.setTimeout(() => {
+    // Odbieramy odłożone cue nawigacji (ustawione przez ekran, z którego
+    // przyszliśmy — on sam zdążył się odmontować) i ew. intro w jednym
+    // deferred callbacku. StrictMode w dev (mount → unmount → mount) czyści
+    // ten timeout na pierwszym, odrzuconym mouncie, więc cue/flaga "widziane"
+    // nie są konsumowane/palone zanim ekran naprawdę zostanie zamontowany.
+    const mountTimeout = window.setTimeout(() => {
+      const cue = takePendingCue()
+      if (cue) void audioBus.play(cue)
+      if (!hasSeenIntro('czytanka-first')) {
         markIntroSeen('czytanka-first')
         void audioBus.play('czytanki-intro')
-      }, 0)
-    }
-    return () => {
-      if (introTimeout !== undefined) window.clearTimeout(introTimeout)
-    }
+      }
+    }, 0)
+    return () => window.clearTimeout(mountTimeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [czytanka.id])
 
   // Audio nie może grać dalej po opuszczeniu ekranu (np. tap wstecz w trakcie odtwarzania),
-  // a odłożone w czasie cue nawigacji/podświetlenia słowa nie mogą odpalić się po unmount.
+  // a odłożone podświetlenie słowa nie może odpalić się po unmount.
   useEffect(() => () => {
     stop()
     if (holdTimeoutRef.current !== null) window.clearTimeout(holdTimeoutRef.current)
-    if (navCueTimeoutRef.current !== null) window.clearTimeout(navCueTimeoutRef.current)
   }, [stop])
 
   usePageVisibility({ onHidden: stop, onVisible: () => {}, enabled: true })
@@ -82,21 +82,22 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     }, WORD_HIGHLIGHT_MS)
   }, [audioBus, stop])
 
-  // stop() zabija kolejkę AudioBus — grając cue nawigacji synchronicznie zaraz
-  // po stop() nigdy by nie wystartowało. Odkładamy je o jeden tick.
+  // Ten ekran znika w tym samym tick'u co nawigacja — nie może samo odtworzyć
+  // cue z opóźnieniem (własny unmount wyczyściłby jego timeout). Zamiast tego
+  // zostawiamy klucz w pendingCue; odbierze go docelowy ekran po zamontowaniu.
   const prevTap = useTapHandler({
     onTap: () => {
       stop()
+      setPendingCue('czytanki-ui-prev')
       onPrev?.()
-      navCueTimeoutRef.current = window.setTimeout(() => { void audioBus.play('czytanki-ui-prev') }, 0)
     },
     disabled: !onPrev,
   })
   const nextTap = useTapHandler({
     onTap: () => {
       stop()
+      setPendingCue('czytanki-ui-next')
       onNext?.()
-      navCueTimeoutRef.current = window.setTimeout(() => { void audioBus.play('czytanki-ui-next') }, 0)
     },
     disabled: !onNext,
   })

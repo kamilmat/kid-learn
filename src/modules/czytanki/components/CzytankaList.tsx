@@ -5,6 +5,7 @@ import { LevelIconView, LevelStars } from '@/shared/ui/levelIcons'
 import { colors } from '@/app/theme'
 import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '../data/czytanki'
 import { useCzytanki } from '../store/czytankiStore'
+import { takePendingCue } from '../audio/pendingCue'
 import { CzytankaTile, GROUP_LEVEL } from './CzytankaTile'
 
 export function CzytankaList({ audioBus, onOpen }: { audioBus: Pick<AudioBus, 'play' | 'stop'>; onOpen: (id: string) => void }) {
@@ -14,12 +15,21 @@ export function CzytankaList({ audioBus, onOpen }: { audioBus: Pick<AudioBus, 'p
   const markIntroSeen = useCzytanki((s) => s.markIntroSeen)
 
   useEffect(() => {
-    if (!hasSeenIntro('czytanki-list-intro')) {
-      markIntroSeen('czytanki-list-intro')
-      audioBus.stop()
-      void audioBus.play('czytanki-list-intro')
-    }
+    audioBus.stop()
+    // Odbieramy odłożone cue nawigacji (np. powrót z czytanki) i ew. intro w
+    // jednym deferred callbacku — StrictMode w dev czyści ten timeout na
+    // pierwszym, odrzuconym mouncie, więc flaga "widziane" nie zostaje spalona
+    // zanim lista naprawdę zostanie zamontowana.
+    const introTimeout = window.setTimeout(() => {
+      const cue = takePendingCue()
+      if (cue) void audioBus.play(cue)
+      if (!hasSeenIntro('czytanki-list-intro')) {
+        markIntroSeen('czytanki-list-intro')
+        void audioBus.play('czytanki-list-intro')
+      }
+    }, 0)
     if (lastOpenedId) document.getElementById(`tile-${lastOpenedId}`)?.scrollIntoView({ block: 'center' })
+    return () => window.clearTimeout(introTimeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
