@@ -144,4 +144,31 @@ describe('migracja persistu v1 → v2', () => {
     expect(facts['count10-8']?.box).toBe(2)
     expect(facts['count-3']).toBeUndefined()
   })
+
+  // Kolizja: persist ma i stary, i nowy klucz dla tego samego faktu. Wpis w
+  // docelowym formacie MUSI wygrać niezależnie od kolejności w obiekcie —
+  // `Object.entries` nie gwarantuje, że nowy format wystąpi jako drugi.
+  it('przy kolizji wygrywa wpis w docelowym formacie, gdy legacy jest PIERWSZY w obiekcie', () => {
+    const blob = {
+      facts: {
+        'count-3': { id: 'count-3', conceptId: 'iskierka-counting-5', box: 1, lastSeen: 111, recentWrong: 2 },
+        'count5-3': { id: 'count5-3', conceptId: 'iskierka-counting-5', box: 5, lastSeen: 999, recentWrong: 0 },
+      },
+    }
+    const out = migrateNumbersPersist(blob)
+    expect(out.facts?.['count5-3']).toMatchObject({ box: 5, lastSeen: 999, recentWrong: 0 })
+    expect(Object.keys(out.facts ?? {})).toHaveLength(1)
+  })
+
+  it('przy kolizji wygrywa wpis w docelowym formacie, gdy legacy jest DRUGI w obiekcie', () => {
+    const blob = {
+      facts: {
+        'count5-3': { id: 'count5-3', conceptId: 'iskierka-counting-5', box: 5, lastSeen: 999, recentWrong: 0 },
+        'count-3': { id: 'count-3', conceptId: 'iskierka-counting-5', box: 1, lastSeen: 111, recentWrong: 2 },
+      },
+    }
+    const out = migrateNumbersPersist(blob)
+    expect(out.facts?.['count5-3']).toMatchObject({ box: 5, lastSeen: 999, recentWrong: 0 })
+    expect(Object.keys(out.facts ?? {})).toHaveLength(1)
+  })
 })

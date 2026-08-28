@@ -31,9 +31,7 @@ import { pickRandom, shuffled } from '@/shared/srs/distractors'
 import { nextBox, nextRecentWrong } from '@/shared/srs/update'
 import { useReading } from '../store/readingStore'
 import type { Outcome } from '@/shared/srs/types'
-
-// Domyślna liczba pytań na sesję (override: settings.reading.questionsPerSession[level])
-const DEFAULT_QUESTIONS_PER_SESSION = 8
+import { DEFAULT_QUESTIONS_PER_SESSION } from '../constants'
 
 // Minimalny czas trzymania overlaya feedbacku — nawet gdy audio już wybrzmiało,
 // 7-latek potrzebuje chwili na zobaczenie wyniku zanim ekran się zmieni.
@@ -387,6 +385,12 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   // Zapamiętuje status sprzed pauzy (asking lub feedback) — potrzebne do prawidłowego resume
   const prePauseStatusRef = useRef<Status>('idle')
 
+  // Kiedy bieżący feedback stał się widoczny — razem z poniższym refem liczy,
+  // ile z MIN_FEEDBACK_MS dziecko już zobaczyło przed pauzą, żeby resume() nie
+  // musiał czekać więcej niż trzeba (ale też nie mniej — patrz resume()).
+  const feedbackStartedAtRef = useRef<number>(0)
+  const feedbackElapsedBeforePauseRef = useRef<number>(0)
+
   // Log eventów per pytanie (R5) — trafia do SessionLog w store
   const eventsRef = useRef<ReadingSessionEvent[]>([])
   const questionStartedAtRef = useRef(0)
@@ -629,6 +633,8 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
           setFeedbackVariant('wild')
           setStatus('feedback')
           statusRef.current = 'feedback'
+          feedbackStartedAtRef.current = now()
+          feedbackElapsedBeforePauseRef.current = 0
           useReading.getState().resetWildCounter()
           // sfx-mastery-fanfara is the existing fanfara key (sfx-fanfara-special deferred to SFX library)
           const wildPlays: Promise<unknown>[] = [audioBus.play('sfx-mastery-fanfara')]
@@ -656,6 +662,8 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       setFeedbackVariant(isCorrect ? 'correct' : outcome === 'wrong' ? 'wrong' : 'dontKnow')
       setStatus('feedback')
       statusRef.current = 'feedback'
+      feedbackStartedAtRef.current = answeredAt
+      feedbackElapsedBeforePauseRef.current = 0
     },
     [audioBus, now, playCorrectionAudio, rng, settings, updateSyllableState, updateWordState],
   )
@@ -826,6 +834,11 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
 
   const pause = useCallback((): void => {
     if (statusRef.current === 'asking' || statusRef.current === 'feedback') {
+      if (statusRef.current === 'feedback') {
+        // Zamrażamy licznik na czas pauzy — resume() dolicza tylko RESZTĘ
+        // MIN_FEEDBACK_MS, nie liczy czasu spędzonego na pauzie.
+        feedbackElapsedBeforePauseRef.current = now() - feedbackStartedAtRef.current
+      }
       prePauseStatusRef.current = statusRef.current
       setPaused(true)
       setStatus('paused')
@@ -834,7 +847,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       audioBus.stop()
       void audioBus.play('nav-pause')
     }
-  }, [audioBus])
+  }, [audioBus, now])
 
   const resume = useCallback((): void => {
     if (statusRef.current !== 'paused') return
@@ -870,9 +883,25 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       })
       return
     }
-    // correct / wild — nie ma czego powtarzać, przechodzimy od razu
-    // (odpowiedź jest już zalogowana).
-    advance()
+    // correct / wild — nie ma audio do powtórzenia, ale dziecko wciąż musi
+    // ZOBACZYĆ feedback co najmniej MIN_FEEDBACK_MS — natychmiastowy advance()
+    // tutaj przeskakiwał pytanie w tej samej klatce co resume, zanim overlay
+    // zdążył się w ogóle pokazać. Doliczamy tylko RESZTĘ: czas widoczny przed
+    // pauzą (feedbackElapsedBeforePauseRef) już się liczył do minimum.
+    const remaining = Math.max(
+      0,
+      MIN_FEEDBACK_MS - feedbackElapsedBeforePauseRef.current,
+    )
+    const questionIndexAtResume = currentQuestionIndexRef.current
+    setTimeout(() => {
+      // Jak wyżej — overlay mógł już zawołać skipFeedback samodzielnie.
+      if (
+        statusRef.current === 'feedback' &&
+        currentQuestionIndexRef.current === questionIndexAtResume
+      ) {
+        advance()
+      }
+    }, remaining)
   }, [advance, audioBus, playCorrectionAudio])
 
   const repeatAudio = useCallback((): void => {

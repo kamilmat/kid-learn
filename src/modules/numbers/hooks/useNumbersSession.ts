@@ -188,8 +188,10 @@ export function useNumbersSession({
         endedAt,
       )
       // „Drzewko rośnie" — cue tylko dla konceptów, które W TEJ sesji przeszły
-      // z uczenia się w mastery (ustawienie rodzica może je wyłączyć).
-      if (treeCelebrationsOn) {
+      // z uczenia się w mastery (ustawienie rodzica może je wyłączyć). Przy
+      // przerwanym flushu (quit/unmount) audio i tak by nie zdążyło zagrać
+      // sensownie — ekran znika pod dzieckiem — więc pomijamy cue.
+      if (treeCelebrationsOn && !aborted) {
         const before = useNumbers.getState().concepts
         const newlyMastered = Object.entries(updatedConcepts).some(
           ([id, c]) =>

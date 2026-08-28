@@ -328,4 +328,12 @@ describe('activeLettersOverride validation on rehydrate', () => {
     const valid = ['a', 'm', 'l', 'e', 'o', 't']
     expect(persist({ iskierka: valid })).toEqual({ iskierka: valid })
   })
+
+  // Override złożony wyłącznie z liter spoza puli poziomu odfiltrowuje się do
+  // pustej tablicy — persistowanie jej nadal jako override oszukiwałoby
+  // edytor (pokazywałby pusty wybór zamiast puli domyślnej). Klucz musi
+  // zniknąć, żeby `getActiveLetterPool`/edytor wzięły domyślną pulę poziomu.
+  it('drops the key entirely when the override has only letters outside the level pool', () => {
+    expect(persist({ iskierka: ['ż', 'ó', 'ś'] })).toEqual({})
+  })
 })

@@ -64,8 +64,10 @@ export function KidNav({ onBack, onHome }: KidNavProps) {
     // Deep-link / cold start PWA: brak historii. Cofamy się o segment URL-a
     // (`..` po ścieżce: `/reading/session/plomyk` → `/reading/session`),
     // a z ekranu pierwszego poziomu — na Home. Ścieżkę liczymy sami zamiast
-    // `navigate('..')`, bo KidNav wisi NAD `<Routes>` modułu i router
-    // rozwiązałby `..` względem roota (czyli zawsze na `/`).
+    // `navigate('..')`, bo KidNav jest montowany na różnej głębokości
+    // względem `<Routes>` w różnych miejscach (root layout, wewnątrz modułu),
+    // więc router-relative `..` rozwiązywałby się niespójnie zależnie od tego,
+    // gdzie akurat wisi.
     const segments = pathname.split('/').filter(Boolean)
     if (segments.length > 1) {
       navigate(`/${segments.slice(0, -1).join('/')}`, { replace: true })

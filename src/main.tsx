@@ -25,18 +25,32 @@ function isOnHome(): boolean {
   return path === base
 }
 
+let updateTimer: number | null = null
+
 const updateSW = registerSW({
   immediate: true,
   onNeedRefresh() {
     if (isOnHome()) {
+      if (updateTimer !== null) {
+        window.clearInterval(updateTimer)
+        updateTimer = null
+      }
       void updateSW()
       return
     }
     // React Router nawiguje przez pushState (bez `popstate`), więc powrót na
     // Home wykrywamy pollingiem — tanio i niezależnie od routera.
-    const timer = window.setInterval(() => {
+    // onNeedRefresh może odpalić się więcej niż raz (np. kolejny deploy), więc
+    // czyścimy poprzedni interval zanim założymy nowy — inaczej wyciek.
+    if (updateTimer !== null) {
+      window.clearInterval(updateTimer)
+    }
+    updateTimer = window.setInterval(() => {
       if (!isOnHome()) return
-      window.clearInterval(timer)
+      if (updateTimer !== null) {
+        window.clearInterval(updateTimer)
+        updateTimer = null
+      }
       void updateSW()
     }, HOME_CHECK_INTERVAL_MS)
   },

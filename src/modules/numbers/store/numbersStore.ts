@@ -74,11 +74,19 @@ export function migrateNumbersPersist(persisted: unknown): PersistedNumbers {
   const facts = p.facts
   const migratedFacts: Record<MathFactId, MathFactState> = {}
   if (facts && typeof facts === 'object' && !Array.isArray(facts)) {
-    for (const [oldId, state] of Object.entries(facts)) {
+    const entries = Object.entries(facts)
+    // Kolizja (persist ma i `count-3`, i `count5-3`) — wygrywa wpis już
+    // zapisany pod docelowym id, bo pochodzi z nowszej sesji. `Object.entries`
+    // NIE gwarantuje, że nowy format występuje przed starym, więc zamiast
+    // polegać na kolejności iteracji, przetwarzamy najpierw wpisy już w
+    // docelowym formacie (id === oldId, nie pasuje do `count-N`), a dopiero
+    // potem legacy — legacy wypada, jeśli target jest już zajęty.
+    const isLegacy = (id: string) => /^count-(\d+)$/.test(id)
+    const nonLegacy = entries.filter(([oldId]) => !isLegacy(oldId))
+    const legacy = entries.filter(([oldId]) => isLegacy(oldId))
+    for (const [oldId, state] of [...nonLegacy, ...legacy]) {
       const newId = migrateLegacyFactId(oldId)
       if (!newId || !state) continue
-      // Kolizja (persist ma i `count-3`, i `count5-3`) — wygrywa wpis już
-      // zapisany pod nowym id, bo pochodzi z nowszej sesji.
       if (migratedFacts[newId]) continue
       migratedFacts[newId] = {
         ...state,

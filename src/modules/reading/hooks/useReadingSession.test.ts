@@ -20,7 +20,7 @@ if (typeof localStorage === 'undefined' || typeof localStorage.clear !== 'functi
   }
 }
 
-const { useReadingSession } = await import('./useReadingSession')
+const { useReadingSession, MIN_FEEDBACK_MS } = await import('./useReadingSession')
 const { useReading } = await import('../store/readingStore')
 
 import { describe, expect, it, beforeEach, vi } from 'vitest'
@@ -385,25 +385,73 @@ describe('useReadingSession', () => {
     expect(result.current.questionOutcomes).toHaveLength(1)
   })
 
-  it('pause podczas wild celebration → resume nie zakleszcza sesji', () => {
-    const settings = {
-      reading: { wildCelebrationFreq: 1, questionsPerSession: { iskierka: 5 }, wordAnimations: 'off' },
-    } as any
-    const { result } = renderHook(() =>
-      useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings, rng: () => 0.5 }),
-    )
-    act(() => result.current.start())
-    const target = result.current.currentQuestion
-    expect(target?.type).toBe('syllable-match')
-    if (target?.type !== 'syllable-match') return
-    act(() => result.current.submitAnswer(target.targetSyllable))
-    expect(result.current.feedbackVariant).toBe('wild')
+  it('pause podczas wild celebration → resume nie zakleszcza sesji (po MIN_FEEDBACK_MS)', () => {
+    vi.useFakeTimers()
+    try {
+      const settings = {
+        reading: { wildCelebrationFreq: 1, questionsPerSession: { iskierka: 5 }, wordAnimations: 'off' },
+      } as any
+      const { result } = renderHook(() =>
+        useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings, rng: () => 0.5 }),
+      )
+      act(() => result.current.start())
+      const target = result.current.currentQuestion
+      expect(target?.type).toBe('syllable-match')
+      if (target?.type !== 'syllable-match') return
+      act(() => result.current.submitAnswer(target.targetSyllable))
+      expect(result.current.feedbackVariant).toBe('wild')
 
-    act(() => result.current.pause())
-    act(() => result.current.resume())
-    expect(result.current.status).toBe('asking')
-    expect(result.current.feedbackVariant).toBeNull()
-    expect(result.current.currentQuestionIndex).toBe(1)
+      act(() => result.current.pause())
+      act(() => result.current.resume())
+      // Bez audio do powtórzenia advance() nie leci w tej samej klatce —
+      // dziecko musi jeszcze zobaczyć feedback przez (resztę) MIN_FEEDBACK_MS.
+      expect(result.current.status).toBe('feedback')
+      act(() => {
+        vi.advanceTimersByTime(MIN_FEEDBACK_MS)
+      })
+      expect(result.current.status).toBe('asking')
+      expect(result.current.feedbackVariant).toBeNull()
+      expect(result.current.currentQuestionIndex).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('resume z pauzy w trakcie feedbacku "correct" czeka resztę MIN_FEEDBACK_MS zanim przejdzie dalej', () => {
+    vi.useFakeTimers()
+    try {
+      const { result } = renderHook(() =>
+        useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }),
+      )
+      act(() => result.current.start())
+      const target = result.current.currentQuestion
+      expect(target?.type).toBe('syllable-match')
+      if (target?.type !== 'syllable-match') return
+      act(() => result.current.submitAnswer(target.targetSyllable))
+      expect(result.current.feedbackVariant).toBe('correct')
+
+      // 400ms widoczne PRZED pauzą powinny liczyć się do minimum.
+      act(() => {
+        vi.advanceTimersByTime(400)
+      })
+      act(() => result.current.pause())
+      act(() => result.current.resume())
+      expect(result.current.status).toBe('feedback')
+
+      // Reszta (MIN_FEEDBACK_MS - 400) jeszcze nie wystarcza.
+      act(() => {
+        vi.advanceTimersByTime(MIN_FEEDBACK_MS - 400 - 1)
+      })
+      expect(result.current.status).toBe('feedback')
+
+      act(() => {
+        vi.advanceTimersByTime(1)
+      })
+      expect(result.current.status).toBe('asking')
+      expect(result.current.currentQuestionIndex).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('totalQuestions honors settings.reading.questionsPerSession[level]', () => {

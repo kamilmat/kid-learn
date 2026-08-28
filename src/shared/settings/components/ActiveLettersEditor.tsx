@@ -78,6 +78,7 @@ export function ActiveLettersEditor({
   }
 
   const selectedCount = selected.size
+  const belowMinimum = selectedCount < minLetters
 
   return (
     <div
@@ -102,6 +103,23 @@ export function ActiveLettersEditor({
       <div data-testid="selected-count" style={{ fontSize: 14 }}>
         Wybrano: <strong>{selectedCount}</strong> / {levelPool.size}
       </div>
+
+      {belowMinimum && (
+        <div
+          data-testid="active-letters-below-minimum-warning"
+          role="status"
+          style={{
+            color: colors.accentOrange,
+            fontSize: 14,
+            padding: 8,
+            borderRadius: radii.kid,
+            background: '#fff3e6',
+          }}
+        >
+          Ten wybór jest mniejszy niż liczba kafelków — sesja używa domyślnej
+          puli.
+        </div>
+      )}
 
       <div
         data-testid="letters-grid"

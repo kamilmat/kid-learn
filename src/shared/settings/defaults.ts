@@ -191,13 +191,18 @@ export function sanitizeActiveLetterOverride(
 
 /**
  * Odfiltrowuje z override'u litery spoza puli poziomu (i duplikaty). NIE
- * ocenia rozmiaru — zwraca `null` tylko gdy wejście nie jest tablicą.
+ * ocenia rozmiaru względem `tilesPerQuestion` — zwraca `null` gdy wejście nie
+ * jest tablicą LUB gdy po odfiltrowaniu nic nie zostało (override złożony
+ * wyłącznie z liter, których poziom już nie zna).
  *
  * WHY osobno od `sanitizeActiveLetterOverride`: persist ma zachować wybór
  * rodzica dosłownie. Kasowanie override'u przy zapisie tylko dlatego, że jest
  * mniejszy niż aktualne `tilesPerQuestion`, gubiło go BEZPOWROTNIE — po
  * obniżeniu liczby kafelków nie było już czego przywrócić. Rozmiar sprawdza
  * dopiero read path (`getActiveLetterPool`), więc fallback jest odwracalny.
+ * Pusta tablica to inny przypadek: nie ma czego przywrócić, więc nie ma sensu
+ * jej persistować jako override — czyścimy klucz, żeby edytor pokazał pulę
+ * domyślną zamiast pustego wyboru.
  */
 export function filterOverrideToLevelPool(
   override: readonly string[] | undefined,
@@ -205,7 +210,11 @@ export function filterOverrideToLevelPool(
 ): string[] | null {
   if (!Array.isArray(override)) return null
   const allowed = new Set(levelLetterPools[level])
-  return Array.from(new Set(override)).filter((letter) => allowed.has(letter))
+  const filtered = Array.from(new Set(override)).filter((letter) => allowed.has(letter))
+  // Override złożony wyłącznie z liter spoza puli poziomu (np. zmieniła się
+  // pula w kodzie) nie ma sensu jako override — traktujemy go jak brak i
+  // dajemy edytorowi pokazać pulę domyślną, zamiast persistować pustą tablicę.
+  return filtered.length > 0 ? filtered : null
 }
 
 /**
