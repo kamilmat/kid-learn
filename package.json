@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:watch": "vitest --watch",
-    "audio:build": "tsx scripts/generate-audio.ts build",
+    "audio:czytanki": "tsx scripts/czytanki-audio-source.ts",
+    "audio:build": "pnpm audio:czytanki && tsx scripts/generate-audio.ts build",
     "audio:check": "tsx scripts/generate-audio.ts check",
     "audio:convert-overrides": "tsx scripts/convert-overrides.ts",
     "dev:recorder": "echo 'Otwórz http://localhost:8080/tools/recorder/' && python3 -m http.server 8080"
