@@ -21,7 +21,8 @@ export type SessionEventAnswer = {
   ts: number
   outcome: 'correct' | 'wrong' | 'dontKnow' | 'timeout'
   chosenLetter?: string
-  chosenPosition?: 0 | 1 | 2 | 3
+  // Indeks kafelka; do 9 kafelków przy `tilesPerQuestion` z ustawień.
+  chosenPosition?: number
   responseMs: number
 }
 

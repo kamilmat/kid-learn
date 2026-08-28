@@ -17,10 +17,14 @@ export function boxWeight(box: Box): number {
 
 // Generic scorer — works on any item with box/lastSeen/recentWrong fields.
 export function scoreItem<T extends BaseItemState>(state: T, now: number): number {
+  // Zegar może cofnąć się (zmiana strefy, ręczne ustawienie daty) — bez clampu
+  // `now - lastSeen` byłoby ujemne i dawało ujemny (albo zerowy) score, przez co
+  // element wypadałby z losowania. Ujemny upływ czasu traktujemy jak zerowy.
+  const elapsedMs = Math.max(0, now - state.lastSeen)
   const recency =
     state.lastSeen <= 0
       ? 1.0
-      : Math.min(1 + ((now - state.lastSeen) / MS_PER_HOUR) * 0.3, RECENCY_CAP)
+      : Math.min(1 + (elapsedMs / MS_PER_HOUR) * 0.3, RECENCY_CAP)
   const recentWrongBoost = 1 + state.recentWrong * 2.0
   return boxWeight(state.box) * recency * recentWrongBoost
 }

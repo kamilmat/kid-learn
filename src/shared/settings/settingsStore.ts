@@ -121,6 +121,9 @@ export const useSettings = create<SettingsStore>()(
         parentGateUnlockedUntil: state.parentGateUnlockedUntil,
       }),
       version: 4,
+      // Bez `migrate` zustand ODRZUCA persist przy niezgodnej wersji (merge dostaje
+      // undefined) — przepuszczamy blob dalej, całą robotę robi `merge` poniżej.
+      migrate: (persisted) => persisted as PersistedShape,
       // Migration:
       //   v2 → v3: `showCountdownBar` z boolean na Partial<Record<Level, boolean>>.
       //   v3 → v4: `timeLimit` z prymitywu (TimeLimit) na Partial<Record<Level, TimeLimit>>.

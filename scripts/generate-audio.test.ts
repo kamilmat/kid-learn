@@ -355,6 +355,18 @@ describe('decideAction', () => {
     ).toEqual({ kind: 'generate', reason: 'hash-mismatch' })
   })
 
+  it('regenerates when a manual override was deleted (manifest still says override)', () => {
+    expect(
+      decideAction({
+        hasOverride: false,
+        hasOutputFile: true,
+        text,
+        voice,
+        manifestEntry: { hash: hashEntry(text, voice), updatedAt: 0, source: 'override' },
+      }),
+    ).toEqual({ kind: 'generate', reason: 'override-removed' })
+  })
+
   it('cache-hits when file exists and hash matches', () => {
     expect(
       decideAction({

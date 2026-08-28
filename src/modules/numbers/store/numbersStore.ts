@@ -92,6 +92,8 @@ export const useNumbers = create<NumbersState>()(
     {
       name: 'iskierki-numbers-v1',
       version: 1,
+      // Bez `migrate` bump wersji wyrzuciłby cały postęp — `merge` sanityzuje shape.
+      migrate: (persisted) => persisted as NumbersState,
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<NumbersState>
         return {
