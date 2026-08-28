@@ -3,7 +3,7 @@ import type { AudioBus } from '@/shared/audio/AudioBus'
 import type { Czytanka } from '../data/types'
 import { wordAudioKey } from '../data/audioKeys'
 
-const SENTENCE_PAUSE_MS = 600
+const SENTENCE_PAUSE_MS = 450
 export type WordPos = { s: number; w: number }
 
 export function useReadAloud({ czytanka, audioBus }: { czytanka: Czytanka; audioBus: Pick<AudioBus, 'play' | 'stop'> }) {

@@ -47,6 +47,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -55,10 +56,12 @@ import { fileURLToPath } from 'node:url'
 import {
   buildPlainSsml,
   buildSsml,
+  findFfmpeg,
   loadEnvLocal,
   MISSING_CREDENTIALS_MESSAGE,
   readAzureCredentials,
   synthesizeAzure,
+  trimSilence,
 } from './azureTts'
 import { toIpa } from './polishG2p'
 
@@ -100,6 +103,13 @@ type Mode = 'build' | 'check'
 
 const ENGINES: readonly Engine[] = ['edge', 'azure', 'azure-ipa']
 const DEFAULT_ENGINE: Engine = 'edge'
+
+/**
+ * Wersja post-processingu plików Azure (przycinanie ciszy ffmpeg). Wchodzi do
+ * hasha wpisów `azure`/`azure-ipa`, więc zmiana tej stałej wymusza regenerację
+ * wszystkich istniejących plików Azure — bump przy każdej zmianie filtra ffmpeg.
+ */
+const AZURE_POSTPROCESS = 'trim-v1'
 
 // ---------- voice map ----------
 
@@ -281,7 +291,7 @@ export function hashEntry(text: string, voice: string): string {
  */
 export function hashEntryAzure(text: string, voice: string, ipa: string): string {
   return createHash('sha256')
-    .update(`azure-ipa\n${voice}\n${ipa}\n${text}`, 'utf8')
+    .update(`azure-ipa\n${AZURE_POSTPROCESS}\n${voice}\n${ipa}\n${text}`, 'utf8')
     .digest('hex')
 }
 
@@ -291,7 +301,9 @@ export function hashEntryAzure(text: string, voice: string, ipa: string): string
  * regenerację zamiast trafienia w cache.
  */
 export function hashEntryAzurePlain(text: string, voice: string): string {
-  return createHash('sha256').update(`azure\n${voice}\n${text}`, 'utf8').digest('hex')
+  return createHash('sha256')
+    .update(`azure\n${AZURE_POSTPROCESS}\n${voice}\n${text}`, 'utf8')
+    .digest('hex')
 }
 
 /** @deprecated Use hashEntry instead. Kept for backward compatibility in tests. */
@@ -427,6 +439,18 @@ function ensureAzureAvailable(sources: SourceMap): { key: string; region: string
   return credentials
 }
 
+/** Sprawdza dostępność ffmpeg — wołane tylko gdy jakiś wpis faktycznie wymaga syntezy Azure w tym run. */
+function ensureFfmpegAvailable(): void {
+  if (!findFfmpeg()) {
+    console.error(
+      'ffmpeg nie znaleziony (wymagany do przycinania ciszy w plikach Azure).\n' +
+        'Sprawdzono: PATH, /opt/homebrew/bin/ffmpeg, /usr/local/bin/ffmpeg.\n' +
+        'Zainstaluj: brew install ffmpeg',
+    )
+    process.exit(1)
+  }
+}
+
 function overridePath(key: string): string {
   return join(MANUAL_OVERRIDES_DIR, `${key}.mp3`)
 }
@@ -479,10 +503,34 @@ function runDryRun(sources: SourceMap, overrides: PronunciationOverrides): void 
 
 async function runBuild(sources: SourceMap): Promise<void> {
   ensureEdgeTtsAvailable()
-  const azure = ensureAzureAvailable(sources)
   mkdirSync(PUBLIC_AUDIO_DIR, { recursive: true })
 
   const manifest = readManifest(MANIFEST_PATH)
+
+  // Pre-compute actions so we know, before making any Azure request, whether
+  // ffmpeg (needed for post-processing) will actually be used this run.
+  const actions: Record<string, BuildAction> = {}
+  let needsAzureGeneration = false
+  for (const [key, entry] of Object.entries(sources)) {
+    const { text, voice, engine, ipa } = entry
+    const action = decideAction({
+      hasOverride: existsSync(overridePath(key)),
+      hasOutputFile: existsSync(outputPath(key)),
+      text,
+      voice,
+      manifestEntry: manifest[key],
+      engine,
+      ipa,
+    })
+    actions[key] = action
+    if (action.kind === 'generate' && (engine === 'azure' || engine === 'azure-ipa')) {
+      needsAzureGeneration = true
+    }
+  }
+
+  const azure = ensureAzureAvailable(sources)
+  if (needsAzureGeneration) ensureFfmpegAvailable()
+
   let generated = 0
   let copied = 0
   let cached = 0
@@ -492,15 +540,7 @@ async function runBuild(sources: SourceMap): Promise<void> {
     const { text, voice, engine, ipa } = entry
     const out = outputPath(key)
     const ovr = overridePath(key)
-    const action = decideAction({
-      hasOverride: existsSync(ovr),
-      hasOutputFile: existsSync(out),
-      text,
-      voice,
-      manifestEntry: manifest[key],
-      engine,
-      ipa,
-    })
+    const action = actions[key]!
 
     try {
       if (action.kind === 'override') {
@@ -521,22 +561,23 @@ async function runBuild(sources: SourceMap): Promise<void> {
           `→ ${key} (generuję, ${action.reason}, engine=${engine}, voice=${voice}` +
             `${ipa ? `, ipa=${ipa}` : ''})`,
         )
-        if (engine === 'azure-ipa') {
+        if (engine === 'azure-ipa' || engine === 'azure') {
           if (!azure) throw new Error('brak danych logowania Azure')
+          const raw = `${out}.raw.mp3`
           await synthesizeAzure({
-            ssml: buildSsml({ voice, ipa: ipa ?? '', text }),
+            ssml:
+              engine === 'azure-ipa'
+                ? buildSsml({ voice, ipa: ipa ?? '', text })
+                : buildPlainSsml({ voice, text }),
             key: azure.key,
             region: azure.region,
-            outPath: out,
+            outPath: raw,
           })
-        } else if (engine === 'azure') {
-          if (!azure) throw new Error('brak danych logowania Azure')
-          await synthesizeAzure({
-            ssml: buildPlainSsml({ voice, text }),
-            key: azure.key,
-            region: azure.region,
-            outPath: out,
-          })
+          try {
+            trimSilence(raw, out)
+          } finally {
+            rmSync(raw, { force: true })
+          }
         } else {
           runEdgeTts(text, voice, out)
         }

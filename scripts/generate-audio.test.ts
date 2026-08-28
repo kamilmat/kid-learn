@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -215,6 +216,28 @@ describe('hashEntryAzurePlain', () => {
   it('is deterministic for the same text+voice', () => {
     expect(hashEntryAzurePlain('ada', AGNIESZKA_VOICE)).toBe(
       hashEntryAzurePlain('ada', AGNIESZKA_VOICE),
+    )
+  })
+})
+
+describe('AZURE_POSTPROCESS is baked into the Azure hashes', () => {
+  // Reproduces the pre-trim hash formulas (no AZURE_POSTPROCESS marker) to prove
+  // the current hashes differ — i.e. bumping AZURE_POSTPROCESS regenerates all
+  // existing Azure files instead of hitting the old cache.
+  const legacyHashEntryAzure = (text: string, voice: string, ipa: string): string =>
+    createHash('sha256').update(`azure-ipa\n${voice}\n${ipa}\n${text}`, 'utf8').digest('hex')
+  const legacyHashEntryAzurePlain = (text: string, voice: string): string =>
+    createHash('sha256').update(`azure\n${voice}\n${text}`, 'utf8').digest('hex')
+
+  it('hashEntryAzure differs from the pre-AZURE_POSTPROCESS formula', () => {
+    expect(hashEntryAzure('lo', DEFAULT_VOICE, 'lˈɔ')).not.toBe(
+      legacyHashEntryAzure('lo', DEFAULT_VOICE, 'lˈɔ'),
+    )
+  })
+
+  it('hashEntryAzurePlain differs from the pre-AZURE_POSTPROCESS formula', () => {
+    expect(hashEntryAzurePlain('ada', AGNIESZKA_VOICE)).not.toBe(
+      legacyHashEntryAzurePlain('ada', AGNIESZKA_VOICE),
     )
   })
 })

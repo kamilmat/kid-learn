@@ -11,6 +11,7 @@
  * Klucze czytane z `.env.local` (gitignore) — AZURE_SPEECH_KEY, AZURE_SPEECH_REGION.
  */
 
+import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -210,4 +211,50 @@ export async function synthesizeAzure({
   const audio = Buffer.from(await response.arrayBuffer())
   if (audio.length === 0) throw new Error('Azure TTS zwróciło pusty plik audio')
   writeFileSync(outPath, audio)
+}
+
+// ---------- silence trim ----------
+
+/**
+ * Szuka binarki ffmpeg — `which ffmpeg` najpierw, potem typowe lokalizacje
+ * Homebrew (macOS Apple Silicon / Intel).
+ */
+export function findFfmpeg(): string | null {
+  const which = spawnSync('which', ['ffmpeg'], { encoding: 'utf8' })
+  if (which.status === 0 && which.stdout.trim()) {
+    return which.stdout.trim()
+  }
+  const candidates = ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg']
+  for (const c of candidates) {
+    if (existsSync(c)) return c
+  }
+  return null
+}
+
+/**
+ * Przycina ciszę na początku/końcu pliku Azure TTS (~0.3s lead, ~0.8s tail
+ * z Azure Speech), zostawiając ~80ms na starcie i ~120ms na końcu żeby
+ * nie obcinać ataku/wybrzmienia głoski. Odwrócenie (`areverse`) między
+ * dwoma przebiegami `silenceremove` pozwala przyciąć koniec tym samym
+ * filtrem co start (silenceremove działa tylko od początku strumienia).
+ */
+export function trimSilence(inPath: string, outPath: string): void {
+  const ffmpeg = findFfmpeg()
+  if (!ffmpeg) {
+    throw new Error('ffmpeg nie znaleziony (sprawdzono PATH, /opt/homebrew/bin, /usr/local/bin)')
+  }
+  const filter =
+    'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.08,' +
+    'areverse,' +
+    'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.12,' +
+    'areverse'
+  const result = spawnSync(
+    ffmpeg,
+    ['-y', '-loglevel', 'error', '-i', inPath, '-af', filter, '-codec:a', 'libmp3lame', '-b:a', '96k', outPath],
+    { encoding: 'utf8' },
+  )
+  if (result.status !== 0) {
+    const err = (result.stderr || result.stdout || '').trim()
+    throw new Error(`ffmpeg trimSilence failed (exit ${result.status}): ${err}`)
+  }
 }
