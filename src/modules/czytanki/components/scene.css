@@ -32,3 +32,7 @@
 
 @keyframes cz-syl-bounce { 0%{transform:scale(1)} 40%{transform:scale(1.25)} 100%{transform:scale(1)} }
 .cz-syl-bounce { animation: cz-syl-bounce .25s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cz-syl-bounce { animation: none !important; }
+}

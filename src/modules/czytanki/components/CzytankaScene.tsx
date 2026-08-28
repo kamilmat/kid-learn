@@ -23,7 +23,7 @@ function SceneActor({ actor }: { actor: Actor }) {
     >
       <span
         className="cz-actor-inner"
-        style={{ animationDelay: `${actor.delay ?? 0}s` }}
+        style={{ animationDelay: poke ? '0s' : `${actor.delay ?? 0}s` }}
         onAnimationEnd={(e: AnimationEvent<HTMLSpanElement>) => {
           if (e.animationName === 'cz-poke') setPoke(false)
         }}

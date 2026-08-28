@@ -29,6 +29,7 @@ export function useSyllablePress({
   const onPointerDown = useCallback(
     (e: PointerEvent) => {
       e.preventDefault()
+      clear()
       fired.current = false
       start.current = { x: e.clientX, y: e.clientY }
       timer.current = window.setTimeout(() => {
@@ -37,7 +38,7 @@ export function useSyllablePress({
         onLongPress()
       }, longPressMs)
     },
-    [onLongPress, longPressMs],
+    [onLongPress, longPressMs, clear],
   )
 
   const onPointerMove = useCallback(
