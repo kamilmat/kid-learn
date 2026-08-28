@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { getSyllableColor } from '@/shared/ui/syllableColors'
@@ -13,6 +13,10 @@ import { CzytankaScene } from './CzytankaScene'
 import { useReadAloud } from '../hooks/useReadAloud'
 
 const FONT_BY_GROUP: Record<CzytankaGroup, number> = { 1: 64, 2: 54, 3: 46, 4: 40 }
+// Dłuższe czytanki dostają mniejszą scenę — tekst jest tu treścią, scena tłem.
+const SCENE_PCT_BY_GROUP: Record<CzytankaGroup, number> = { 1: 40, 2: 40, 3: 38, 4: 34 }
+const MIN_FONT = 26
+const FONT_STEP = 2
 const WORD_HIGHLIGHT_MS = 600
 
 type Props = {
@@ -103,39 +107,76 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   })
   const readTap = useTapHandler({ onTap: toggle })
 
-  const fontSize = FONT_BY_GROUP[czytanka.group]
+  // Bez scrolla i bez przycinania: zaczynamy od rozmiaru dla grupy i zmniejszamy
+  // krokami, aż wszystkie zdania zmieszczą się w dostępnej wysokości. Zależy od
+  // orientacji i długości zdań (zawijanie), więc liczone z realnego layoutu.
+  const baseFont = FONT_BY_GROUP[czytanka.group]
+  const boxRef = useRef<HTMLDivElement>(null)
+  const textRef = useRef<HTMLDivElement>(null)
+  const [fontSize, setFontSize] = useState(baseFont)
+  // Bump wymusza ponowny pomiar także wtedy, gdy fontSize się nie zmienia
+  // (reset do baseFont po obrocie ekranu) — inaczej efekt z deps nie odpali.
+  const [fitPass, setFitPass] = useState(0)
+
+  const refit = useCallback(() => {
+    setFontSize(baseFont)
+    setFitPass((n) => n + 1)
+  }, [baseFont])
+
+  useLayoutEffect(() => { refit() }, [czytanka.id, refit])
+
+  useEffect(() => {
+    window.addEventListener('resize', refit)
+    window.addEventListener('orientationchange', refit)
+    return () => {
+      window.removeEventListener('resize', refit)
+      window.removeEventListener('orientationchange', refit)
+    }
+  }, [refit])
+
+  useLayoutEffect(() => {
+    const box = boxRef.current
+    const text = textRef.current
+    if (!box || !text) return
+    const available = box.clientHeight
+    if (available <= 0) return
+    if (text.offsetHeight > available && fontSize > MIN_FONT) {
+      setFontSize((f) => Math.max(MIN_FONT, f - FONT_STEP))
+    }
+  }, [fontSize, fitPass])
 
   return (
     <div data-testid="czytanka-view" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 12, padding: `0 ${tapTargets.minMargin}px ${tapTargets.minMargin}px`, position: 'relative' }}>
-      <div style={{ flex: '0 0 40%', minHeight: 0, position: 'relative' }}>
+      <div style={{ flex: `0 0 ${SCENE_PCT_BY_GROUP[czytanka.group]}%`, minHeight: 0, position: 'relative' }}>
         <CzytankaScene scene={czytanka.scene} />
         {onPrev && <button type="button" aria-label="Poprzednia czytanka" {...prevTap} style={{ ...roundBtn, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)' }}>◀</button>}
         {onNext && <button type="button" aria-label="Następna czytanka" {...nextTap} style={{ ...roundBtn, position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>▶</button>}
+        <button type="button" aria-label={reading ? 'Zatrzymaj' : 'Przeczytaj całość'} data-testid="read-aloud" {...readTap}
+          style={{ ...roundBtn, position: 'absolute', left: '50%', bottom: 8, transform: 'translateX(-50%)', background: reading ? '#fde047' : '#fff', borderRadius: radii.kid }}>
+          {reading ? '⏹' : '🔊'}
+        </button>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '0.2em', overflow: 'hidden', paddingBottom: 88 }}>
-        {czytanka.sentences.map((sent, s) => (
-          <div key={s} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0 0.7em' }}>
-            {sent.map((word, w) => {
-              const isActive = (activeWord?.s === s && activeWord.w === w) || (heldWord?.s === s && heldWord.w === w)
-              return (
-                <span key={w} style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.15em' }}>
-                  {word.syllables.map((syl, i) => (
-                    <SyllableButton key={i} text={syl} color={getSyllableColor(i)} fontSize={fontSize} highlighted={isActive}
-                      onTap={() => tapSyllable(syl)} onLongPress={() => holdWord(s, w, word.syllables)} />
-                  ))}
-                  {word.punct && <span aria-hidden="true" style={{ fontFamily: 'var(--font-block)', fontWeight: 700, fontSize, color: colors.text }}>{word.punct}</span>}
-                </span>
-              )
-            })}
-          </div>
-        ))}
+      <div ref={boxRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+        <div ref={textRef} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2em', fontSize }}>
+          {czytanka.sentences.map((sent, s) => (
+            <div key={s} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0 0.7em' }}>
+              {sent.map((word, w) => {
+                const isActive = (activeWord?.s === s && activeWord.w === w) || (heldWord?.s === s && heldWord.w === w)
+                return (
+                  <span key={w} style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.15em' }}>
+                    {word.syllables.map((syl, i) => (
+                      <SyllableButton key={i} text={syl} color={getSyllableColor(i)} fontSize={fontSize} highlighted={isActive}
+                        onTap={() => tapSyllable(syl)} onLongPress={() => holdWord(s, w, word.syllables)} />
+                    ))}
+                    {word.punct && <span aria-hidden="true" style={{ fontFamily: 'var(--font-block)', fontWeight: 700, fontSize, color: colors.text }}>{word.punct}</span>}
+                  </span>
+                )
+              })}
+            </div>
+          ))}
+        </div>
       </div>
-
-      <button type="button" aria-label={reading ? 'Zatrzymaj' : 'Przeczytaj całość'} data-testid="read-aloud" {...readTap}
-        style={{ ...roundBtn, position: 'absolute', right: tapTargets.minMargin, bottom: tapTargets.minMargin, background: reading ? '#fde047' : '#fff', borderRadius: radii.kid }}>
-        {reading ? '⏹' : '🔊'}
-      </button>
     </div>
   )
 }
