@@ -50,10 +50,13 @@ overridy tekstu/IPA/głosu. `tools/recorder/` nadal wspiera grupy
 Czytanki-sylaby/Czytanki-słowa na wypadek gdyby przyszłe sylaby wymagały
 faktycznego nagrania.
 
-**Status brancha**: praca na `feat/czytanki`, jeszcze nie zmergowana do
-`main` — zweryfikowane w Chrome (iPad viewport landscape+portrait); do
-sprawdzenia na fizycznym iPadzie: long-press w Safari, przycisk 🔊 nad sceną
-przed mergem i deployem.
+**Status**: zmergowane do `main` i **live** (2026-08-28, deploy zielony). Audio
+czytanek głosem Agnieszki (Azure), z przyciętą ciszą i obwolutką wokół wyrazów.
+Zweryfikowane w Chrome (iPad viewport landscape+portrait); do sprawdzenia na
+fizycznym iPadzie: long-press w Safari, przycisk 🔊 nad sceną. Historia audio w
+gicie jest pocięta na małe commity („audio część i/n") — sieć usera zrywa duże
+pushe; przy kolejnych zmianach mp3 pushować po jednym commicie.
+Klucz Azure w `.env.local` — po tej sesji zregenerować w portalu (przeszedł przez czat).
 
 ## Wymowa izolowanych sylab — backend `azure-ipa` (2026-08-26)
 
