@@ -8,7 +8,7 @@ const SCENES: readonly Scene[] = [
   { stage: 3, offsetMs: 3000 },
 ]
 
-function PochodniaCommutativity({ stage }: { stage: number }) {
+export function PochodniaCommutativity({ stage }: { stage: number }) {
   const apple = CONCRETE_SETS[0]!
   const rotated = stage >= 3
   return (
@@ -40,4 +40,3 @@ function PochodniaCommutativity({ stage }: { stage: number }) {
   )
 }
 PochodniaCommutativity.SCENES = SCENES
-export default PochodniaCommutativity

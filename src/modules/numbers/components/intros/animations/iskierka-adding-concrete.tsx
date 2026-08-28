@@ -8,7 +8,7 @@ const SCENES: readonly Scene[] = [
   { stage: 3, offsetMs: 3200 },
 ]
 
-function IskierkaAddingConcrete({ stage }: { stage: number }) {
+export function IskierkaAddingConcrete({ stage }: { stage: number }) {
   const apple = CONCRETE_SETS[0]!
   return (
     <div data-testid="anim-iskierka-adding-concrete" style={{ display: 'flex', alignItems: 'center', gap: 16, fontFamily: 'var(--font-handwritten)', fontSize: 56 }}>
@@ -21,4 +21,3 @@ function IskierkaAddingConcrete({ stage }: { stage: number }) {
   )
 }
 IskierkaAddingConcrete.SCENES = SCENES
-export default IskierkaAddingConcrete

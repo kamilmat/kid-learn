@@ -6,6 +6,7 @@ import { ConcreteIcons } from '../representations/ConcreteIcons'
 import { DigitTile } from '../representations/DigitTile'
 import { pickIconSet } from '../../data/concreteSets'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices } from '../../utils/buildChoices'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -29,7 +30,7 @@ export function ConcreteAddExercise({ audioBus, payload, onAnswer }: Props) {
     return () => clearTimeout(t)
   }, [audioBus])
 
-  const choices = useMemo(() => buildChoices(sum, 1, 10), [sum])
+  const choices = useMemo(() => buildChoices(sum, { min: 1, max: 10 }), [sum])
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
@@ -111,11 +112,4 @@ function DropTarget({ children }: { children: ReactNode }) {
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.floor(n)))
-}
-
-function buildChoices(correct: number, min: number, max: number): number[] {
-  const pool: number[] = []
-  for (let n = min; n <= max; n++) if (n !== correct) pool.push(n)
-  const distractors = pool.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

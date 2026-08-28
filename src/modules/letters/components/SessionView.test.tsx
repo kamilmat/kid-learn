@@ -143,7 +143,7 @@ describe('SessionView — integration', () => {
     })
     expect(screen.getByTestId('pause-overlay')).toBeInTheDocument()
     act(() => {
-      screen.getByTestId('resume-button').click()
+      screen.getByTestId('pause-resume').click()
     })
     expect(screen.queryByTestId('pause-overlay')).not.toBeInTheDocument()
   })

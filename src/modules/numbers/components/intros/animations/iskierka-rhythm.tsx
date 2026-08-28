@@ -8,7 +8,7 @@ const SCENES: readonly Scene[] = [
   { stage: 3, offsetMs: 2600 },
 ]
 
-function IskierkaRhythm({ stage }: { stage: number }) {
+export function IskierkaRhythm({ stage }: { stage: number }) {
   const apple = CONCRETE_SETS[0]!
   return (
     <div data-testid="anim-iskierka-rhythm" style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
@@ -27,4 +27,3 @@ function IskierkaRhythm({ stage }: { stage: number }) {
   )
 }
 IskierkaRhythm.SCENES = SCENES
-export default IskierkaRhythm

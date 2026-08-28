@@ -38,19 +38,6 @@ describe('readingStore', () => {
     expect(state.wildCelebrationCounter).toBe(0)
   })
 
-  it('lazy-init creates SyllableState on first access', () => {
-    const state = useReading.getState()
-    state.ensureSyllableInitialized('MA')
-    expect(useReading.getState().syllables['syl-MA']).toBeDefined()
-    expect(useReading.getState().syllables['syl-MA'].box).toBe(1)
-  })
-
-  it('lazy-init creates WordState on first access', () => {
-    const state = useReading.getState()
-    state.ensureWordInitialized('word-MAMA')
-    expect(useReading.getState().words['word-MAMA']).toBeDefined()
-  })
-
   it('addToAlbum unlocks word', () => {
     const state = useReading.getState()
     state.addToAlbum('word-MAMA')

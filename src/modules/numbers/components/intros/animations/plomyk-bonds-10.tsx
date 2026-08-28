@@ -9,7 +9,7 @@ const SCENES: readonly Scene[] = [
 
 const PAIRS: Array<[number, number]> = [[4, 6], [7, 3], [5, 5]]
 
-function PlomykBonds10({ stage }: { stage: number }) {
+export function PlomykBonds10({ stage }: { stage: number }) {
   const idx = Math.max(0, Math.min(stage - 1, PAIRS.length - 1))
   const pair = PAIRS[idx]!
   return (
@@ -23,4 +23,3 @@ function PlomykBonds10({ stage }: { stage: number }) {
   )
 }
 PlomykBonds10.SCENES = SCENES
-export default PlomykBonds10

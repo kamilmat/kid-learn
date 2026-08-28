@@ -5,6 +5,7 @@ import type { AudioBus } from '@/shared/audio/AudioBus'
 import { NumberBondShape } from '../representations/NumberBondShape'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
+import { shuffled } from '@/shared/srs/distractors'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -107,13 +108,13 @@ function buildBondChoices(a: number, b: number, whole: number): BondChoice[] {
   for (let n = 1; n <= whole - 1; n++) {
     if (!set.has(n)) pool.push(n)
   }
-  const shuffled = pool.sort(() => Math.random() - 0.5)
-  const distractorCount = Math.min(3, shuffled.length)
-  const distractors = shuffled.slice(0, distractorCount)
+  const shuffledPool = shuffled(pool, Math.random)
+  const distractorCount = Math.min(3, shuffledPool.length)
+  const distractors = shuffledPool.slice(0, distractorCount)
   const digits = a === b ? [a, a, ...distractors] : [a, b, ...distractors]
   const choices: BondChoice[] = digits.map((d, idx) => ({
     id: `bond-digit-${idx}-${d}`,
     digit: d,
   }))
-  return choices.sort(() => Math.random() - 0.5)
+  return shuffled(choices, Math.random)
 }

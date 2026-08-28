@@ -9,7 +9,7 @@ const SCENES: readonly Scene[] = [
   { stage: 4, offsetMs: 3700 },
 ]
 
-function PochodniaArrays({ stage }: { stage: number }) {
+export function PochodniaArrays({ stage }: { stage: number }) {
   const apple = CONCRETE_SETS[0]!
   return (
     <div data-testid="anim-pochodnia-arrays" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
@@ -27,4 +27,3 @@ function PochodniaArrays({ stage }: { stage: number }) {
   )
 }
 PochodniaArrays.SCENES = SCENES
-export default PochodniaArrays

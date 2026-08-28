@@ -7,7 +7,7 @@ const SCENES: readonly Scene[] = VALUES.map((_, i) => ({
   offsetMs: 600 + i * 600,
 }))
 
-function PochodniaSkipcount10({ stage }: { stage: number }) {
+export function PochodniaSkipcount10({ stage }: { stage: number }) {
   return (
     <div data-testid={`anim-pochodnia-skipcount-${STEP}`} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
       {VALUES.map((v, i) => (
@@ -36,4 +36,3 @@ function PochodniaSkipcount10({ stage }: { stage: number }) {
   )
 }
 PochodniaSkipcount10.SCENES = SCENES
-export default PochodniaSkipcount10

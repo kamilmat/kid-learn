@@ -7,7 +7,7 @@ const SCENES: readonly Scene[] = [
   { stage: 3, offsetMs: 3000 },
 ]
 
-function PlomykAddsub10({ stage }: { stage: number }) {
+export function PlomykAddsub10({ stage }: { stage: number }) {
   const count = stage === 1 ? 4 : stage === 2 ? 7 : stage >= 3 ? 5 : 0
   const op = stage === 2 ? '+3' : stage >= 3 ? '−2' : ''
   const highlightAfter = stage === 2 ? 4 : undefined
@@ -21,4 +21,3 @@ function PlomykAddsub10({ stage }: { stage: number }) {
   )
 }
 PlomykAddsub10.SCENES = SCENES
-export default PlomykAddsub10

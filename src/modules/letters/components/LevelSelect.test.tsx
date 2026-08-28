@@ -49,6 +49,15 @@ const { createInitialLetterState } = await import(
   '@/shared/srs/createInitialLetterState'
 )
 
+function setMastered(letter: string) {
+  useLetters.setState((s) => ({
+    letters: {
+      ...s.letters,
+      [letter]: { ...createInitialLetterState(letter), box: 5, masteredAt: 1 },
+    },
+  }))
+}
+
 function makeAudioBus() {
   return { play: vi.fn(() => Promise.resolve(true)) }
 }
@@ -115,14 +124,8 @@ describe('LevelSelect', () => {
 
   it('mastery wall shows pula aktywnego poziomu (default Iskierka = 6); box=5 marked', () => {
     // Oznaczamy "a" i "m" jako opanowane (box 5) — obie w Iskierka puli
-    useLetters.getState().applyOutcome(
-      'a',
-      { ...createInitialLetterState('a'), box: 5, masteredAt: 1 },
-    )
-    useLetters.getState().applyOutcome(
-      'm',
-      { ...createInitialLetterState('m'), box: 5, masteredAt: 1 },
-    )
+    setMastered('a')
+    setMastered('m')
 
     render(<LevelSelect onSelect={vi.fn()} audioBus={makeAudioBus()} />)
 
@@ -143,10 +146,7 @@ describe('LevelSelect', () => {
   })
 
   it('clicking a mastered cell triggers mastery-celebration audio', () => {
-    useLetters.getState().applyOutcome(
-      'a',
-      { ...createInitialLetterState('a'), box: 5, masteredAt: 1 },
-    )
+    setMastered('a')
     const audioBus = makeAudioBus()
     render(<LevelSelect onSelect={vi.fn()} audioBus={audioBus} />)
     act(() => {

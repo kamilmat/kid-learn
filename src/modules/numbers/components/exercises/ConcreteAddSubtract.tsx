@@ -6,6 +6,7 @@ import { TenFrame } from '../representations/TenFrame'
 import { DigitTile } from '../representations/DigitTile'
 import { colors } from '@/app/theme'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices } from '../../utils/buildChoices'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -26,7 +27,7 @@ export function ConcreteAddSubtract({ audioBus, payload, onAnswer }: Props) {
   }, [audioBus, op])
 
   const choices = useMemo(
-    () => buildChoices(result, op === '+' ? a + b : a),
+    () => buildChoices(result, { min: 0, max: Math.max(op === '+' ? a + b : a, result + 2) }),
     [result, a, b, op],
   )
 
@@ -144,12 +145,4 @@ function DropTarget({ children }: { children: ReactNode }) {
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.floor(n)))
-}
-
-function buildChoices(correct: number, max: number): number[] {
-  const safeMax = Math.max(max, correct + 2)
-  const pool: number[] = []
-  for (let n = 0; n <= safeMax; n++) if (n !== correct) pool.push(n)
-  const distractors = pool.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

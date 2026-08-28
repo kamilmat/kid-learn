@@ -5,6 +5,7 @@ import type { AudioBus } from '@/shared/audio/AudioBus'
 import { TenFrame } from '../representations/TenFrame'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices } from '../../utils/buildChoices'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -21,7 +22,7 @@ export function MatchDigitDotsExercise({ audioBus, payload, onAnswer }: Props) {
     void audioBus.play('ask-howmany')
   }, [audioBus])
 
-  const choices = useMemo(() => buildChoices(correct, 1, 10), [correct])
+  const choices = useMemo(() => buildChoices(correct, { min: 1, max: 10 }), [correct])
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
@@ -93,11 +94,4 @@ function DropTarget({ children }: { children: ReactNode }) {
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.floor(n)))
-}
-
-function buildChoices(correct: number, min: number, max: number): number[] {
-  const pool: number[] = []
-  for (let n = min; n <= max; n++) if (n !== correct) pool.push(n)
-  const distractors = pool.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

@@ -16,11 +16,7 @@ import { LevelIconView, LevelStars, LEVEL_TILE_BG, LEVEL_TILE_BORDER } from '@/s
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { LevelHeader } from '@/shared/ui/LevelHeader'
 import { toUpper } from '@/modules/letters/data/alphabet'
-import {
-  selectMasteredLetters,
-  useLetters,
-  type LettersState,
-} from '@/modules/letters/store/lettersStore'
+import { selectMasteredLetters, useLetters } from '@/modules/letters/store/lettersStore'
 
 export type LevelSelectProps = {
   onSelect: (level: Level) => void
@@ -181,21 +177,18 @@ export function LevelSelect({
   onSelect,
   audioBus = defaultAudioBus,
 }: LevelSelectProps) {
-  const lettersState = useLetters()
-  const masteredSet = useMemo<Set<string>>(() => {
-    // selectMasteredLetters operuje na czystym shape — wyciągamy tylko letters
-    const snapshot: LettersState = {
-      letters: lettersState.letters,
-      sessions: lettersState.sessions,
-      seenIntros: lettersState.seenIntros,
-      lastUsedLevel: lettersState.lastUsedLevel,
-    }
-    return new Set(selectMasteredLetters(snapshot))
-  }, [lettersState.letters, lettersState.sessions, lettersState.seenIntros, lettersState.lastUsedLevel])
+  // Selektory zamiast całego store'u — ekran nie rerenderuje się przy zapisie
+  // historii sesji ani seenIntros.
+  const letters = useLetters((s) => s.letters)
+  const persistedLastUsedLevel = useLetters((s) => s.lastUsedLevel)
+  const masteredSet = useMemo<Set<string>>(
+    () => new Set(selectMasteredLetters({ letters })),
+    [letters],
+  )
 
   // Mastery wall: pokazujemy tylko pulę aktywnego (lub ostatniego) poziomu.
   // Default Iskierka (6 liter) — dziecko widzi tylko to czego się uczy.
-  const lastUsedLevel = lettersState.lastUsedLevel ?? 'iskierka'
+  const lastUsedLevel = persistedLastUsedLevel ?? 'iskierka'
   const visibleLetters = useMemo<readonly string[]>(
     () => levelLetterPools[lastUsedLevel],
     [lastUsedLevel],

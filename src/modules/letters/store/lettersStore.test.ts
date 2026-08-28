@@ -52,7 +52,6 @@ const { defaultSettings } = await import('@/shared/settings/defaults')
 const {
   LETTERS_STORAGE_KEY,
   MAX_SESSION_HISTORY,
-  selectActiveLetters,
   selectLetterStateMap,
   selectMasteredLetters,
   useLetters,
@@ -60,6 +59,12 @@ const {
 
 import type { LetterState } from '@/shared/srs/types'
 import type { SessionLog } from '@/shared/stats/types'
+
+// Store nie ma już settera per-litera (produkcja pisze bulkiem po sesji) —
+// testy wstawiają stan wprost.
+const setLetter = (letter: string, state: LetterState): void => {
+  useLetters.setState((s) => ({ letters: { ...s.letters, [letter]: state } }))
+}
 
 const reset = (): void => {
   localStorage.clear()
@@ -102,30 +107,6 @@ describe('useLetters store', () => {
     expect(s.lastUsedLevel).toBeNull()
   })
 
-  describe('getLetterState', () => {
-    it('returns initial state for unknown letter (lazy init)', () => {
-      const st = useLetters.getState().getLetterState('b')
-      expect(st.letter).toBe('b')
-      expect(st.box).toBe(1)
-      expect(st.totalSeen).toBe(0)
-    })
-
-    it('returns stored state for known letter', () => {
-      const stored = makeLetterState('a', { box: 4, totalSeen: 12 })
-      useLetters.getState().applyOutcome('a', stored)
-      const fetched = useLetters.getState().getLetterState('a')
-      expect(fetched).toEqual(stored)
-    })
-  })
-
-  describe('applyOutcome', () => {
-    it('writes a single letter state', () => {
-      const updated = makeLetterState('m', { box: 3 })
-      useLetters.getState().applyOutcome('m', updated)
-      expect(useLetters.getState().letters['m']).toEqual(updated)
-    })
-  })
-
   describe('applySessionResults', () => {
     it('merges updated states and appends session to history', () => {
       const updated = {
@@ -143,7 +124,7 @@ describe('useLetters store', () => {
     })
 
     it('preserves earlier letters not present in update', () => {
-      useLetters.getState().applyOutcome('o', makeLetterState('o', { box: 4 }))
+      setLetter('o', makeLetterState('o', { box: 4 }))
       useLetters
         .getState()
         .applySessionResults(
@@ -193,7 +174,7 @@ describe('useLetters store', () => {
 
   describe('resetAllProgress', () => {
     it('clears letters/sessions/seenIntros but keeps lastUsedLevel', () => {
-      useLetters.getState().applyOutcome('a', makeLetterState('a', { box: 5 }))
+      setLetter('a', makeLetterState('a', { box: 5 }))
       useLetters
         .getState()
         .applySessionResults({}, makeSessionLog('s1'))
@@ -220,7 +201,7 @@ describe('useLetters store', () => {
     })
 
     it('persists letters and sessions', () => {
-      useLetters.getState().applyOutcome('a', makeLetterState('a', { box: 3 }))
+      setLetter('a', makeLetterState('a', { box: 3 }))
       useLetters
         .getState()
         .applySessionResults({}, makeSessionLog('s1'))
@@ -234,27 +215,16 @@ describe('useLetters store', () => {
 
   describe('selectors', () => {
     it('selectMasteredLetters returns only box=5 letters, sorted', () => {
-      useLetters.getState().applyOutcome('a', makeLetterState('a', { box: 2 }))
-      useLetters.getState().applyOutcome('m', makeLetterState('m', { box: 5 }))
-      useLetters.getState().applyOutcome('b', makeLetterState('b', { box: 5 }))
+      setLetter('a', makeLetterState('a', { box: 2 }))
+      setLetter('m', makeLetterState('m', { box: 5 }))
+      setLetter('b', makeLetterState('b', { box: 5 }))
       const mastered = selectMasteredLetters(useLetters.getState())
       expect(mastered).toEqual(['b', 'm'])
     })
 
-    it('selectActiveLetters returns level pool from settings', () => {
-      const active = selectActiveLetters(
-        useLetters.getState(),
-        'iskierka',
-        defaultSettings,
-      )
-      expect(active.sort()).toEqual(['a', 'e', 'l', 'm', 'o', 't'])
-    })
-
     it('selectLetterStateMap lazy-inits missing letters', () => {
       // Tylko "a" istnieje
-      useLetters
-        .getState()
-        .applyOutcome('a', makeLetterState('a', { box: 4 }))
+      setLetter('a', makeLetterState('a', { box: 4 }))
       const map = selectLetterStateMap(
         useLetters.getState(),
         'iskierka',

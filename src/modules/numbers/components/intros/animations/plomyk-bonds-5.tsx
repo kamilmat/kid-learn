@@ -7,7 +7,7 @@ const SCENES: readonly Scene[] = [
   { stage: 3, offsetMs: 2800 },
 ]
 
-function PlomykBonds5({ stage }: { stage: number }) {
+export function PlomykBonds5({ stage }: { stage: number }) {
   return (
     <div data-testid="anim-plomyk-bonds-5">
       <NumberBondShape
@@ -19,4 +19,3 @@ function PlomykBonds5({ stage }: { stage: number }) {
   )
 }
 PlomykBonds5.SCENES = SCENES
-export default PlomykBonds5

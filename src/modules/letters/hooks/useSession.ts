@@ -44,7 +44,7 @@ import type { IskraIntensity } from '@/shared/ui/IskraMascot'
 import { CONTRASTIVE_PAIRS } from '@/modules/letters/data/contrastivePairs'
 import { getAssociation } from '@/modules/letters/data/associations'
 import { createInitialLetterState } from '@/shared/srs/createInitialLetterState'
-import { pickDistractors } from '@/shared/srs/distractors'
+import { pickDistractors, pickRandom, shuffled } from '@/shared/srs/distractors'
 import { pickNextLetter } from '@/shared/srs/select'
 import { updateLetterState } from '@/shared/srs/update'
 import type {
@@ -171,25 +171,6 @@ const STREAK_AUDIO_DURATION_MS = 2000
 function defaultUuid(): string {
   // Krótki UUID-lite — dla testów i logów wystarcza.
   return `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
-}
-
-function shuffleInPlace<T>(arr: T[], rng: () => number): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    const a = arr[i]
-    const b = arr[j]
-    if (a !== undefined && b !== undefined) {
-      arr[i] = b
-      arr[j] = a
-    }
-  }
-  return arr
-}
-
-function pickRandom<T>(arr: readonly T[], rng: () => number): T {
-  const idx = Math.floor(rng() * arr.length)
-  // Cast bezpieczny — arr.length > 0 zakłada wywołanie tylko z niepustą listą.
-  return arr[idx] as T
 }
 
 function caseModeToInitialChosenCase(mode: CaseMode): 'upper' | 'lower' {
@@ -470,7 +451,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       cfg.rng,
       distractorCount,
     )
-    const tiles = shuffleInPlace([target, ...distractors], cfg.rng)
+    const tiles = shuffled([target, ...distractors], cfg.rng)
     const targetSlot: Slot = tiles.indexOf(target)
     const chosenStyle = pickStyleForQuestion(
       cfg.styleMode,
