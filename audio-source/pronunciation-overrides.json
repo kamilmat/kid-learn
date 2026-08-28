@@ -9,5 +9,18 @@
   "cz-syl-au":     { "text": "au" },
   "cz-word-co":    { "ipa": "t͡sˈɔ" },
   "cz-word-lale":  { "ipa": "lˈalɛ" },
-  "cz-word-tola":  { "ipa": "tˈɔla" }
+  "cz-word-tola":  { "ipa": "tˈɔla" },
+  "cz-syl-be_":  { "text": "bę" },
+  "cz-syl-z-e_": { "text": "żę" },
+  "cz-syl-me_":  { "text": "mę." },
+  "cz-syl-re_":  { "text": "rę." },
+  "cz-syl-l_e_": { "text": "łę." },
+  "cz-syl-cje_": { "text": "cję", "voice": "zofia" },
+  "cz-syl-fe_":  { "text": "fę",  "voice": "zofia" },
+  "cz-syl-ke_":  { "text": "kę",  "voice": "zofia" },
+  "cz-syl-dz-a": { "text": "dża", "voice": "zofia" },
+  "cz-syl-z":    { "text": "z",   "voice": "zofia" },
+  "cz-word-z":   { "text": "z",   "voice": "zofia" },
+  "cz-syl-w":    { "text": "w",   "voice": "marek" },
+  "cz-word-w":   { "text": "w",   "voice": "marek" }
 }

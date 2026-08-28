@@ -89,8 +89,10 @@ export type SourceMap = Record<string, SourceEntry>
  * Ręczny wyjątek wymowy wybrany przez odsłuch, z pierwszeństwem przed G2P/tekstem.
  * `ipa` wymusza syntezę przez `<phoneme>` (nawet dla wpisów `azure` bez IPA);
  * `text` wymusza zwykłe SSML z podanym tekstem (nawet dla wpisów `azure-ipa`).
+ * Opcjonalne `voice` (klucz z VOICE_MAP, np. "zofia") zastępuje głos z `_voice`
+ * pliku źródłowego wyłącznie dla tego klucza.
  */
-export type PronunciationOverride = { ipa: string } | { text: string }
+export type PronunciationOverride = { ipa: string; voice?: string } | { text: string; voice?: string }
 
 export type PronunciationOverrides = Record<string, PronunciationOverride>
 
@@ -227,7 +229,18 @@ export function loadPronunciationOverrides(path: string): PronunciationOverrides
     if (hasIpa === hasText) {
       throw new Error(`${path}: override for "${key}" must have exactly one of "ipa" or "text"`)
     }
-    out[key] = hasIpa ? { ipa: entry['ipa'] as string } : { text: entry['text'] as string }
+    const voiceRaw = entry['voice']
+    if (voiceRaw !== undefined && typeof voiceRaw !== 'string') {
+      throw new Error(`${path}: override "voice" for "${key}" must be a string`)
+    }
+    const voice = voiceRaw as string | undefined
+    out[key] = hasIpa
+      ? voice !== undefined
+        ? { ipa: entry['ipa'] as string, voice }
+        : { ipa: entry['ipa'] as string }
+      : voice !== undefined
+        ? { text: entry['text'] as string, voice }
+        : { text: entry['text'] as string }
   }
   return out
 }
@@ -236,7 +249,10 @@ export function loadPronunciationOverrides(path: string): PronunciationOverrides
  * Nakłada ręczny wyjątek wymowy na wpis źródłowy. Działa tylko dla silników
  * `azure-ipa`/`azure` (`edge` nie obsługuje SSML/phoneme). `ipa` przełącza
  * wpis na `azure-ipa` z podanym IPA; `text` przełącza na zwykłe `azure` SSML
- * z podanym tekstem — niezależnie od oryginalnego silnika wpisu.
+ * z podanym tekstem — niezależnie od oryginalnego silnika wpisu. Opcjonalne
+ * `voice` zastępuje głos pliku źródłowego (`_voice`) tylko dla tego klucza;
+ * `expectedHash`/`decideAction` biorą `voice` z wynikowego wpisu, więc zmiana
+ * głosu w override automatycznie wymusza regenerację.
  */
 export function applyPronunciationOverride(
   entry: SourceEntry,
@@ -244,10 +260,11 @@ export function applyPronunciationOverride(
 ): SourceEntry {
   if (!override) return entry
   if (entry.engine !== 'azure-ipa' && entry.engine !== 'azure') return entry
+  const voice = override.voice !== undefined ? resolveVoice(override.voice) : entry.voice
   if ('ipa' in override) {
-    return { text: entry.text, voice: entry.voice, engine: 'azure-ipa', ipa: override.ipa }
+    return { text: entry.text, voice, engine: 'azure-ipa', ipa: override.ipa }
   }
-  return { text: override.text, voice: entry.voice, engine: 'azure' }
+  return { text: override.text, voice, engine: 'azure' }
 }
 
 /**
@@ -443,7 +460,7 @@ function runDryRun(sources: SourceMap, overrides: PronunciationOverrides): void 
           'ipa' in pronunciationOverride
             ? `ipa:"${pronunciationOverride.ipa}"`
             : `text:"${pronunciationOverride.text}"`
-        }`
+        }${pronunciationOverride.voice ? ` voice:${pronunciationOverride.voice}` : ''}`
       : ''
     console.log(
       `${key}\tengine=${entry.engine}\ttext="${entry.text}"${ipa}${overrideLabel}\t${label}`,

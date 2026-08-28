@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { describe, expect, it } from 'vitest'
 
-import { buildSsml } from './azureTts'
+import { buildPlainSsml, buildSsml } from './azureTts'
 import {
   applyPronunciationOverride,
   decideAction,
@@ -435,5 +435,18 @@ describe('applyPronunciationOverride', () => {
     const overridden = applyPronunciationOverride(entry, { ipa: 't͡sˈɔ' })
     const ssml = buildSsml({ voice: overridden.voice, ipa: overridden.ipa ?? '', text: overridden.text })
     expect(ssml).toContain('ph="t͡sˈɔ"')
+  })
+
+  it('a voice override replaces the file-level voice, changes the hash, and flows into the SSML <voice> name', () => {
+    const entry = { text: 'z', voice: AGNIESZKA_VOICE, engine: 'azure' as const }
+    const overridden = applyPronunciationOverride(entry, { text: 'z', voice: 'zofia' })
+    expect(overridden.voice).toBe('pl-PL-ZofiaNeural')
+
+    const hashBefore = hashEntryAzurePlain(entry.text, entry.voice)
+    const hashAfter = hashEntryAzurePlain(overridden.text, overridden.voice)
+    expect(hashAfter).not.toBe(hashBefore)
+
+    const ssml = buildPlainSsml({ voice: overridden.voice, text: overridden.text })
+    expect(ssml).toContain('<voice name="pl-PL-ZofiaNeural">')
   })
 })
