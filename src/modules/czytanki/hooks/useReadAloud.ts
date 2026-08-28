@@ -29,7 +29,9 @@ export function useReadAloud({ czytanka, audioBus }: { czytanka: Czytanka; audio
           try { await audioBus.play(wordAudioKey(sent[w]!.syllables)) } catch { /* brak pliku — idziemy dalej */ }
         }
         if (runId.current !== id) return
-        await new Promise((r) => setTimeout(r, SENTENCE_PAUSE_MS))
+        if (s < czytanka.sentences.length - 1) {
+          await new Promise((r) => setTimeout(r, SENTENCE_PAUSE_MS))
+        }
       }
       if (runId.current === id) setActiveWord(null)
     })()

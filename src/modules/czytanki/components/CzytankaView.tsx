@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { getSyllableColor } from '@/shared/ui/syllableColors'
@@ -34,19 +34,35 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   const markIntroSeen = useCzytanki((s) => s.markIntroSeen)
   const [heldWord, setHeldWord] = useState<{ s: number; w: number } | null>(null)
   const { activeWord, reading, toggle, stop } = useReadAloud({ czytanka, audioBus })
+  const holdTimeoutRef = useRef<number | null>(null)
+  const navCueTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
     markOpened(czytanka.id)
     audioBus.stop()
+    // Odtwarzamy intro z opóźnieniem PO stop() — a flagę "widziane" ustawiamy
+    // dopiero w tym samym deferred callbacku, żeby StrictMode w dev (mount →
+    // unmount → mount) nie spalił jednorazowego intro na pierwszym, odrzuconym mouncie.
+    let introTimeout: number | undefined
     if (!hasSeenIntro('czytanka-first')) {
-      markIntroSeen('czytanka-first')
-      void audioBus.play('czytanki-intro')
+      introTimeout = window.setTimeout(() => {
+        markIntroSeen('czytanka-first')
+        void audioBus.play('czytanki-intro')
+      }, 0)
+    }
+    return () => {
+      if (introTimeout !== undefined) window.clearTimeout(introTimeout)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [czytanka.id])
 
-  // Audio nie może grać dalej po opuszczeniu ekranu (np. tap wstecz w trakcie odtwarzania).
-  useEffect(() => () => stop(), [stop])
+  // Audio nie może grać dalej po opuszczeniu ekranu (np. tap wstecz w trakcie odtwarzania),
+  // a odłożone w czasie cue nawigacji/podświetlenia słowa nie mogą odpalić się po unmount.
+  useEffect(() => () => {
+    stop()
+    if (holdTimeoutRef.current !== null) window.clearTimeout(holdTimeoutRef.current)
+    if (navCueTimeoutRef.current !== null) window.clearTimeout(navCueTimeoutRef.current)
+  }, [stop])
 
   usePageVisibility({ onHidden: stop, onVisible: () => {}, enabled: true })
 
@@ -59,11 +75,31 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     stop()
     setHeldWord({ s, w })
     void audioBus.play(wordAudioKey(syllables))
-    window.setTimeout(() => setHeldWord(null), WORD_HIGHLIGHT_MS)
+    if (holdTimeoutRef.current !== null) window.clearTimeout(holdTimeoutRef.current)
+    holdTimeoutRef.current = window.setTimeout(() => {
+      setHeldWord(null)
+      holdTimeoutRef.current = null
+    }, WORD_HIGHLIGHT_MS)
   }, [audioBus, stop])
 
-  const prevTap = useTapHandler({ onTap: () => { stop(); void audioBus.play('czytanki-ui-prev'); onPrev?.() }, disabled: !onPrev })
-  const nextTap = useTapHandler({ onTap: () => { stop(); void audioBus.play('czytanki-ui-next'); onNext?.() }, disabled: !onNext })
+  // stop() zabija kolejkę AudioBus — grając cue nawigacji synchronicznie zaraz
+  // po stop() nigdy by nie wystartowało. Odkładamy je o jeden tick.
+  const prevTap = useTapHandler({
+    onTap: () => {
+      stop()
+      onPrev?.()
+      navCueTimeoutRef.current = window.setTimeout(() => { void audioBus.play('czytanki-ui-prev') }, 0)
+    },
+    disabled: !onPrev,
+  })
+  const nextTap = useTapHandler({
+    onTap: () => {
+      stop()
+      onNext?.()
+      navCueTimeoutRef.current = window.setTimeout(() => { void audioBus.play('czytanki-ui-next') }, 0)
+    },
+    disabled: !onNext,
+  })
   const readTap = useTapHandler({ onTap: toggle })
 
   const fontSize = FONT_BY_GROUP[czytanka.group]
@@ -76,7 +112,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
         {onNext && <button type="button" aria-label="Następna czytanka" {...nextTap} style={{ ...roundBtn, position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>▶</button>}
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '0.2em', overflow: 'hidden' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '0.2em', overflow: 'hidden', paddingBottom: 88 }}>
         {czytanka.sentences.map((sent, s) => (
           <div key={s} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0 0.7em' }}>
             {sent.map((word, w) => {
@@ -97,7 +133,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
 
       <button type="button" aria-label={reading ? 'Zatrzymaj' : 'Przeczytaj całość'} data-testid="read-aloud" {...readTap}
         style={{ ...roundBtn, position: 'absolute', right: tapTargets.minMargin, bottom: tapTargets.minMargin, background: reading ? '#fde047' : '#fff', borderRadius: radii.kid }}>
-        {reading ? '⏹' : '▶'}
+        {reading ? '⏹' : '🔊'}
       </button>
     </div>
   )

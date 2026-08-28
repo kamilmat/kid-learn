@@ -16,6 +16,7 @@ export function CzytankaList({ audioBus, onOpen }: { audioBus: Pick<AudioBus, 'p
   useEffect(() => {
     if (!hasSeenIntro('czytanki-list-intro')) {
       markIntroSeen('czytanki-list-intro')
+      audioBus.stop()
       void audioBus.play('czytanki-list-intro')
     }
     if (lastOpenedId) document.getElementById(`tile-${lastOpenedId}`)?.scrollIntoView({ block: 'center' })

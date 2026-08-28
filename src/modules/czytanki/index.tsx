@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
@@ -31,7 +31,19 @@ export function CzytankiModule({ audioBus = defaultAudioBus }: { audioBus?: Bus 
 
 function ListRoute({ audioBus }: { audioBus: Bus }) {
   const navigate = useNavigate()
-  const onOpen = useCallback((id: string) => { audioBus.stop(); void audioBus.play('czytanki-ui-open'); navigate(id) }, [audioBus, navigate])
+  const cueTimeoutRef = useRef<number | null>(null)
+
+  useEffect(() => () => {
+    if (cueTimeoutRef.current !== null) window.clearTimeout(cueTimeoutRef.current)
+  }, [])
+
+  // stop() zabija kolejkę AudioBus — grając cue synchronicznie zaraz po stop()
+  // nigdy by nie wystartowało. Odkładamy je o jeden tick.
+  const onOpen = useCallback((id: string) => {
+    audioBus.stop()
+    navigate(id)
+    cueTimeoutRef.current = window.setTimeout(() => { void audioBus.play('czytanki-ui-open') }, 0)
+  }, [audioBus, navigate])
   return <CzytankaList audioBus={audioBus} onOpen={onOpen} />
 }
 
