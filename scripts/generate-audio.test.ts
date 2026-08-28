@@ -3,12 +3,15 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { describe, expect, it } from 'vitest'
 
+import { buildSsml } from './azureTts'
 import {
+  applyPronunciationOverride,
   decideAction,
   hashEntry,
   hashEntryAzure,
   hashEntryAzurePlain,
   hashText,
+  loadPronunciationOverrides,
   loadSources,
   parseCli,
 } from './generate-audio'
@@ -339,5 +342,98 @@ describe('decideAction', () => {
         manifestEntry: { hash: hashEntry(text, voice), updatedAt: 0, source: 'tts' },
       }),
     ).toEqual({ kind: 'cache-hit' })
+  })
+})
+
+describe('loadPronunciationOverrides', () => {
+  it('returns {} when the file does not exist', () => {
+    expect(loadPronunciationOverrides('/no/such/file.json')).toEqual({})
+  })
+
+  it('parses ipa and text overrides, skipping _ comment keys', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'iskierki-audio-'))
+    try {
+      const p = join(dir, 'pronunciation-overrides.json')
+      writeFileSync(
+        p,
+        JSON.stringify({
+          _comment: 'wyjątki wybrane przez odsłuch',
+          'cz-syl-au': { text: 'au' },
+          'cz-word-co': { ipa: 't͡sˈɔ' },
+        }),
+      )
+      expect(loadPronunciationOverrides(p)).toEqual({
+        'cz-syl-au': { text: 'au' },
+        'cz-word-co': { ipa: 't͡sˈɔ' },
+      })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('throws when an entry has neither ipa nor text', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'iskierki-audio-'))
+    try {
+      const p = join(dir, 'bad.json')
+      writeFileSync(p, JSON.stringify({ 'cz-syl-x': {} }))
+      expect(() => loadPronunciationOverrides(p)).toThrow(/exactly one of "ipa" or "text"/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('throws when an entry has both ipa and text', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'iskierki-audio-'))
+    try {
+      const p = join(dir, 'bad.json')
+      writeFileSync(p, JSON.stringify({ 'cz-syl-x': { ipa: 'a', text: 'a' } }))
+      expect(() => loadPronunciationOverrides(p)).toThrow(/exactly one of "ipa" or "text"/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('applyPronunciationOverride', () => {
+  it('leaves the entry untouched when there is no override', () => {
+    const entry = { text: 'lo', voice: DEFAULT_VOICE, engine: 'azure-ipa' as const, ipa: 'lɔ' }
+    expect(applyPronunciationOverride(entry, undefined)).toBe(entry)
+  })
+
+  it('leaves edge-engine entries untouched even with an override', () => {
+    const entry = { text: 'balon', voice: DEFAULT_VOICE, engine: 'edge' as const }
+    expect(applyPronunciationOverride(entry, { text: 'balon2' })).toBe(entry)
+  })
+
+  it('ipa override switches an azure (plain) entry to azure-ipa', () => {
+    const entry = { text: 'co', voice: AGNIESZKA_VOICE, engine: 'azure' as const }
+    const result = applyPronunciationOverride(entry, { ipa: 't͡sˈɔ' })
+    expect(result).toEqual({
+      text: 'co',
+      voice: AGNIESZKA_VOICE,
+      engine: 'azure-ipa',
+      ipa: 't͡sˈɔ',
+    })
+  })
+
+  it('text override switches an azure-ipa entry to plain azure with the override text', () => {
+    const entry = { text: 'au', voice: AGNIESZKA_VOICE, engine: 'azure-ipa' as const, ipa: 'ˈau' }
+    const result = applyPronunciationOverride(entry, { text: 'au' })
+    expect(result).toEqual({ text: 'au', voice: AGNIESZKA_VOICE, engine: 'azure' })
+  })
+
+  it('an ipa override changes the expected hash vs. the un-overridden entry', () => {
+    const entry = { text: 'co', voice: AGNIESZKA_VOICE, engine: 'azure' as const }
+    const overridden = applyPronunciationOverride(entry, { ipa: 't͡sˈɔ' })
+    const hashBefore = hashEntryAzurePlain(entry.text, entry.voice)
+    const hashAfter = hashEntryAzure(overridden.text, overridden.voice, overridden.ipa ?? '')
+    expect(hashAfter).not.toBe(hashBefore)
+  })
+
+  it('an ipa override is used verbatim in the SSML phoneme tag', () => {
+    const entry = { text: 'co', voice: AGNIESZKA_VOICE, engine: 'azure' as const }
+    const overridden = applyPronunciationOverride(entry, { ipa: 't͡sˈɔ' })
+    const ssml = buildSsml({ voice: overridden.voice, ipa: overridden.ipa ?? '', text: overridden.text })
+    expect(ssml).toContain('ph="t͡sˈɔ"')
   })
 })

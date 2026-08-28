@@ -97,6 +97,12 @@ type Rule = {
   to: string
   /** Zmiękczenie przez "i": przed samogłoską "i" znika (sia → ɕa), inaczej zostaje (si → ɕi). */
   soft?: boolean
+  /**
+   * "ki"/"gi" przed samogłoską to nie zmiękczona zwarta tylnojęzykowa (kʲ/ɡʲ),
+   * tylko zwarta palatalna (c/ɟ) — Azure pl-PL wymawia ją wyraźniej niż kʲ/ɡʲ.
+   * Używane zamiast `to`, gdy `soft` i kolejny znak jest w SOFTENING_FOLLOWERS.
+   */
+  palatalStopBeforeVowel?: string
 }
 
 /** Samogłoski, przed którymi "i" pełni rolę znaku miękkości (bez samego "i"). */
@@ -116,8 +122,8 @@ const RULES: readonly Rule[] = [
   { from: 'mi', to: `m${PAL}`, soft: true },
   { from: 'wi', to: `v${PAL}`, soft: true },
   { from: 'fi', to: `f${PAL}`, soft: true },
-  { from: 'ki', to: `k${PAL}`, soft: true },
-  { from: 'gi', to: `${G}${PAL}`, soft: true },
+  { from: 'ki', to: `k${PAL}`, soft: true, palatalStopBeforeVowel: 'c' },
+  { from: 'gi', to: `${G}${PAL}`, soft: true, palatalStopBeforeVowel: 'ɟ' },
   { from: 'dź', to: DZI },
   { from: 'dż', to: DZH },
   { from: 'dz', to: DZ_ },
@@ -167,13 +173,14 @@ function segment(src: string): Phone[] {
     if (!rule) {
       throw new Error(`polishG2p: nieznany znak "${src[i]}" w "${src}"`)
     }
-    i += rule.from.length
-    out.push(phone(rule.to))
-    if (rule.soft) {
-      const next = src[i]
-      // "si" na końcu albo przed spółgłoską — "i" jest samogłoską sylaby (nich → ɲix).
-      if (next === undefined || !SOFTENING_FOLLOWERS.has(next)) out.push(phone('i'))
-    }
+    const nextIndex = i + rule.from.length
+    const next = src[nextIndex]
+    // "si" na końcu albo przed spółgłoską — "i" jest samogłoską sylaby (nich → ɲix).
+    const absorbsSoftening = rule.soft === true && next !== undefined && SOFTENING_FOLLOWERS.has(next)
+    const ipa = absorbsSoftening && rule.palatalStopBeforeVowel ? rule.palatalStopBeforeVowel : rule.to
+    out.push(phone(ipa))
+    if (rule.soft && !absorbsSoftening) out.push(phone('i'))
+    i = nextIndex
   }
   return out
 }
@@ -299,12 +306,17 @@ export function toIpa(syllable: string, options: G2pOptions = {}): string {
   return options.tieBar === false ? out.split(TIE).join('') : out
 }
 
-/** Zbiór znaków IPA, których używa pl-PL w Azure — do walidacji wyjścia. */
+/**
+ * Zbiór znaków IPA, których używa pl-PL w Azure — do walidacji wyjścia.
+ * ʃ/ʒ/ː dołączone dla ręcznych wyjątków wymowy w `pronunciation-overrides.json`
+ * (wybranych przez odsłuch — Azure akceptuje je choć G2P ich nie produkuje).
+ */
 export const AZURE_PL_IPA_CHARS: ReadonlySet<string> = new Set([
   ...['a', 'ɛ', 'i', 'ɔ', 'u', 'ɨ'],
   ...['p', 'b', 't', 'd', 'k', G, 'c', 'ɟ'],
   ...['m', 'n', 'ɲ', 'ŋ'],
   ...['f', 'v', 's', 'z', 'ʂ', 'ʐ', 'ɕ', 'ʑ', 'x'],
+  ...['ʃ', 'ʒ', 'ː'],
   ...['r', 'l', 'j', 'w'],
   ...[PAL, STRESS, NAS, TIE],
 ])

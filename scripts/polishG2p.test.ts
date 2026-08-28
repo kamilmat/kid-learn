@@ -39,12 +39,26 @@ describe('toIpa — zmiękczenia przez "i"', () => {
     ['cie', `t${TIE}ɕ${S}ɛ`],
     ['sie', `ɕ${S}ɛ`],
     ['nie', `ɲ${S}ɛ`],
-    ['kie', `k${PAL}${S}ɛ`],
-    ['gie', `${G}${PAL}${S}ɛ`],
+    ['kie', `c${S}ɛ`],
+    ['gie', `ɟ${S}ɛ`],
     ['bia', `b${PAL}${S}a`],
     // "i" przed spółgłoską jest samogłoską sylaby, nie tylko znakiem miękkości
     ['nich', `ɲ${S}ix`],
     ['sil', `ɕ${S}il`],
+  ])('%s → %s', (input, expected) => {
+    expect(toIpa(input)).toBe(expected)
+  })
+})
+
+describe('toIpa — "ki"/"gi" przed samogłoską → zwarta palatalna c/ɟ', () => {
+  it.each([
+    ['kiem', `c${S}ɛm`],
+    ['kiet', `c${S}ɛt`],
+    ['gie', `ɟ${S}ɛ`],
+    // "ki" bez następującej samogłoski: "i" zostaje własną samogłoską, nie triggeruje c.
+    ['kim', `k${PAL}${S}im`],
+    // "wi" (nie "ki"/"gi") jest nietknięte — "kwia" to k + wi + a.
+    ['kwia', `kf${PAL}${S}a`],
   ])('%s → %s', (input, expected) => {
     expect(toIpa(input)).toBe(expected)
   })

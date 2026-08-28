@@ -20,14 +20,26 @@ Task 10 (ta integracja) doczepił moduł 4 do reszty appki:
 - **Raport rodzica**: nowa sekcja `CzytankiStats` (po `NumbersStats`) — „Otwarte: X/60" + per-grupa breakdown + lista otwartych tytułów z emoji
 - **Eksport MD**: `exportReportToMarkdown` przyjmuje opcjonalny 6. parametr `czytankiSnapshot`, dopisuje sekcję `## Czytanki`
 
-**Testy**: 653/653 zielone (`pnpm test --run`), `pnpm tsc -b` czysto.
+**Testy**: 675/675 zielone (`pnpm test --run`), `pnpm tsc -b` czysto.
 **Audio**: 1135 plików mp3 w `public/audio/`, `pnpm audio:check` potwierdza 1128 wymaganych kluczy na miejscu (11 source plików; `czytanki.json` rozbity na `czytanki-syllables.json` + `czytanki-words.json`, oba generowane przez `pnpm audio:czytanki` z `data/czytanki.ts`).
 
-**Do odsłuchu / manual override** — TTS może odczytać pojedyncze litery jako
-*nazwy* liter zamiast dźwięku sylaby, sprawdzić w przeglądarce i ew. nagrać
-manual override (`audio-source/manual-overrides/<klucz>.mp3`):
-- `cz-syl-w` / `cz-word-w` (sylaba/słowo „w" — ryzyko „wu")
-- `cz-syl-z` / `cz-word-z` (sylaba/słowo „z" — ryzyko „zet")
+**Odsłuch zrobiony (2026-08-27)** — pełny przegląd wygenerowanych sylab/słów
+przez usera. Wynik:
+- Reguła G2P: `ki`/`gi` + samogłoska → zwarta palatalna `c`/`ɟ` (nie `kʲ`/`ɡʲ`),
+  bo Azure wymawiała `kʲ`/`ɡʲ` niewyraźnie (`polishG2p.ts`, dotyczy 3 kluczy:
+  `cz-syl-kie`, `cz-syl-kiem`, `cz-syl-kiet`).
+- Nowy mechanizm `audio-source/pronunciation-overrides.json` — 10 kluczy z
+  ręcznym IPA/tekstem wybranym przez odsłuch, ma pierwszeństwo przed G2P/tekstem
+  (`cz-syl-deszcz`, `cz-syl-drze`, `cz-syl-kacz`, `cz-syl-s_wiecz`, `cz-syl-zi`,
+  `cz-syl-l_u`, `cz-syl-au`, `cz-word-co`, `cz-word-lale`, `cz-word-tola`).
+- `pnpm audio:build` przegenerował dokładnie tych 13 kluczy, `pnpm audio:check`
+  potwierdza 1128/1128.
+
+**Nadal do zrobienia — manual recording** (Azure/G2P nie daje dobrego wyniku
+nawet z override; wymaga nagrania `audio-source/manual-overrides/<klucz>.mp3`):
+`cz-syl-be_`, `cz-syl-cje_`, `cz-syl-fe_`, `cz-syl-ke_`, `cz-syl-me_`,
+`cz-syl-re_`, `cz-syl-l_e_`, `cz-syl-z-e_`, `cz-syl-dz-a`, `cz-syl-w`, `cz-syl-z`
+(+ `cz-word-w`, `cz-word-z` mogą reużyć te same nagrania co `cz-syl-w`/`cz-syl-z`).
 
 **Status brancha**: praca na `feat/czytanki`, jeszcze nie zmergowana do
 `main` — zweryfikowane w Chrome (iPad viewport landscape+portrait); do
@@ -64,15 +76,10 @@ porównanie z oczekiwaną sylabą):
   `audio-source/czytanki-words.json` (407, edge) zamiast jednego `czytanki.json`.
 
 **Następne kroki**:
-1. Wpisać klucz do `.env.local` (`AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION=westeurope`,
-   zasób Speech w tierze F0; wzór w `.env.example`).
-2. `pnpm audio:dry` — sprawdzić plan (375 sylab „generate", słowa „cache-hit").
-3. `pnpm audio:build` — wygenerować 375 mp3 przez Azure (~kilka minut).
-4. **Odsłuchać sylaby kontrolne**: `lo`, `ka`, `ry`, `drze`, `ptak`, `w`, `z`,
-   `dzi`, `cię`, `żół` — to one najczęściej wychodziły źle na Edge. Jeśli któraś
-   brzmi nienaturalnie: poprawić regułę w `polishG2p.ts` (uwaga: zmiana reguły
-   regeneruje wszystkie 375) albo nagrać manual override.
-5. Jeśli wyjdzie dobrze — przełączyć `audio-source/syllables.json` (23 sylaby
+1. ~~Wpisać klucz do `.env.local`~~ / ~~`pnpm audio:build`~~ / ~~odsłuch~~ — zrobione,
+   patrz „Odsłuch zrobiony (2026-08-27)" wyżej.
+2. Nagrać manual override dla 11 kluczy z listy „Nadal do zrobienia" powyżej.
+3. Jeśli wyjdzie dobrze — przełączyć `audio-source/syllables.json` (23 sylaby
    modułu 2) na `_engine: azure-ipa` tym samym mechanizmem.
 
 ## Następna sesja — visual review round 3 (atrakcyjność dla dziecka)

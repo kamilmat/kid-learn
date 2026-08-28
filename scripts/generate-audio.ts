@@ -85,6 +85,15 @@ export type SourceEntry = {
 
 export type SourceMap = Record<string, SourceEntry>
 
+/**
+ * Ręczny wyjątek wymowy wybrany przez odsłuch, z pierwszeństwem przed G2P/tekstem.
+ * `ipa` wymusza syntezę przez `<phoneme>` (nawet dla wpisów `azure` bez IPA);
+ * `text` wymusza zwykłe SSML z podanym tekstem (nawet dla wpisów `azure-ipa`).
+ */
+export type PronunciationOverride = { ipa: string } | { text: string }
+
+export type PronunciationOverrides = Record<string, PronunciationOverride>
+
 type Mode = 'build' | 'check'
 
 const ENGINES: readonly Engine[] = ['edge', 'azure', 'azure-ipa']
@@ -120,6 +129,7 @@ const __dirname = dirname(__filename)
 const ROOT = resolve(__dirname, '..')
 const AUDIO_SOURCE_DIR = join(ROOT, 'audio-source')
 const MANUAL_OVERRIDES_DIR = join(AUDIO_SOURCE_DIR, 'manual-overrides')
+const PRONUNCIATION_OVERRIDES_PATH = join(AUDIO_SOURCE_DIR, 'pronunciation-overrides.json')
 const PUBLIC_AUDIO_DIR = join(ROOT, 'public', 'audio')
 const MANIFEST_PATH = join(PUBLIC_AUDIO_DIR, '.manifest.json')
 
@@ -189,6 +199,55 @@ export function loadSources(filePaths: readonly string[]): SourceMap {
     }
   }
   return merged
+}
+
+/**
+ * Loads `pronunciation-overrides.json` (jeśli istnieje). Klucze zaczynające się
+ * od `_` to komentarze i są pomijane. Każdy wpis musi mieć dokładnie jedno pole:
+ * `ipa` albo `text`.
+ */
+export function loadPronunciationOverrides(path: string): PronunciationOverrides {
+  if (!existsSync(path)) return {}
+  const raw = readFileSync(path, 'utf8').trim()
+  if (raw === '') return {}
+  const parsed: unknown = JSON.parse(raw)
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${path}: expected JSON object map, got ${typeof parsed}`)
+  }
+  const obj = parsed as Record<string, unknown>
+  const out: PronunciationOverrides = {}
+  for (const [key, value] of Object.entries(obj)) {
+    if (key.startsWith('_')) continue
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error(`${path}: override for "${key}" must be an object`)
+    }
+    const entry = value as Record<string, unknown>
+    const hasIpa = typeof entry['ipa'] === 'string'
+    const hasText = typeof entry['text'] === 'string'
+    if (hasIpa === hasText) {
+      throw new Error(`${path}: override for "${key}" must have exactly one of "ipa" or "text"`)
+    }
+    out[key] = hasIpa ? { ipa: entry['ipa'] as string } : { text: entry['text'] as string }
+  }
+  return out
+}
+
+/**
+ * Nakłada ręczny wyjątek wymowy na wpis źródłowy. Działa tylko dla silników
+ * `azure-ipa`/`azure` (`edge` nie obsługuje SSML/phoneme). `ipa` przełącza
+ * wpis na `azure-ipa` z podanym IPA; `text` przełącza na zwykłe `azure` SSML
+ * z podanym tekstem — niezależnie od oryginalnego silnika wpisu.
+ */
+export function applyPronunciationOverride(
+  entry: SourceEntry,
+  override: PronunciationOverride | undefined,
+): SourceEntry {
+  if (!override) return entry
+  if (entry.engine !== 'azure-ipa' && entry.engine !== 'azure') return entry
+  if ('ipa' in override) {
+    return { text: entry.text, voice: entry.voice, engine: 'azure-ipa', ipa: override.ipa }
+  }
+  return { text: override.text, voice: entry.voice, engine: 'azure' }
 }
 
 /**
@@ -362,7 +421,7 @@ function outputPath(key: string): string {
 // ---------- main flows ----------
 
 /** Plan buildu bez dotykania TTS — działa bez klucza Azure i bez edge-tts. */
-function runDryRun(sources: SourceMap): void {
+function runDryRun(sources: SourceMap, overrides: PronunciationOverrides): void {
   const manifest = readManifest(MANIFEST_PATH)
   const counts: Record<string, number> = {}
 
@@ -378,7 +437,17 @@ function runDryRun(sources: SourceMap): void {
     })
     const label = action.kind === 'generate' ? `generate (${action.reason})` : action.kind
     const ipa = entry.ipa ? ` ipa="${entry.ipa}"` : ''
-    console.log(`${key}\tengine=${entry.engine}\ttext="${entry.text}"${ipa}\t${label}`)
+    const pronunciationOverride = overrides[key]
+    const overrideLabel = pronunciationOverride
+      ? ` override=${
+          'ipa' in pronunciationOverride
+            ? `ipa:"${pronunciationOverride.ipa}"`
+            : `text:"${pronunciationOverride.text}"`
+        }`
+      : ''
+    console.log(
+      `${key}\tengine=${entry.engine}\ttext="${entry.text}"${ipa}${overrideLabel}\t${label}`,
+    )
     const bucket = `${entry.engine}/${action.kind}`
     counts[bucket] = (counts[bucket] ?? 0) + 1
   }
@@ -506,12 +575,21 @@ export function parseCli(argv: readonly string[]): { mode: Mode; dryRun: boolean
 
 async function main(): Promise<void> {
   const { mode, dryRun } = parseCli(process.argv)
-  const sourceFilePaths = discoverSourceFiles(AUDIO_SOURCE_DIR)
+  // pronunciation-overrides.json nie jest źródłem tekstu (wartości to obiekty,
+  // nie stringi) — wczytywane osobno, wykluczone z loadSources.
+  const sourceFilePaths = discoverSourceFiles(AUDIO_SOURCE_DIR).filter(
+    (p) => p !== PRONUNCIATION_OVERRIDES_PATH,
+  )
   console.log(`Discovered source files: ${sourceFilePaths.map((p) => p.split('/').pop()).join(', ')}`)
-  const sources = loadSources(sourceFilePaths)
+  const rawSources = loadSources(sourceFilePaths)
+  const overrides = loadPronunciationOverrides(PRONUNCIATION_OVERRIDES_PATH)
+  const sources: SourceMap = {}
+  for (const [key, entry] of Object.entries(rawSources)) {
+    sources[key] = applyPronunciationOverride(entry, overrides[key])
+  }
 
   if (mode === 'check') runCheck(sources)
-  else if (dryRun) runDryRun(sources)
+  else if (dryRun) runDryRun(sources, overrides)
   else await runBuild(sources)
 }
 

@@ -1,0 +1,13 @@
+{
+  "_comment": "Wyjątki wymowy wybrane przez odsłuch — mają pierwszeństwo przed G2P/tekstem.",
+  "cz-syl-deszcz": { "ipa": "dˈɛʂtʂ" },
+  "cz-syl-drze":   { "ipa": "dʒˈɛ" },
+  "cz-syl-kacz":   { "ipa": "kˈatʃ" },
+  "cz-syl-s_wiecz": { "ipa": "ɕfjˈɛtʂ" },
+  "cz-syl-zi":     { "ipa": "ʑjˈi" },
+  "cz-syl-l_u":    { "text": "łu" },
+  "cz-syl-au":     { "text": "au" },
+  "cz-word-co":    { "ipa": "t͡sˈɔ" },
+  "cz-word-lale":  { "ipa": "lˈalɛ" },
+  "cz-word-tola":  { "ipa": "tˈɔla" }
+}
