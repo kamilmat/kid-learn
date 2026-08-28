@@ -34,40 +34,50 @@ export function Home() {
 
   // Onboarding głosowy — pierwsze odwiedzenie home wymaga jednego z intro
   useEffect(() => {
+    // Flagę "widziane" palimy dopiero gdy intro faktycznie dograło (play()
+    // → true). Inaczej pierwszy wjazd z zablokowanym autoplay / brakiem pliku
+    // kasował onboarding na zawsze.
+    const playIntro = (key: string, mark: (k: string) => void) => {
+      void audioBus.play(key).then((played) => {
+        if (played) mark(key)
+      })
+    }
     if (!lettersIntroSeen) {
-      void audioBus.play('home-letters-intro')
-      markLettersIntro('home-letters-intro')
+      playIntro('home-letters-intro', markLettersIntro)
     } else if (!readingIntroSeen) {
-      void audioBus.play('home-reading-intro')
-      markReadingIntro('home-reading-intro')
+      playIntro('home-reading-intro', markReadingIntro)
     } else if (!numbersIntroSeen) {
-      void audioBus.play('home-numbers-intro')
-      markNumbersIntro('home-numbers-intro')
+      playIntro('home-numbers-intro', markNumbersIntro)
     } else if (!czytankiIntroSeen) {
-      void audioBus.play('home-czytanki-intro')
-      markCzytankiIntro('home-czytanki-intro')
+      playIntro('home-czytanki-intro', markCzytankiIntro)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // iOS Safari odblokowuje audio tylko po synchronicznym play() w gestcie.
+  // Kafelki Home nie grają nav-tap (moduł sam zagra swoje intro), więc
+  // odblokowujemy cichym klipem — inaczej intro modułu jest nieme.
   const handleLetters = useCallback(() => {
-    // Bez nav-tap "klik" — moduł sam zagra swoje intro/audio.
     audioBus.stop()
+    audioBus.unlock()
     navigate('/letters')
   }, [navigate])
 
   const handleReading = useCallback(() => {
     audioBus.stop()
+    audioBus.unlock()
     navigate('/reading')
   }, [navigate])
 
   const handleNumbers = useCallback(() => {
     audioBus.stop()
+    audioBus.unlock()
     navigate('/numbers')
   }, [navigate])
 
   const handleCzytanki = useCallback(() => {
     audioBus.stop()
+    audioBus.unlock()
     navigate('/czytanki')
   }, [navigate])
 

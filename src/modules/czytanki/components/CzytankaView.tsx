@@ -55,8 +55,10 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
       const cue = takePendingCue()
       if (cue) void audioBus.play(cue)
       if (!hasSeenIntro('czytanka-first')) {
-        markIntroSeen('czytanka-first')
-        void audioBus.play('czytanki-intro')
+        // Flaga dopiero po faktycznym odtworzeniu (play() → true).
+        void audioBus.play('czytanki-intro').then((played) => {
+          if (played) markIntroSeen('czytanka-first')
+        })
       }
     }, 0)
     return () => window.clearTimeout(mountTimeout)

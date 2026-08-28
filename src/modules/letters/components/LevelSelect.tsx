@@ -207,8 +207,11 @@ export function LevelSelect({
   // Onboarding głosowy — `level-select-intro` tylko 1× (sekcja 5.2).
   useEffect(() => {
     if (!hasSeenIntro(LEVEL_SELECT_INTRO_KEY)) {
-      void audioBus.play(LEVEL_SELECT_INTRO_KEY)
-      markIntroSeen(LEVEL_SELECT_INTRO_KEY)
+      // Flaga "widziane" dopiero po faktycznym odtworzeniu (play() → true) —
+      // zablokowany autoplay / brak pliku nie może skasować onboardingu.
+      void audioBus.play(LEVEL_SELECT_INTRO_KEY).then((played) => {
+        if (played) markIntroSeen(LEVEL_SELECT_INTRO_KEY)
+      })
     }
     // mount-only
     // eslint-disable-next-line react-hooks/exhaustive-deps

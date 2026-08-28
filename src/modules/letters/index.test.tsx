@@ -49,9 +49,18 @@ const { useLetters } = await import('./store/lettersStore')
 
 function makeAudioBus() {
   return {
-    play: vi.fn(() => Promise.resolve()),
+    play: vi.fn(() => Promise.resolve(true)),
     stop: vi.fn(),
   }
+}
+
+// Flagi intro palimy dopiero po rozwiązaniu play() — plik używa fake timerów,
+// więc zamiast waitFor (który by wisiał) domykamy mikrotaski ręcznie.
+async function flushMicrotasks() {
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+  })
 }
 
 function resetStore() {
@@ -84,7 +93,7 @@ describe('LettersModule — integration', () => {
     expect(screen.getByTestId('letters-module')).toBeInTheDocument()
   })
 
-  it('plays letters-intro on first visit and marks seen', () => {
+  it('plays letters-intro on first visit and marks seen', async () => {
     const audioBus = makeAudioBus()
     render(
       <MemoryRouter initialEntries={['/']}>
@@ -93,6 +102,7 @@ describe('LettersModule — integration', () => {
     )
     const keys = audioBus.play.mock.calls.map((c) => c[0])
     expect(keys).toContain('letters-intro')
+    await flushMicrotasks()
     expect(useLetters.getState().hasSeenIntro('letters-intro')).toBe(true)
   })
 
@@ -110,7 +120,7 @@ describe('LettersModule — integration', () => {
     expect(useLetters.getState().lastUsedLevel).toBe('iskierka')
   })
 
-  it('renders SessionView at /letters/session/iskierka and plays quiz-intro + dont-know-intro', () => {
+  it('renders SessionView at /letters/session/iskierka and plays quiz-intro + dont-know-intro', async () => {
     const audioBus = makeAudioBus()
     render(
       <MemoryRouter initialEntries={['/session/iskierka']}>
@@ -121,6 +131,7 @@ describe('LettersModule — integration', () => {
     const keys = audioBus.play.mock.calls.map((c) => c[0])
     expect(keys).toContain('quiz-intro')
     expect(keys).toContain('dont-know-intro')
+    await flushMicrotasks()
     expect(useLetters.getState().hasSeenIntro('quiz-intro')).toBe(true)
     expect(useLetters.getState().hasSeenIntro('dont-know-intro')).toBe(true)
   })

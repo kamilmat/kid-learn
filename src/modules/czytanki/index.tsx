@@ -8,7 +8,7 @@ import { setPendingCue, takePendingCue } from './audio/pendingCue'
 import { CzytankaList } from './components/CzytankaList'
 import { CzytankaView } from './components/CzytankaView'
 
-type Bus = Pick<AudioBus, 'play' | 'stop'>
+type Bus = Pick<AudioBus, 'play' | 'stop' | 'unlock'>
 
 export function CzytankiModule({ audioBus = defaultAudioBus }: { audioBus?: Bus } = {}) {
   const location = useLocation()
@@ -40,6 +40,9 @@ function ListRoute({ audioBus }: { audioBus: Bus }) {
   // dopiero docelowy ekran (CzytankaView) po zamontowaniu, przez pendingCue.
   const onOpen = useCallback((id: string) => {
     audioBus.stop()
+    // iOS: pierwszy synchroniczny play() w gestcie odblokowuje element —
+    // cue 'czytanki-ui-open' zagra dopiero po mouncie CzytankaView (poza gestem).
+    audioBus.unlock()
     setPendingCue('czytanki-ui-open')
     navigate(id)
   }, [audioBus, navigate])

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 
 // MemoryStorage polyfill jak w lettersStore.test.ts.
 class MemoryStorage implements Storage {
@@ -50,7 +50,7 @@ const { createInitialLetterState } = await import(
 )
 
 function makeAudioBus() {
-  return { play: vi.fn(() => Promise.resolve()) }
+  return { play: vi.fn(() => Promise.resolve(true)) }
 }
 
 function resetStore() {
@@ -86,12 +86,23 @@ describe('LevelSelect', () => {
     expect(onSelect).toHaveBeenCalledWith('plomyk')
   })
 
-  it('plays level-select-intro on first mount, marks seen', () => {
+  it('plays level-select-intro on first mount, marks seen dopiero po odtworzeniu', async () => {
     const audioBus = makeAudioBus()
     render(<LevelSelect onSelect={vi.fn()} audioBus={audioBus} />)
     const calls = audioBus.play.mock.calls.map((c) => c[0])
     expect(calls).toContain('level-select-intro')
-    expect(useLetters.getState().hasSeenIntro('level-select-intro')).toBe(true)
+    await waitFor(() =>
+      expect(useLetters.getState().hasSeenIntro('level-select-intro')).toBe(true),
+    )
+  })
+
+  it('nie pali flagi level-select-intro gdy audio nie zagrało', async () => {
+    const audioBus = { play: vi.fn(() => Promise.resolve(false)) }
+    render(<LevelSelect onSelect={vi.fn()} audioBus={audioBus} />)
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(useLetters.getState().hasSeenIntro('level-select-intro')).toBe(false)
   })
 
   it('does not replay level-select-intro if already seen', () => {

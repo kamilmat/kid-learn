@@ -123,8 +123,10 @@ function LettersIndex({ audioBus }: LettersIndexProps) {
   // Onboarding `letters-intro` — 1× per `seenIntros`.
   useEffect(() => {
     if (!hasSeenIntro(LETTERS_INTRO_KEY)) {
-      void audioBus.play(LETTERS_INTRO_KEY)
-      markIntroSeen(LETTERS_INTRO_KEY)
+      // Flaga "widziane" dopiero po faktycznym odtworzeniu (play() → true).
+      void audioBus.play(LETTERS_INTRO_KEY).then((played) => {
+        if (played) markIntroSeen(LETTERS_INTRO_KEY)
+      })
     }
     // mount-only
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,12 +167,14 @@ function LettersSession({ audioBus }: LettersSessionProps) {
   useEffect(() => {
     if (!isValidLevel) return
     if (!hasSeenIntro(QUIZ_INTRO_KEY)) {
-      void audioBus.play(QUIZ_INTRO_KEY)
-      markIntroSeen(QUIZ_INTRO_KEY)
+      void audioBus.play(QUIZ_INTRO_KEY).then((played) => {
+        if (played) markIntroSeen(QUIZ_INTRO_KEY)
+      })
     }
     if (!hasSeenIntro(DONT_KNOW_INTRO_KEY)) {
-      void audioBus.play(DONT_KNOW_INTRO_KEY)
-      markIntroSeen(DONT_KNOW_INTRO_KEY)
+      void audioBus.play(DONT_KNOW_INTRO_KEY).then((played) => {
+        if (played) markIntroSeen(DONT_KNOW_INTRO_KEY)
+      })
     }
     // mount-only (nawet jeśli level zmieni się w URL — i tak remountujemy przez key)
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { audioBus } from '@/shared/audio/AudioBus'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { useTapHandler } from './useTapHandler'
 
@@ -28,7 +29,17 @@ const buttonStyle = {
 export function KidNav({ onBack, onHome }: KidNavProps) {
   const navigate = useNavigate()
 
+  // Cue gramy SYNCHRONICZNIE w handlerze tapa, jeszcze przed nawigacją:
+  // "każdy klik mówi co zrobił", a przy okazji pierwszy play() w gestcie
+  // odblokowuje audio na iOS (unlock() poniżej to no-op gdy cue już w kolejce).
+  const playCue = (key: 'nav-back' | 'nav-home') => {
+    audioBus.stop()
+    void audioBus.play(key)
+    audioBus.unlock()
+  }
+
   const handleBack = () => {
+    playCue('nav-back')
     if (onBack) {
       onBack()
       return
@@ -37,6 +48,7 @@ export function KidNav({ onBack, onHome }: KidNavProps) {
   }
 
   const handleHome = () => {
+    playCue('nav-home')
     if (onHome) {
       onHome()
       return

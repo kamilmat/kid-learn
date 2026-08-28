@@ -24,8 +24,9 @@ export function CzytankaList({ audioBus, onOpen }: { audioBus: Pick<AudioBus, 'p
       const cue = takePendingCue()
       if (cue) void audioBus.play(cue)
       if (!hasSeenIntro('czytanki-list-intro')) {
-        markIntroSeen('czytanki-list-intro')
-        void audioBus.play('czytanki-list-intro')
+        void audioBus.play('czytanki-list-intro').then((played) => {
+          if (played) markIntroSeen('czytanki-list-intro')
+        })
       }
     }, 0)
     if (lastOpenedId) document.getElementById(`tile-${lastOpenedId}`)?.scrollIntoView({ block: 'center' })
