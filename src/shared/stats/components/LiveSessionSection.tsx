@@ -2,12 +2,14 @@
 //
 // Tabela eventów ostatniej sesji z timestampami HH:MM:SS i opisem akcji.
 
-import type { SessionEvent, SessionLog } from '@/shared/stats/types'
+import type { SessionEvent } from '@/shared/stats/types'
+import type { UnifiedSession } from '@/shared/stats/aggregate'
 import { LEVEL_LABEL } from '@/shared/settings/defaults'
 import { toUpper } from '@/modules/letters/data/alphabet'
 
 export type LiveSessionSectionProps = {
-  sessions: SessionLog[]
+  /** Sesje wszystkich modułów, posortowane rosnąco po `startedAt`. */
+  sessions: UnifiedSession[]
 }
 
 const OUTCOME_ICON: Record<'correct' | 'wrong' | 'dontKnow' | 'timeout', string> = {
@@ -42,13 +44,17 @@ type EventRow = {
  * Każdy `question-start` poprzedza odpowiednią `answer` — łączymy je w jeden
  * wiersz "Pytanie N: prompt X → Y (Z.Zs)" (jak w spec 14.3).
  */
-export function buildEventRows(session: SessionLog): EventRow[] {
+export function buildEventRows(session: UnifiedSession): EventRow[] {
   const out: EventRow[] = []
+  // Wielkie litery mają sens tylko dla modułu 1 — cele Czytania są już wielkimi
+  // literami, a id faktów matematycznych ("add-5-2") toUpper tylko zniekształca.
+  const fmtTarget = (target: string): string =>
+    session.module === 'letters' ? toUpper(target) : target
   const totalQuestions = session.events.filter((e) => e.type === 'question-start').length
   out.push({
     ts: session.startedAt,
     icon: '▶',
-    description: `Sesja zaczęta (${LEVEL_LABEL[session.level]}, ${totalQuestions} pytań)`,
+    description: `Sesja zaczęta (${session.moduleLabel} · ${LEVEL_LABEL[session.level]}, ${totalQuestions} pytań)`,
   })
 
   let questionNum = 0
@@ -67,9 +73,9 @@ export function buildEventRows(session: SessionLog): EventRow[] {
       const responseS = (ev.responseMs / 1000).toFixed(1)
       let outcomeText: string
       if (ev.outcome === 'correct') {
-        outcomeText = `${icon} ${toUpper(target)}`
+        outcomeText = `${icon} ${fmtTarget(target)}`
       } else if (ev.outcome === 'wrong') {
-        outcomeText = `${icon} ${ev.chosenLetter ? toUpper(ev.chosenLetter) : '?'}`
+        outcomeText = `${icon} ${ev.chosenLetter ? fmtTarget(ev.chosenLetter) : '?'}`
       } else if (ev.outcome === 'dontKnow') {
         outcomeText = `${icon}`
       } else {
@@ -78,7 +84,7 @@ export function buildEventRows(session: SessionLog): EventRow[] {
       out.push({
         ts: ev.ts,
         icon,
-        description: `Pytanie ${questionNum}: prompt ${toUpper(target)} → ${outcomeText} (${responseS}s)`,
+        description: `Pytanie ${questionNum}: prompt ${fmtTarget(target)} → ${outcomeText} (${responseS}s)`,
       })
       pendingQuestion = null
     } else if (ev.type === 'pause') {
@@ -111,7 +117,17 @@ export function LiveSessionSection({ sessions }: LiveSessionSectionProps) {
         borderRadius: 12,
       }}
     >
-      <h2 style={{ margin: '0 0 12px', fontSize: 22 }}>Ostatnia sesja</h2>
+      <h2 style={{ margin: '0 0 12px', fontSize: 22 }}>
+        Ostatnia sesja
+        {last && (
+          <span
+            data-testid="live-session-module"
+            style={{ marginLeft: 8, fontSize: 15, color: '#6a6a72' }}
+          >
+            {last.moduleLabel}
+          </span>
+        )}
+      </h2>
       {!last ? (
         <div data-testid="live-session-empty" style={{ color: '#888' }}>
           Brak sesji.

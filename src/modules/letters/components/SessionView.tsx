@@ -2,7 +2,8 @@
 // Trzyma `useSession` i renderuje QuizCard / PauseOverlay / FeedbackOverlay /
 // SessionEnd zgodnie ze status'em.
 
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import type { RefObject } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import { useIdleDetector } from '@/shared/engagement/useIdleDetector'
@@ -24,7 +25,7 @@ import type {
 import { useSession } from '@/modules/letters/hooks/useSession'
 import type { LetterTileState } from './LetterTile'
 import { FeedbackOverlay } from './FeedbackOverlay'
-import { PauseOverlay } from './PauseOverlay'
+import { PauseOverlay } from '@/shared/ui/PauseOverlay'
 import { QuizCard } from './QuizCard'
 import { SessionEnd } from './SessionEnd'
 import type {
@@ -48,6 +49,11 @@ export type SessionViewProps = {
   audioBus?: Pick<AudioBus, 'play' | 'stop'>
   /** Jeśli `true`, sesja sama się startuje przy mounto. */
   autoStart?: boolean
+  /**
+   * Ref, do którego sesja wpina „zapisz częściowy postęp". KidNav w routingu
+   * modułu woła go zanim odejdzie z ekranu — ⬅️/🏠 nie mogą gubić SRS.
+   */
+  quitRef?: RefObject<(() => void) | null>
 }
 
 function resolveCaseMode(settings: Settings, level: Level): CaseMode {
@@ -66,6 +72,7 @@ export function SessionView({
   onSessionComplete,
   audioBus = defaultAudioBus,
   autoStart = true,
+  quitRef,
 }: SessionViewProps) {
   const activeLetters = useMemo(() => getActiveLetterPool(settings, level), [settings, level])
   const caseMode = resolveCaseMode(settings, level)
@@ -85,6 +92,25 @@ export function SessionView({
     ...(onSessionComplete !== undefined ? { onSessionEnd: onSessionComplete } : {}),
     audioBus,
   })
+
+  // `session` to nowy obiekt co render — flush trzymamy w refie, żeby efekt
+  // unmountu miał zawsze aktualną wersję i nie restartował się co render.
+  const flushFnRef = useRef(session.flush)
+  flushFnRef.current = session.flush
+  const flush = useCallback(() => {
+    flushFnRef.current()
+  }, [])
+
+  // Wyjście dowolną drogą (KidNav ⬅️/🏠, wstecz przeglądarki, zmiana route'a)
+  // musi utrwalić częściowy postęp. `flush` jest idempotentne — po normalnym
+  // końcu sesji ani po `quit()` nie zapisuje drugi raz.
+  useEffect(() => {
+    if (quitRef) quitRef.current = flush
+    return () => {
+      flush()
+      if (quitRef) quitRef.current = null
+    }
+  }, [flush, quitRef])
 
   // Auto-start
   useEffect(() => {

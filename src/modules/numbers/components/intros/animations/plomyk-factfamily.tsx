@@ -11,7 +11,7 @@ const SCENES: readonly Scene[] = [
 
 const EQUATIONS = ['', '3 + 4 = 7', '4 + 3 = 7', '7 − 3 = 4', '7 − 4 = 3']
 
-function PlomykFactfamily({ stage }: { stage: number }) {
+export function PlomykFactfamily({ stage }: { stage: number }) {
   return (
     <div data-testid="anim-plomyk-factfamily" style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
       <NumberBondShape whole={7} partA={3} partB={4} />
@@ -26,4 +26,3 @@ function PlomykFactfamily({ stage }: { stage: number }) {
   )
 }
 PlomykFactfamily.SCENES = SCENES
-export default PlomykFactfamily

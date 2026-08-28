@@ -1,6 +1,8 @@
 {
   "home-numbers-intro": "Stuknij, jeśli chcesz uczyć się cyferek!",
 
+  "numbers-level-select-intro": "Wybierz poziom. Zacznij od Iskierki!",
+
   "session-start-iskierka": "Zaczynamy! Iskierka.",
   "session-start-plomyk": "Płomyk! Liczymy razem.",
   "session-start-ognik": "Ognik. Trudniejsze działania.",
@@ -96,5 +98,9 @@
   "correct-show-17": "Tu było siedemnaście!",
   "correct-show-18": "Tu było osiemnaście!",
   "correct-show-19": "Tu było dziewiętnaście!",
-  "correct-show-20": "Tu było dwadzieścia!"
+  "correct-show-20": "Tu było dwadzieścia!",
+  "correct-show-25": "Tu było dwadzieścia pięć!",
+  "correct-show-30": "Tu było trzydzieści!",
+  "correct-show-40": "Tu było czterdzieści!",
+  "correct-show-50": "Tu było pięćdziesiąt!"
 }

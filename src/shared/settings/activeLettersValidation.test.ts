@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { defaultSettings } from './defaults'
 import {
   MIN_ACTIVE_LETTERS,
+  getMinActiveLetters,
   isActiveLettersValid,
   validateAndApplyOverride,
 } from './activeLettersValidation'
@@ -23,6 +24,25 @@ describe('isActiveLettersValid', () => {
 
   it('exposes MIN_ACTIVE_LETTERS = 4', () => {
     expect(MIN_ACTIVE_LETTERS).toBe(4)
+  })
+
+  // I12: minimum idzie za `tilesPerQuestion` poziomu, nie za globalną czwórką.
+  it('per-level minimum = max(4, efektywne tilesPerQuestion)', () => {
+    expect(getMinActiveLetters(defaultSettings, 'iskierka')).toBe(4)
+    expect(getMinActiveLetters(defaultSettings, 'plomyk')).toBe(6)
+    expect(getMinActiveLetters(defaultSettings, 'ognik')).toBe(8)
+    expect(getMinActiveLetters(defaultSettings, 'pochodnia')).toBe(10)
+    const threeTiles = {
+      ...defaultSettings,
+      tilesPerQuestion: { pochodnia: 3 as const },
+    }
+    expect(getMinActiveLetters(threeTiles, 'pochodnia')).toBe(4)
+  })
+
+  it('isActiveLettersValid respektuje minimum poziomu gdy je podamy', () => {
+    const four = ['a', 'm', 'l', 'e']
+    expect(isActiveLettersValid(four, defaultSettings, 'iskierka')).toBe(true)
+    expect(isActiveLettersValid(four, defaultSettings, 'plomyk')).toBe(false)
   })
 })
 
@@ -52,15 +72,33 @@ describe('validateAndApplyOverride', () => {
     }
   })
 
-  it('applies valid override and preserves other settings', () => {
+  it('rejects a set smaller than the level tilesPerQuestion', () => {
+    // Płomyk pokazuje 6 kafelków — 4 litery nie wystarczą, choć MIN to 4.
     const result = validateAndApplyOverride(
       'plomyk',
       ['a', 'm', 'l', 'e'],
       defaultSettings,
     )
+    expect(result).toHaveProperty('error')
+    if ('error' in result) expect(result.error).toMatch(/minimum 6/i)
+  })
+
+  it('applies valid override and preserves other settings', () => {
+    const result = validateAndApplyOverride(
+      'plomyk',
+      ['a', 'm', 'l', 'e', 'o', 't'],
+      defaultSettings,
+    )
     expect(result).not.toHaveProperty('error')
     if (!('error' in result)) {
-      expect(result.activeLettersOverride.plomyk).toEqual(['a', 'm', 'l', 'e'])
+      expect(result.activeLettersOverride.plomyk).toEqual([
+        'a',
+        'm',
+        'l',
+        'e',
+        'o',
+        't',
+      ])
       expect(result.sessionLength).toBe(defaultSettings.sessionLength)
       // nie mutuje wejścia
       expect(defaultSettings.activeLettersOverride).toEqual({})
@@ -69,13 +107,13 @@ describe('validateAndApplyOverride', () => {
 
   it('deduplicates letters before saving', () => {
     const result = validateAndApplyOverride(
-      'plomyk',
+      'iskierka',
       ['a', 'a', 'm', 'l', 'e'],
       defaultSettings,
     )
     expect(result).not.toHaveProperty('error')
     if (!('error' in result)) {
-      expect(result.activeLettersOverride.plomyk).toEqual(['a', 'm', 'l', 'e'])
+      expect(result.activeLettersOverride.iskierka).toEqual(['a', 'm', 'l', 'e'])
     }
   })
 

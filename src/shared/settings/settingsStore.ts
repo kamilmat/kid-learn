@@ -7,7 +7,11 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
-import { defaultSettings } from './defaults'
+import {
+  ALL_LEVELS,
+  defaultSettings,
+  filterOverrideToLevelPool,
+} from './defaults'
 import {
   applyAttempt,
   cooldownRemainingMs,
@@ -15,7 +19,7 @@ import {
   isCooldown,
   validateAnswer,
 } from './mathGate'
-import type { MathGateState, MathProblem, Settings } from './types'
+import type { Level, MathGateState, MathProblem, Settings } from './types'
 
 export const STORAGE_KEY = 'iskierki-state-v1'
 export const UNLOCK_TTL_MS = 5 * 60_000 // 5 min — sekcja 13.1
@@ -121,6 +125,9 @@ export const useSettings = create<SettingsStore>()(
         parentGateUnlockedUntil: state.parentGateUnlockedUntil,
       }),
       version: 4,
+      // Bez `migrate` zustand ODRZUCA persist przy niezgodnej wersji (merge dostaje
+      // undefined) — przepuszczamy blob dalej, całą robotę robi `merge` poniżej.
+      migrate: (persisted) => persisted as PersistedShape,
       // Migration:
       //   v2 → v3: `showCountdownBar` z boolean na Partial<Record<Level, boolean>>.
       //   v3 → v4: `timeLimit` z prymitywu (TimeLimit) na Partial<Record<Level, TimeLimit>>.
@@ -150,24 +157,49 @@ export const useSettings = create<SettingsStore>()(
         if (!sanitizedSettings.humorMode) {
           sanitizedSettings.humorMode = 'on'
         }
-        if (!sanitizedSettings.reading) {
-          sanitizedSettings.reading = {
-            wordAnimations: 'on',
-            wildCelebrationFreq: 8,
-            questionsPerSession: {},
-            timeLimit: {},
-          }
+        // Deep-merge: stary persist mógł zapisać `reading` bez pól dodanych później
+        // (np. wildCelebrationFreq -> undefined -> NaN w useReadingSession).
+        const persistedReading = sanitizedSettings.reading as Record<string, unknown> | undefined
+        const mergedReading: Record<string, unknown> = {
+          ...defaultSettings.reading,
+          ...(persistedReading ?? {}),
         }
+        // legacy: `reading.timeLimit` nigdy nie było użyte (moduł 2 nie ma timera)
+        delete mergedReading.timeLimit
+        sanitizedSettings.reading = mergedReading
         // v5: uzupełnij brakujące pola modułu 3 (numbers).
         const persistedNumbers = sanitizedSettings.numbers as Record<string, unknown> | undefined
         sanitizedSettings.numbers = {
           ...defaultSettings.numbers,
           ...(persistedNumbers ?? {}),
         }
+        const mergedSettings = {
+          ...defaultSettings,
+          ...sanitizedSettings,
+        } as Settings
+        // Override puli aktywnych liter: z persistu wyrzucamy WYŁĄCZNIE litery,
+        // których dany poziom nie zna (zmieniła się pula w kodzie). Rozmiaru NIE
+        // oceniamy — override mniejszy niż `tilesPerQuestion` zostaje zapisany,
+        // a `getActiveLetterPool` (read path) i tak zwróci wtedy domyślną pulę.
+        // WHY: wcześniej merge kasował taki override na zawsze, więc obniżenie
+        // liczby kafelków w ustawieniach nie przywracało wyboru rodzica.
+        const persistedOverrides = mergedSettings.activeLettersOverride
+        const rawOverrides: Partial<Record<Level, string[]>> =
+          persistedOverrides &&
+          typeof persistedOverrides === 'object' &&
+          !Array.isArray(persistedOverrides)
+            ? persistedOverrides
+            : {}
+        const validOverrides: Partial<Record<Level, string[]>> = {}
+        for (const level of ALL_LEVELS) {
+          const filtered = filterOverrideToLevelPool(rawOverrides[level], level)
+          if (filtered) validOverrides[level] = filtered
+        }
+        mergedSettings.activeLettersOverride = validOverrides
         return {
           ...current,
           ...p,
-          settings: { ...defaultSettings, ...sanitizedSettings },
+          settings: mergedSettings,
         }
       },
     },

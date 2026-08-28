@@ -5,7 +5,7 @@ export type Syllable = {
 
 const SYLLABLE_TEXTS = [
   'MA', 'TA', 'LA', 'KO', 'MO', 'TO', 'LO', 'RA', 'RO', 'RU',
-  'BA', 'DA', 'DO', 'KU', 'NA', 'NO', 'SA', 'NU', 'PA', 'WA',
+  'BA', 'DA', 'DO', 'KU', 'NA', 'NO', 'SA', 'SO', 'NU', 'PA', 'WA',
   'DU', 'KA', 'TY',
 ] as const
 

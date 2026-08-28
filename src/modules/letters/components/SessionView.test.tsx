@@ -6,7 +6,7 @@ import type { Settings } from '@/shared/settings/types'
 
 function makeAudioBus() {
   return {
-    play: vi.fn(() => Promise.resolve()),
+    play: vi.fn(() => Promise.resolve(true)),
     stop: vi.fn(),
   }
 }
@@ -143,7 +143,7 @@ describe('SessionView — integration', () => {
     })
     expect(screen.getByTestId('pause-overlay')).toBeInTheDocument()
     act(() => {
-      screen.getByTestId('resume-button').click()
+      screen.getByTestId('pause-resume').click()
     })
     expect(screen.queryByTestId('pause-overlay')).not.toBeInTheDocument()
   })

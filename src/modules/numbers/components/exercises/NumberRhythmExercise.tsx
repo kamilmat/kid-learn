@@ -1,10 +1,13 @@
-import { useEffect, useMemo, type ReactNode } from 'react'
-import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { useEffect, useMemo } from 'react'
+import { DndContext, type DragEndEvent } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { DotPattern } from '../representations/DotPattern'
 import { DigitTile } from '../representations/DigitTile'
 import { colors, radii } from '@/app/theme'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices } from '../../utils/buildChoices'
+import { DropTarget } from './shared/DropTarget'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -19,13 +22,12 @@ export function NumberRhythmExercise({ audioBus, payload, onAnswer }: Props) {
   const expectedNext = pattern[0] ?? 1
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-whats-next')
   }, [audioBus])
 
   // Sekwencja: pattern × 2 + slot na pytanie
   const sequence = useMemo(() => [...pattern, ...pattern], [pattern])
-  const choices = useMemo(() => buildChoices(expectedNext, 1, 6), [expectedNext])
+  const choices = useMemo(() => buildChoices(expectedNext, { min: 1, max: 6 }), [expectedNext])
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
@@ -35,7 +37,7 @@ export function NumberRhythmExercise({ audioBus, payload, onAnswer }: Props) {
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} onDragEnd={handleDragEnd}>
       <div
         data-testid="exercise-number-rhythm"
         style={{
@@ -60,7 +62,7 @@ export function NumberRhythmExercise({ audioBus, payload, onAnswer }: Props) {
           {sequence.map((n, idx) => (
             <RhythmStep key={idx} count={n} />
           ))}
-          <DropTarget>
+          <DropTarget droppableId={DROP_TARGET_ID} fixedSize={110} borderRadius={radii.kid}>
             <span style={{ fontSize: 64, opacity: 0.3, fontFamily: 'var(--font-block)' }}>?</span>
           </DropTarget>
         </div>
@@ -92,34 +94,4 @@ function RhythmStep({ count }: { count: number }) {
       <DotPattern count={count} pattern="dice" size={96} />
     </div>
   )
-}
-
-function DropTarget({ children }: { children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: DROP_TARGET_ID })
-  return (
-    <div
-      ref={setNodeRef}
-      data-testid="drop-target"
-      style={{
-        width: 110,
-        height: 110,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: `4px dashed ${isOver ? '#16a34a' : '#cbd5e1'}`,
-        borderRadius: radii.kid,
-        background: isOver ? '#dcfce7' : '#fff',
-        transition: 'background 120ms',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function buildChoices(correct: number, min: number, max: number): number[] {
-  const pool: number[] = []
-  for (let n = min; n <= max; n++) if (n !== correct) pool.push(n)
-  const distractors = pool.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

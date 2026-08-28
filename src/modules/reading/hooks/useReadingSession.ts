@@ -12,9 +12,12 @@
 
 import { useCallback, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
+import { pickNoRepeat } from '@/shared/audio/pickNoRepeat'
 import type { Level, Settings } from '@/shared/settings/types'
 import type {
   ReadingQuestion,
+  ReadingSessionEvent,
   SyllableState,
   WordState,
   SyllableFillVariant,
@@ -24,15 +27,32 @@ import { getReadingPool } from '../data/levelPools'
 import { ALL_SYLLABLES, getSyllableAudioKey } from '../data/syllables'
 import { ALL_WORDS, getWordById, getWordsByLevel, getWordAudioKey } from '../data/words'
 import { pickNextItem } from '@/shared/srs/select'
+import { pickRandom, shuffled } from '@/shared/srs/distractors'
 import { nextBox, nextRecentWrong } from '@/shared/srs/update'
 import { useReading } from '../store/readingStore'
 import type { Outcome } from '@/shared/srs/types'
+import { DEFAULT_QUESTIONS_PER_SESSION } from '../constants'
 
-// Stała liczba pytań na sesję
-const QUESTIONS_PER_SESSION = 8
+// Minimalny czas trzymania overlaya feedbacku — nawet gdy audio już wybrzmiało,
+// 7-latek potrzebuje chwili na zobaczenie wyniku zanim ekran się zmieni.
+export const MIN_FEEDBACK_MS = 1200
 
 // Domyślna liczba dystraktorów dla syllable-match i word-choice
 const CHOICE_COUNT = 4
+
+// Progi ceremonii albumu (liczba odblokowanych kart)
+const CEREMONY_MILESTONES = [10, 20, 30, 40, 50, 60]
+
+// Pochwały czytania — po poprawnej odpowiedzi. Samo `sfx-correct-ding` było
+// zbyt suche: dziecko potrzebuje słownej reakcji jak w module liter.
+export const READING_PRAISE_KEYS = [
+  'reading-praise-1',
+  'reading-praise-2',
+  'reading-praise-3',
+  'reading-praise-4',
+  'reading-praise-5',
+  'reading-praise-6',
+] as const
 
 export type Status = 'idle' | 'asking' | 'feedback' | 'paused' | 'complete' | 'wild-celebration'
 export type FeedbackVariant = null | 'correct' | 'wrong' | 'dontKnow' | 'wild'
@@ -71,10 +91,17 @@ type Hook = {
   submitAnswer: (answer: string) => void
   submitDontKnow: () => void
   recordDropError: () => void
-  skipFeedback: () => void
+  /** `viaTap=true` gdy dziecko tapnęło overlay (gra cue), false przy auto-advance. */
+  skipFeedback: (viaTap?: boolean) => void
   pause: () => void
   resume: () => void
   repeatAudio: () => void
+  /** Zapisuje częściowe wyniki sesji (wyjście przez pauzę / SessionEnd). Idempotentne. */
+  quit: () => void
+  /** Jak `quit()`, ale bez `audioBus.stop()` — wyjście przez KidNav / unmount. */
+  flush: () => void
+  /** Rozwiązuje się gdy kolejka audio feedbacku bieżącego pytania wybrzmiała. */
+  waitForFeedbackAudio: () => Promise<void>
 
   pickedScene: { wordId: string; sceneId: string } | null
 }
@@ -110,24 +137,6 @@ function makeInitialWordState(wordId: string, level: Level): WordState {
   }
 }
 
-function shuffleArray<T>(arr: T[], rng: () => number): T[] {
-  const result = [...arr]
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    const a = result[i]
-    const b = result[j]
-    if (a !== undefined && b !== undefined) {
-      result[i] = b
-      result[j] = a
-    }
-  }
-  return result
-}
-
-function pickRandom<T>(arr: readonly T[], rng: () => number): T {
-  return arr[Math.floor(rng() * arr.length)] as T
-}
-
 // Generuje N unikalnych losowych elementów z tablicy wykluczając podane id
 function pickRandomDistinct<T extends { id: string }>(
   pool: readonly T[],
@@ -136,8 +145,7 @@ function pickRandomDistinct<T extends { id: string }>(
   rng: () => number,
 ): T[] {
   const available = pool.filter((x) => !exclude.includes(x.id))
-  const shuffled = shuffleArray(available, rng)
-  return shuffled.slice(0, count)
+  return shuffled(available, rng).slice(0, count)
 }
 
 // Generuje pytanie syllable-match (Iskierka)
@@ -152,7 +160,7 @@ function generateSyllableMatch(
   const targetSyllable = targetId.replace('syl-', '')
   // 3 dystraktorów z puli sylab (różne od targetu)
   const distractors = pickRandomDistinct(ALL_SYLLABLES, CHOICE_COUNT - 1, [targetId], rng)
-  const choices = shuffleArray(
+  const choices = shuffled(
     [targetSyllable, ...distractors.map((d) => d.text)],
     rng,
   )
@@ -199,7 +207,7 @@ function generateWordChoice(
   // 3 dystraktorów z puli tego poziomu
   const levelWords = getWordsByLevel(word.level)
   const distractors = pickRandomDistinct(levelWords, CHOICE_COUNT - 1, [targetId], rng)
-  const choices = shuffleArray(
+  const choices = shuffled(
     [word.text, ...distractors.map((d) => d.text)],
     rng,
   )
@@ -244,8 +252,7 @@ function pickSyllableFillDistractors(
         ? preferred2
         : fallback
 
-  const shuffled = [...pool].sort(() => rng() - 0.5)
-  return shuffled.slice(0, count)
+  return shuffled(pool, rng).slice(0, count)
 }
 
 // Generuje pytanie syllable-fill (Pochodnia)
@@ -293,7 +300,7 @@ function generateSyllableFill(
 
   // Dystraktorzy dobrani z bogatej puli z dopasowaniem długości (bug-fix: nie MA/TA dla DŹWIEDŹ)
   const distractorTexts = pickSyllableFillDistractors(missingSyllable, CHOICE_COUNT - 1, rng)
-  const choices = shuffleArray(
+  const choices = shuffled(
     [missingSyllable, ...distractorTexts],
     rng,
   )
@@ -308,12 +315,14 @@ function generateSyllableFill(
   }
 }
 
-// Odgrywa audio promptu dla aktualnego pytania
+// Kolejkuje audio promptu. NIE woła `stop()` — kolejka AudioBus jest FIFO, więc
+// prompt gra po tym co już zakolejkowano (intro poziomu w `start()`, cue `nav-tap`
+// przy tapnięciu w feedback). Kto potrzebuje uciszyć poprzednie audio, woła
+// `audioBus.stop()` jawnie (start, skipFeedback, repeatAudio, pause).
 function playPromptAudio(
   question: ReadingQuestion,
   audioBus: Pick<AudioBus, 'play' | 'stop'>,
 ): void {
-  audioBus.stop()
   switch (question.type) {
     case 'syllable-match':
       void audioBus.play(getSyllableAudioKey(question.targetSyllable))
@@ -333,7 +342,10 @@ function playPromptAudio(
 }
 
 export function useReadingSession({ level, audioBus, settings, rng = Math.random, now = () => Date.now() }: Args): Hook {
-  const store = useReading()
+  // Selektory zamiast `useReading()` — hook rerenderuje się tylko przy zmianie
+  // map SRS, a nie przy każdym zapisie do store'u (album, ceremonie, licznik).
+  const persistedSyllables = useReading((st) => st.syllables)
+  const persistedWords = useReading((st) => st.words)
 
   const [status, setStatus] = useState<Status>('idle')
   const [currentQuestion, setCurrentQuestion] = useState<ReadingQuestion | null>(null)
@@ -373,20 +385,47 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   // Zapamiętuje status sprzed pauzy (asking lub feedback) — potrzebne do prawidłowego resume
   const prePauseStatusRef = useRef<Status>('idle')
 
+  // Kiedy bieżący feedback stał się widoczny — razem z poniższym refem liczy,
+  // ile z MIN_FEEDBACK_MS dziecko już zobaczyło przed pauzą, żeby resume() nie
+  // musiał czekać więcej niż trzeba (ale też nie mniej — patrz resume()).
+  const feedbackStartedAtRef = useRef<number>(0)
+  const feedbackElapsedBeforePauseRef = useRef<number>(0)
+
+  // Log eventów per pytanie (R5) — trafia do SessionLog w store
+  const eventsRef = useRef<ReadingSessionEvent[]>([])
+  const questionStartedAtRef = useRef(0)
+
+  // Sesja już zapisana do store (complete albo quit) — chroni przed podwójnym zapisem
+  const finishedRef = useRef(false)
+
+  // Kolejka audio feedbacku bieżącego pytania — overlay czeka na jej koniec (R1)
+  const feedbackAudioRef = useRef<Promise<unknown>>(Promise.resolve())
+
+  // Wariant feedbacku w refie — `resume()` musi znać go synchronicznie, żeby
+  // zdecydować czy powtórzyć korektę czy od razu przejść dalej.
+  const feedbackVariantRef = useRef<FeedbackVariant>(null)
+
+  // Ostatnia zagrana pochwała — picker nie powtarza jej dwa razy pod rząd
+  const lastPraiseRef = useRef<string | null>(null)
+
+  const questionsPerSession =
+    settings.reading.questionsPerSession[level] ?? DEFAULT_QUESTIONS_PER_SESSION
+
   // Synchronizuj ref ze stanem
   statusRef.current = status
   currentQuestionRef.current = currentQuestion
   currentQuestionIndexRef.current = currentQuestionIndex
+  feedbackVariantRef.current = feedbackVariant
 
   // Buduje mapę SRS states dla puli Iskierka (syllables)
   const buildSyllableStates = useCallback((): Record<string, SyllableState> => {
     const states: Record<string, SyllableState> = {}
     for (const syl of ALL_SYLLABLES) {
-      const persisted = store.syllables[syl.id]
+      const persisted = persistedSyllables[syl.id]
       states[syl.id] = persisted ?? makeInitialSyllableState(syl.id)
     }
     return states
-  }, [store.syllables])
+  }, [persistedSyllables])
 
   // Buduje mapę SRS states dla puli słów danego poziomu
   const buildWordStates = useCallback(
@@ -394,12 +433,12 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       const states: Record<string, WordState> = {}
       const words = getWordsByLevel(lvl)
       for (const w of words) {
-        const persisted = store.words[w.id]
+        const persisted = persistedWords[w.id]
         states[w.id] = persisted ?? makeInitialWordState(w.id, lvl)
       }
       return states
     },
-    [store.words],
+    [persistedWords],
   )
 
   // Generuje następne pytanie i ustawia state
@@ -467,6 +506,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
         throw new Error(`useReadingSession: nie można wygenerować pytania dla "${level}"`)
       }
 
+      questionStartedAtRef.current = nowMs
       currentQuestionIndexRef.current = questionIndex
       setCurrentQuestionIndex(questionIndex)
       setCurrentQuestion(question)
@@ -518,6 +558,22 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     return newBox === 5 && prevBox < 5 && !current.album
   }, [now])
 
+  /**
+   * Kolejkuje audio korekty: prefiks („spróbuj jeszcze raz" / „nie wiesz…")
+   * + ponowne wybrzmienie celu. Wydzielone, bo `resume()` po pauzie złapanej
+   * w trakcie feedbacku musi odegrać to PONOWNIE — `pause()` robi `stop()`,
+   * więc bez tego dziecko nigdy nie usłyszy poprawnej odpowiedzi.
+   */
+  const playCorrectionAudio = useCallback(
+    (variant: 'wrong' | 'dontKnow', q: ReadingQuestion): Promise<unknown>[] => [
+      audioBus.play(variant === 'wrong' ? 'reading-wrong-prefix' : 'reading-dont-know'),
+      q.type === 'syllable-match'
+        ? audioBus.play(getSyllableAudioKey(q.targetSyllable))
+        : audioBus.play(getWordAudioKey(q.targetWord)),
+    ],
+    [audioBus],
+  )
+
   // Obsługuje outcome (correct/wrong/dontKnow) dla aktualnego pytania
   const handleOutcome = useCallback(
     (outcome: Outcome): void => {
@@ -525,44 +581,42 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       if (!q) return
 
       const isCorrect = outcome === 'correct'
+      // Nowa karta w albumie — cue audio dokleja się do kolejki feedbacku
+      let unlockedAlbumCard = false
 
       // Aktualizuj SRS
-      switch (q.type) {
-        case 'syllable-match': {
-          const sylId = getSyllableAudioKey(q.targetSyllable)
-          updateSyllableState(sylId, outcome)
-          break
-        }
-        case 'word-assembly': {
-          const wordId = ALL_WORDS.find((w) => w.text === q.targetWord)?.id ?? `word-${q.targetWord}`
-          const newlyMastered = updateWordState(wordId, outcome)
-          if (newlyMastered) {
-            newAlbumWordsRef.current = [...newAlbumWordsRef.current, wordId]
-          }
-          break
-        }
-        case 'word-choice': {
-          const wordId = ALL_WORDS.find((w) => w.text === q.targetWord)?.id ?? `word-${q.targetWord}`
-          const newlyMastered = updateWordState(wordId, outcome)
-          if (newlyMastered) {
-            newAlbumWordsRef.current = [...newAlbumWordsRef.current, wordId]
-          }
-          break
-        }
-        case 'syllable-fill': {
-          const wordId = ALL_WORDS.find((w) => w.text === q.targetWord)?.id ?? `word-${q.targetWord}`
-          const newlyMastered = updateWordState(wordId, outcome)
-          if (newlyMastered) {
-            newAlbumWordsRef.current = [...newAlbumWordsRef.current, wordId]
-          }
-          break
+      let targetId: string
+      if (q.type === 'syllable-match') {
+        targetId = getSyllableAudioKey(q.targetSyllable)
+        updateSyllableState(targetId, outcome)
+      } else {
+        targetId = ALL_WORDS.find((w) => w.text === q.targetWord)?.id ?? `word-${q.targetWord}`
+        const newlyMastered = updateWordState(targetId, outcome)
+        if (newlyMastered) {
+          newAlbumWordsRef.current = [...newAlbumWordsRef.current, targetId]
+          unlockedAlbumCard = true
         }
       }
+
+      // Event pytania — raport rodzica potrzebuje per-item historii, nie tylko sum
+      const answeredAt = now()
+      eventsRef.current = [
+        ...eventsRef.current,
+        {
+          questionIndex: currentQuestionIndexRef.current,
+          exerciseType: q.type,
+          targetId,
+          outcome,
+          responseMs: Math.max(0, answeredAt - questionStartedAtRef.current),
+          timestamp: answeredAt,
+        },
+      ]
 
       // Zapisz wynik pytania (pushowany do questionOutcomes w advance)
       pendingOutcomeRef.current = isCorrect ? 'correct' : outcome === 'wrong' ? 'wrong' : 'dontKnow'
 
       // Zaktualizuj liczniki
+      const plays: Promise<unknown>[] = []
       if (isCorrect) {
         correctCountRef.current += 1
         setIskierkiEarned(correctCountRef.current)
@@ -579,47 +633,71 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
           setFeedbackVariant('wild')
           setStatus('feedback')
           statusRef.current = 'feedback'
+          feedbackStartedAtRef.current = now()
+          feedbackElapsedBeforePauseRef.current = 0
           useReading.getState().resetWildCounter()
           // sfx-mastery-fanfara is the existing fanfara key (sfx-fanfara-special deferred to SFX library)
-          void audioBus.play('sfx-mastery-fanfara')
+          const wildPlays: Promise<unknown>[] = [audioBus.play('sfx-mastery-fanfara')]
+          if (unlockedAlbumCard) wildPlays.push(audioBus.play('reading-album-unlock'))
+          feedbackAudioRef.current = Promise.all(wildPlays)
           return
         }
-        void audioBus.play('sfx-correct-ding')
+        plays.push(audioBus.play('sfx-correct-ding'))
+        const praiseKey = pickNoRepeat(READING_PRAISE_KEYS, lastPraiseRef.current, rng)
+        lastPraiseRef.current = praiseKey
+        plays.push(audioBus.play(praiseKey))
       } else if (outcome === 'wrong') {
         wrongCountRef.current += 1
-        void audioBus.play('reading-wrong-prefix')
-        // Powtórz słowo/sylabę po korekcie
-        switch (q.type) {
-          case 'syllable-match':
-            void audioBus.play(getSyllableAudioKey(q.targetSyllable))
-            break
-          case 'word-assembly':
-          case 'word-choice':
-          case 'syllable-fill':
-            void audioBus.play(getWordAudioKey(q.targetWord))
-            break
-        }
+        plays.push(...playCorrectionAudio('wrong', q))
       } else if (outcome === 'dontKnow') {
         dontKnowCountRef.current += 1
-        void audioBus.play('reading-dont-know')
-        switch (q.type) {
-          case 'syllable-match':
-            void audioBus.play(getSyllableAudioKey(q.targetSyllable))
-            break
-          case 'word-assembly':
-          case 'word-choice':
-          case 'syllable-fill':
-            void audioBus.play(getWordAudioKey(q.targetWord))
-            break
-        }
+        plays.push(...playCorrectionAudio('dontKnow', q))
       }
+
+      if (unlockedAlbumCard) plays.push(audioBus.play('reading-album-unlock'))
+
+      // Overlay feedbacku auto-advance'uje gdy ta kolejka wybrzmi (min. MIN_FEEDBACK_MS)
+      feedbackAudioRef.current = Promise.all(plays)
 
       setFeedbackVariant(isCorrect ? 'correct' : outcome === 'wrong' ? 'wrong' : 'dontKnow')
       setStatus('feedback')
       statusRef.current = 'feedback'
+      feedbackStartedAtRef.current = answeredAt
+      feedbackElapsedBeforePauseRef.current = 0
     },
-    [audioBus, settings, updateSyllableState, updateWordState],
+    [audioBus, now, playCorrectionAudio, rng, settings, updateSyllableState, updateWordState],
   )
+
+  // Zapisuje wyniki sesji do store — wołane na końcu sesji ORAZ przy wyjściu
+  // przez pauzę (inaczej częściowy postęp SRS przepadał). Idempotentne.
+  const persistSession = useCallback((): void => {
+    if (finishedRef.current) return
+    finishedRef.current = true
+    const sessionLog = {
+      startedAt: startedAtRef.current,
+      endedAt: now(),
+      level,
+      events: eventsRef.current,
+    }
+    // Używamy getState() żeby mieć synchroniczny dostęp do store
+    useReading.getState().applySessionResults(
+      syllableStatesRef.current,
+      wordStatesRef.current,
+      sessionLog,
+    )
+    // Dodaj nowe słowa do albumu + sprawdź milestone ceremonii
+    const prevAlbumCount = useReading.getState().albumUnlocked.length
+    for (const wordId of newAlbumWordsRef.current) {
+      useReading.getState().addToAlbum(wordId)
+    }
+    const newAlbumCount = useReading.getState().albumUnlocked.length
+    for (const m of CEREMONY_MILESTONES) {
+      if (prevAlbumCount < m && newAlbumCount >= m) {
+        useReading.getState().setPendingCeremony(m)
+        break
+      }
+    }
+  }, [level, now])
 
   // Przechodzi do następnego pytania lub kończy sesję
   const advance = useCallback((): void => {
@@ -631,7 +709,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     }
 
     const nextIndex = currentQuestionIndexRef.current + 1
-    if (nextIndex >= QUESTIONS_PER_SESSION) {
+    if (nextIndex >= questionsPerSession) {
       // Sesja zakończona
       const durationMs = now() - startedAtRef.current
       const sessionResults: SessionResult = {
@@ -644,29 +722,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
         newAlbumWords: [...newAlbumWordsRef.current],
         durationMs,
       }
-      // Zapisz wyniki do store
-      const sessionLog = {
-        startedAt: startedAtRef.current,
-        endedAt: now(),
-        level,
-        events: [],
-      }
-      // Używamy getState() żeby mieć synchroniczny dostęp do store
-      const storeState = useReading.getState()
-      storeState.applySessionResults(syllableStatesRef.current, wordStatesRef.current, sessionLog)
-      // Dodaj nowe słowa do albumu + sprawdź milestone ceremonii
-      const prevAlbumCount = useReading.getState().albumUnlocked.length
-      for (const wordId of newAlbumWordsRef.current) {
-        useReading.getState().addToAlbum(wordId)
-      }
-      const newAlbumCount = useReading.getState().albumUnlocked.length
-      const CEREMONY_MILESTONES = [10, 20, 30, 40, 50, 60]
-      for (const m of CEREMONY_MILESTONES) {
-        if (prevAlbumCount < m && newAlbumCount >= m) {
-          useReading.getState().setPendingCeremony(m)
-          break
-        }
-      }
+      persistSession()
 
       setResults(sessionResults)
       setCurrentQuestion(null)
@@ -676,7 +732,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       return
     }
     generateQuestion(nextIndex)
-  }, [generateQuestion, level, now])
+  }, [generateQuestion, now, persistSession, questionsPerSession])
 
   const start = useCallback((): void => {
     // Reset stanu
@@ -691,9 +747,17 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     setIskierkiEarned(0)
     setQuestionOutcomes([])
     pendingOutcomeRef.current = null
+    eventsRef.current = []
+    finishedRef.current = false
+    feedbackAudioRef.current = Promise.resolve()
+    lastPraiseRef.current = null
 
     // Oblicz jitter dla tej sesji: ±2
     wildJitterRef.current = Math.floor(rng() * 5) - 2  // -2, -1, 0, 1, 2
+
+    // Licznik wild celebration jest persistowany — bez resetu nowa sesja startowała
+    // z licznikiem z poprzedniej i potrafiła odpalić fajerwerki na pierwszym pytaniu.
+    useReading.getState().resetWildCounter()
 
     // Inicjalizuj SRS states z persisted store lub default
     syllableStatesRef.current = buildSyllableStates()
@@ -704,6 +768,18 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     // Wyczyść kolejkę audio z poprzednich sesji/intro
     audioBus.stop()
 
+    // Onboarding głosowy poziomu — 1× per poziom. Kolejkowany TU (a nie w efekcie
+    // SessionView), bo `stop()` powyżej ucinał intro w tym samym mouncie i palił
+    // flagę na zawsze. Flaga zapala się dopiero gdy audio dograło do końca.
+    const introKey = `reading-${level}-intro`
+    void playIntroOnce(
+      audioBus,
+      introKey,
+      (k) => useReading.getState().hasSeenIntro(k),
+      (k) => useReading.getState().markIntroSeen(k),
+    )
+
+    // Prompt pierwszego pytania dokleja się za intro (kolejka FIFO)
     generateQuestion(0)
   }, [audioBus, buildSyllableStates, buildWordStates, generateQuestion, level, now, rng])
 
@@ -747,42 +823,116 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     void audioBus.play('correction-prefix')
   }, [audioBus])
 
-  const skipFeedback = useCallback((): void => {
+  const skipFeedback = useCallback((viaTap = false): void => {
     if (statusRef.current !== 'feedback') return
     audioBus.stop()
+    // „Każdy klik mówi co zrobił" — krótkie cue potwierdzające tap; prompt
+    // następnego pytania dokleja się za nim w kolejce FIFO.
+    if (viaTap) void audioBus.play('nav-tap')
     advance()
   }, [advance, audioBus])
 
   const pause = useCallback((): void => {
     if (statusRef.current === 'asking' || statusRef.current === 'feedback') {
+      if (statusRef.current === 'feedback') {
+        // Zamrażamy licznik na czas pauzy — resume() dolicza tylko RESZTĘ
+        // MIN_FEEDBACK_MS, nie liczy czasu spędzonego na pauzie.
+        feedbackElapsedBeforePauseRef.current = now() - feedbackStartedAtRef.current
+      }
       prePauseStatusRef.current = statusRef.current
       setPaused(true)
       setStatus('paused')
       statusRef.current = 'paused'
+      // Bez stop() prompt/feedback mówił dalej zza overlaya pauzy
+      audioBus.stop()
       void audioBus.play('nav-pause')
     }
-  }, [audioBus])
+  }, [audioBus, now])
 
   const resume = useCallback((): void => {
-    if (statusRef.current === 'paused') {
-      setPaused(false)
-      // Przywróć status sprzed pauzy (asking lub feedback) — inaczej skipFeedback() guard nie przejdzie
-      const restored = prePauseStatusRef.current
-      setStatus(restored)
-      statusRef.current = restored
-      void audioBus.play('nav-resume')
+    if (statusRef.current !== 'paused') return
+    setPaused(false)
+    // Przywróć status sprzed pauzy (asking lub feedback) — inaczej skipFeedback() guard nie przejdzie
+    const restored = prePauseStatusRef.current
+    setStatus(restored)
+    statusRef.current = restored
+    void audioBus.play('nav-resume')
+    // Pauza w trakcie feedbacku ucięła kolejkę audio (`stop()` w pause), więc
+    // po wznowieniu overlay stałby w ciszy — a przy wariancie 'wild' nikt już
+    // nie zawołałby skipFeedback i sesja zostawała zakleszczona na zawsze.
+    if (restored !== 'feedback') return
+
+    const q = currentQuestionRef.current
+    const variant = feedbackVariantRef.current
+    if (q !== null && (variant === 'wrong' || variant === 'dontKnow')) {
+      // Korekta jest sednem feedbacku — samo przejście dalej pozbawiłoby
+      // dziecko jedynej szansy usłyszenia poprawnej sylaby/słowa. Kolejkujemy
+      // ją ponownie (za `nav-resume`) i idziemy dalej dopiero gdy wybrzmi.
+      const replay = Promise.all(playCorrectionAudio(variant, q))
+      feedbackAudioRef.current = replay
+      const questionIndexAtResume = currentQuestionIndexRef.current
+      void replay.then(() => {
+        // Overlay (remountowany po zdjęciu pauzy) mógł już zawołać skipFeedback
+        // — wtedy status/indeks się zmieniły i drugi advance zjadłby pytanie.
+        if (
+          statusRef.current === 'feedback' &&
+          currentQuestionIndexRef.current === questionIndexAtResume
+        ) {
+          advance()
+        }
+      })
+      return
     }
-  }, [audioBus])
+    // correct / wild — nie ma audio do powtórzenia, ale dziecko wciąż musi
+    // ZOBACZYĆ feedback co najmniej MIN_FEEDBACK_MS — natychmiastowy advance()
+    // tutaj przeskakiwał pytanie w tej samej klatce co resume, zanim overlay
+    // zdążył się w ogóle pokazać. Doliczamy tylko RESZTĘ: czas widoczny przed
+    // pauzą (feedbackElapsedBeforePauseRef) już się liczył do minimum.
+    const remaining = Math.max(
+      0,
+      MIN_FEEDBACK_MS - feedbackElapsedBeforePauseRef.current,
+    )
+    const questionIndexAtResume = currentQuestionIndexRef.current
+    setTimeout(() => {
+      // Jak wyżej — overlay mógł już zawołać skipFeedback samodzielnie.
+      if (
+        statusRef.current === 'feedback' &&
+        currentQuestionIndexRef.current === questionIndexAtResume
+      ) {
+        advance()
+      }
+    }, remaining)
+  }, [advance, audioBus, playCorrectionAudio])
 
   const repeatAudio = useCallback((): void => {
     const q = currentQuestionRef.current
     if (!q) return
+    audioBus.stop()
     playPromptAudio(q, audioBus)
   }, [audioBus])
 
+  // Zapis częściowy bez efektów audio — wyjście przez KidNav / unmount.
+  // `stop()` zabiłby świeżo zakolejkowane cue `nav-back` / `nav-home`.
+  const flushSession = useCallback((): void => {
+    // Nic nie odpowiedziano — nie zaśmiecamy historii pustą sesją
+    if (finishedRef.current || eventsRef.current.length === 0) return
+    persistSession()
+  }, [persistSession])
+
+  const quitSession = useCallback((): void => {
+    if (finishedRef.current || eventsRef.current.length === 0) return
+    audioBus.stop()
+    persistSession()
+  }, [audioBus, persistSession])
+
+  const waitForFeedbackAudio = useCallback(
+    (): Promise<void> => Promise.resolve(feedbackAudioRef.current).then(() => undefined),
+    [],
+  )
+
   return {
     status,
-    totalQuestions: QUESTIONS_PER_SESSION,
+    totalQuestions: questionsPerSession,
     currentQuestionIndex,
     currentQuestion,
     feedbackVariant,
@@ -798,6 +948,9 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     pause,
     resume,
     repeatAudio,
+    quit: quitSession,
+    flush: flushSession,
+    waitForFeedbackAudio,
     pickedScene,
   }
 }

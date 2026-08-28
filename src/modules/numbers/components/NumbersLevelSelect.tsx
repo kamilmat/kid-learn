@@ -1,4 +1,7 @@
+import { useEffect } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
+import { useNumbers } from '../store/numbersStore'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { LevelIconView, LevelStars, LEVEL_TILE_BG, LEVEL_TILE_BORDER } from '@/shared/ui/levelIcons'
 import { colors, radii } from '@/app/theme'
@@ -18,8 +21,19 @@ type Props = {
   onTree: () => void
 }
 
-export function NumbersLevelSelect({ audioBus: _audioBus, onSelect, onTree }: Props) {
+export function NumbersLevelSelect({ audioBus, onSelect, onTree }: Props) {
   const treeTap = useTapHandler({ onTap: onTree })
+  // Onboarding głosowy ekranu — 1×, jak w pozostałych modułach.
+  useEffect(() => {
+    void playIntroOnce(
+      audioBus,
+      'numbers-level-select-intro',
+      (k) => useNumbers.getState().hasSeenIntro(k),
+      (k) => useNumbers.getState().markIntroSeen(k),
+    )
+    // mount-only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   return (
     <div
       data-testid="numbers-level-select"
@@ -66,7 +80,13 @@ export function NumbersLevelSelect({ audioBus: _audioBus, onSelect, onTree }: Pr
         }}
       >
         {LEVELS.map(({ level, label }) => (
-          <LevelTile key={level} level={level} label={label} onSelect={onSelect} />
+          <LevelTile
+            key={level}
+            level={level}
+            label={label}
+            onSelect={onSelect}
+            audioBus={audioBus}
+          />
         ))}
       </div>
       <button
@@ -101,12 +121,22 @@ function LevelTile({
   level,
   label,
   onSelect,
+  audioBus,
 }: {
   level: Level
   label: string
   onSelect: (level: Level) => void
+  audioBus: Pick<AudioBus, 'play' | 'stop'>
 }) {
-  const tap = useTapHandler({ onTap: () => onSelect(level) })
+  // Synchroniczny play() w gestcie = cue "klik" + iOS audio unlock;
+  // bez tego pierwsze audio sesji (powitanie) bywa nieme na iPadzie.
+  const tap = useTapHandler({
+    onTap: () => {
+      audioBus.stop()
+      void audioBus.play('nav-tap')
+      onSelect(level)
+    },
+  })
   return (
     <button
       type="button"

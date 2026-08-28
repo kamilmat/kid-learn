@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { audioBus } from '@/shared/audio/AudioBus'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { useTapHandler } from './useTapHandler'
 
@@ -25,18 +26,58 @@ const buttonStyle = {
   WebkitTapHighlightColor: 'transparent',
 } as const
 
+/**
+ * Czy w historii przeglądarki jest dokąd wracać. React Router stempluje
+ * `history.state.idx` numerem wpisu w swoim stosie; `0` oznacza pierwszy
+ * ekran tej karty — `navigate(-1)` wyszłoby wtedy z aplikacji (na iPadzie
+ * w trybie PWA: pusty ekran bez paska nawigacji).
+ */
+function hasHistoryToGoBack(): boolean {
+  if (typeof window === 'undefined') return false
+  const idx = (window.history.state as { idx?: unknown } | null)?.idx
+  return typeof idx === 'number' && idx > 0
+}
+
 export function KidNav({ onBack, onHome }: KidNavProps) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+
+  // Cue gramy SYNCHRONICZNIE w handlerze tapa, jeszcze przed nawigacją:
+  // "każdy klik mówi co zrobił", a przy okazji pierwszy play() w gestcie
+  // odblokowuje audio na iOS (unlock() poniżej to no-op gdy cue już w kolejce).
+  const playCue = (key: 'nav-back' | 'nav-home') => {
+    audioBus.stop()
+    void audioBus.play(key)
+    audioBus.unlock()
+  }
 
   const handleBack = () => {
+    playCue('nav-back')
     if (onBack) {
       onBack()
       return
     }
-    navigate(-1)
+    if (hasHistoryToGoBack()) {
+      navigate(-1)
+      return
+    }
+    // Deep-link / cold start PWA: brak historii. Cofamy się o segment URL-a
+    // (`..` po ścieżce: `/reading/session/plomyk` → `/reading/session`),
+    // a z ekranu pierwszego poziomu — na Home. Ścieżkę liczymy sami zamiast
+    // `navigate('..')`, bo KidNav jest montowany na różnej głębokości
+    // względem `<Routes>` w różnych miejscach (root layout, wewnątrz modułu),
+    // więc router-relative `..` rozwiązywałby się niespójnie zależnie od tego,
+    // gdzie akurat wisi.
+    const segments = pathname.split('/').filter(Boolean)
+    if (segments.length > 1) {
+      navigate(`/${segments.slice(0, -1).join('/')}`, { replace: true })
+      return
+    }
+    navigate('/', { replace: true })
   }
 
   const handleHome = () => {
+    playCue('nav-home')
     if (onHome) {
       onHome()
       return

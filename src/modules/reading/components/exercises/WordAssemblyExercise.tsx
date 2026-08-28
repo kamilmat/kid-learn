@@ -11,9 +11,11 @@ import {
   useDraggable,
   type DragEndEvent,
 } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { useDragSyllable } from '../../hooks/useDragSyllable'
 import { DropSlot } from '../DropSlot'
+import { shuffled } from '@/shared/srs/distractors'
 
 export type WordAssemblyExerciseProps = {
   targetWord: string
@@ -122,7 +124,7 @@ export function WordAssemblyExercise({
   const allSyllables = useMemo(() => {
     const combined = [...syllables, ...distractors]
     // Losowe przetasowanie przy pierwszym renderze i przy zmianie pytania
-    return combined.slice().sort(() => Math.random() - 0.5)
+    return shuffled(combined, Math.random)
   }, [syllables, distractors])
 
   const [filledSlots, setFilledSlots] = useState<(string | null)[]>(() =>
@@ -170,7 +172,7 @@ export function WordAssemblyExercise({
   const dkHandlers = useTapHandler({ onTap: onDontKnow })
 
   return (
-    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} sensors={sensors} onDragEnd={onDragEnd}>
       <div
         data-testid="word-assembly-exercise"
         style={{

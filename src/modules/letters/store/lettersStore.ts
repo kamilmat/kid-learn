@@ -33,10 +33,6 @@ export type LettersState = {
 }
 
 export type LettersStore = LettersState & {
-  /** Zwraca state litery z mapy lub świeży initial — bez side-effectów. */
-  getLetterState: (letter: string) => LetterState
-  /** Zapisuje pojedynczy zaktualizowany state (po pojedynczej odpowiedzi). */
-  applyOutcome: (letter: string, updatedState: LetterState) => void
   /**
    * Bulk update po sesji — zaktualizowane state'y + dodanie SessionLog do
    * historii (zachowujemy ostatnie MAX_SESSION_HISTORY wpisów).
@@ -65,18 +61,6 @@ export const useLetters = create<LettersStore>()(
   persist(
     (set, get) => ({
       ...initialLettersState,
-
-      getLetterState: (letter) => {
-        const existing = get().letters[letter]
-        if (existing) return existing
-        return createInitialLetterState(letter)
-      },
-
-      applyOutcome: (letter, updatedState) => {
-        set((state) => ({
-          letters: { ...state.letters, [letter]: updatedState },
-        }))
-      },
 
       applySessionResults: (updatedStates, sessionLog) => {
         set((state) => {
@@ -129,6 +113,8 @@ export const useLetters = create<LettersStore>()(
         lastUsedLevel: state.lastUsedLevel,
       }),
       version: 1,
+      // Bez `migrate` bump wersji wyrzuciłby cały postęp — `merge` sanityzuje shape.
+      migrate: (persisted) => persisted as PersistedLettersShape,
       // Defensywne sklejanie: jeśli zapisany stan nie ma jakiegoś pola
       // (np. po dodaniu nowego do `LetterState` lub `LettersState`), użyj
       // świeżych defaultów zamiast `undefined`.
@@ -161,7 +147,9 @@ export const useLetters = create<LettersStore>()(
  * Zwraca litery z `box === 5` (opanowane) — ściana osiągnięć (sekcja 6.5).
  * Wynik posortowany alfabetycznie dla stabilności renderu.
  */
-export function selectMasteredLetters(state: LettersState): string[] {
+export function selectMasteredLetters(
+  state: Pick<LettersState, 'letters'>,
+): string[] {
   const out: string[] = []
   for (const [letter, st] of Object.entries(state.letters)) {
     if (st.box === 5) out.push(letter)
@@ -170,24 +158,12 @@ export function selectMasteredLetters(state: LettersState): string[] {
 }
 
 /**
- * Aktywna pula liter dla poziomu — używa `getActiveLetterPool` (settings
- * override + fallback do domyślnej puli poziomu, sekcja 11).
- */
-export function selectActiveLetters(
-  _state: LettersState,
-  level: Level,
-  settings: Settings,
-): string[] {
-  return getActiveLetterPool(settings, level)
-}
-
-/**
  * Mapa `LetterState` z lazy init dla aktywnej puli — gwarantuje, że każda
  * aktywna litera ma poprawny initial state (nawet jeśli dziecko nigdy jej
  * jeszcze nie widziało). Używane przez SessionView jako `initialStates`.
  */
 export function selectLetterStateMap(
-  state: LettersState,
+  state: Pick<LettersState, 'letters'>,
   level: Level,
   settings: Settings,
 ): Record<string, LetterState> {

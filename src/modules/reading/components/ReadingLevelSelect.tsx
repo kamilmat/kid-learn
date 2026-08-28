@@ -1,12 +1,14 @@
 // ReadingLevelSelect — ekran wyboru poziomu w module Czytanie.
 
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { LevelIconView, LevelStars, LEVEL_TILE_BG, LEVEL_TILE_BORDER } from '@/shared/ui/levelIcons'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { colors, radii } from '@/app/theme'
 import type { Level } from '@/shared/settings/types'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { LevelHeader } from '@/shared/ui/LevelHeader'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
+import { useReading } from '../store/readingStore'
 
 const LEVELS: { id: Level; label: string }[] = [
   { id: 'iskierka', label: 'Iskierka' },
@@ -21,6 +23,19 @@ type Props = {
 }
 
 export function ReadingLevelSelect({ onSelect, audioBus }: Props) {
+  // Onboarding głosowy ekranu — 1×. Bez niego dziecko widziało cztery ikony
+  // i nie miało skąd wiedzieć, że ma wybrać poziom.
+  useEffect(() => {
+    void playIntroOnce(
+      audioBus,
+      'reading-level-select-intro',
+      (k) => useReading.getState().hasSeenIntro(k),
+      (k) => useReading.getState().markIntroSeen(k),
+    )
+    // mount-only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <div
       data-testid="reading-level-select"

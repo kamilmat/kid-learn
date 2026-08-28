@@ -50,7 +50,6 @@ describe('WordAlbum', () => {
   })
 
   it('shows emoji for unlocked words', () => {
-    useReading.getState().ensureWordInitialized('word-MAMA')
     useReading.getState().addToAlbum('word-MAMA')
     render(<MemoryRouter><WordAlbum audioBus={mockBus} onExit={vi.fn()} /></MemoryRouter>)
     expect(screen.getByText('👩‍👧')).toBeDefined()

@@ -6,7 +6,6 @@
 // gwarancja spójności tekst↔UI.
 
 import type { LetterState } from '@/shared/srs/types'
-import type { SessionLog } from '@/shared/stats/types'
 import type { Settings } from '@/shared/settings/types'
 import { ALL_LEVELS, LEVEL_LABEL, getEffectiveTimeLimit } from '@/shared/settings/defaults'
 import { toUpper } from '@/modules/letters/data/alphabet'
@@ -25,6 +24,11 @@ import {
   collectFlagsForRecentSessions,
   FLAG_LABEL,
 } from './components/AntiCheatSection'
+import {
+  STATS_MODULE_LABEL,
+  type StatsModuleId,
+  type UnifiedSession,
+} from './aggregate'
 import { CONCEPTS } from '@/modules/numbers/data/concepts'
 import { CONCEPT_LABELS } from '@/modules/numbers/data/conceptLabels'
 import { formatFactId } from './components/NumbersStats'
@@ -71,14 +75,19 @@ export type CzytankiSnapshot = {
   openedIds: string[]
 }
 
+const MODULE_ORDER: StatsModuleId[] = ['letters', 'reading', 'numbers']
+
 export function exportReportToMarkdown(
   letters: Record<string, LetterState>,
-  sessions: SessionLog[],
+  allSessions: UnifiedSession[],
   settings: Settings,
   now: number,
   numbersSnapshot?: NumbersSnapshot,
   czytankiSnapshot?: CzytankiSnapshot,
 ): string {
+  // Sugestie działają wyłącznie na SRS liter — filtrujemy sesje modułu 1,
+  // reszta sekcji (Aktywność, Flagi) używa scalonej listy ze wszystkich modułów.
+  const sessions = allSessions.filter((s) => s.module === 'letters')
   const lines: string[] = []
   lines.push('# Raport Iskierki')
   lines.push('')
@@ -109,10 +118,10 @@ export function exportReportToMarkdown(
   const todayStart = startOfDay(now)
   const yesterdayStart = todayStart - MS_PER_DAY
   const weekStart = todayStart - 6 * MS_PER_DAY
-  const today = rangeAggregate(sessions, todayStart, todayStart + MS_PER_DAY)
-  const yesterday = rangeAggregate(sessions, yesterdayStart, todayStart)
-  const week = rangeAggregate(sessions, weekStart, todayStart + MS_PER_DAY)
-  const streak = streakDays(sessions, now)
+  const today = rangeAggregate(allSessions, todayStart, todayStart + MS_PER_DAY)
+  const yesterday = rangeAggregate(allSessions, yesterdayStart, todayStart)
+  const week = rangeAggregate(allSessions, weekStart, todayStart + MS_PER_DAY)
+  const streak = streakDays(allSessions, now)
   lines.push(`- Dziś: ${today.questions} pytań / ${fmtMin(today.durationMs)}`)
   lines.push(
     `- Wczoraj: ${yesterday.questions} pytań / ${fmtMin(yesterday.durationMs)}`,
@@ -121,8 +130,72 @@ export function exportReportToMarkdown(
   lines.push(`- Streak: ${streak} dni`)
   lines.push('')
 
+  // Rozbicie wyników na poprawne / błędne / „nie wiem" — `rangeAggregate`
+  // liczy tylko pytania i czas, a „nie wiem" nie jest pomyłką.
+  const outcomeRollup = (
+    scoped: UnifiedSession[],
+    fromTs: number,
+    toTs: number,
+  ): { correct: number; wrong: number; dontKnow: number } => {
+    let correct = 0
+    let wrong = 0
+    let dontKnow = 0
+    for (const s of scoped) {
+      if (s.startedAt < fromTs || s.startedAt >= toTs) continue
+      correct += s.correct
+      wrong += s.wrong
+      dontKnow += s.dontKnow
+    }
+    return { correct, wrong, dontKnow }
+  }
+  const weekOutcomes = outcomeRollup(
+    allSessions,
+    weekStart,
+    todayStart + MS_PER_DAY,
+  )
+  lines.push(
+    `- Tydzień — wyniki: ${weekOutcomes.correct} poprawnych, ${weekOutcomes.wrong} błędnych, ${weekOutcomes.dontKnow}× „nie wiem"`,
+  )
+
+  const todayByModule = MODULE_ORDER.map((m) => ({
+    m,
+    agg: rangeAggregate(
+      allSessions.filter((s) => s.module === m),
+      todayStart,
+      todayStart + MS_PER_DAY,
+    ),
+  })).filter((x) => x.agg.sessions > 0)
+  if (todayByModule.length > 0) {
+    lines.push('- Dziś wg modułu:')
+    for (const { m, agg: a } of todayByModule) {
+      lines.push(`  - ${STATS_MODULE_LABEL[m]}: ${a.sessions} sesji, ${a.questions} pytań`)
+    }
+  }
+  const weekByModule = MODULE_ORDER.map((m) => ({
+    m,
+    agg: rangeAggregate(
+      allSessions.filter((s) => s.module === m),
+      weekStart,
+      todayStart + MS_PER_DAY,
+    ),
+  })).filter((x) => x.agg.sessions > 0)
+  if (weekByModule.length > 0) {
+    lines.push('- Tydzień wg modułu:')
+    for (const { m, agg: a } of weekByModule) {
+      const o = outcomeRollup(
+        allSessions.filter((s) => s.module === m),
+        weekStart,
+        todayStart + MS_PER_DAY,
+      )
+      lines.push(
+        `  - ${STATS_MODULE_LABEL[m]}: ${a.sessions} sesji, ${a.questions} pytań (${o.correct} ✓ / ${o.wrong} ✗ / ${o.dontKnow}× „nie wiem")`,
+      )
+    }
+  }
+  lines.push('')
+
   const days = lastNDays(now, 14)
-  const agg = aggregatePerDay(sessions)
+  const agg = aggregatePerDay(allSessions)
   lines.push('### Ostatnie 14 dni')
   lines.push('')
   lines.push('| Dzień | Sesje | Pytania | Czas |')
@@ -150,14 +223,16 @@ export function exportReportToMarkdown(
   // ---- Flagi anti-cheat ----
   lines.push('## Flagi zaangażowania (ostatnie 5 sesji)')
   lines.push('')
-  const flags = collectFlagsForRecentSessions(sessions, 5)
+  const flags = collectFlagsForRecentSessions(allSessions, 5)
+  const sessionById = new Map(allSessions.map((s) => [s.id, s]))
   if (flags.length === 0) {
     lines.push('_Brak flag — wygląda na rzetelne ćwiczenie._')
   } else {
     for (const fws of flags) {
       const icon = fws.flag.severity === 'alert' ? '🚨' : '⚠'
+      const moduleLabel = sessionById.get(fws.sessionId)?.moduleLabel ?? ''
       lines.push(
-        `- ${icon} ${FLAG_LABEL[fws.flag.type]} — ${fws.flag.severity === 'alert' ? 'alert' : 'ostrzeżenie'} · sesja ${fmtDate(fws.sessionStartedAt)}`,
+        `- ${icon} ${FLAG_LABEL[fws.flag.type]} — ${fws.flag.severity === 'alert' ? 'alert' : 'ostrzeżenie'} · ${moduleLabel} · sesja ${fmtDate(fws.sessionStartedAt)}`,
       )
     }
   }

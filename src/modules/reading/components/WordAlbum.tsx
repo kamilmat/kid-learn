@@ -7,6 +7,8 @@ import { ALL_WORDS, getWordById, getWordAudioKey } from '../data/words'
 import { pickRandomScene } from '../data/scenes'
 import { WordScene } from './WordScene'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
+import { tapTargets } from '@/app/theme'
 import { IskraMascotAnimated } from './IskraMascotAnimated'
 import { SyllableText } from './SyllableText'
 import type { AudioBus } from '@/shared/audio/AudioBus'
@@ -28,13 +30,16 @@ export function WordAlbum({ audioBus, onExit }: Props) {
   const [filter, setFilter] = useState<Filter>('all')
   const [activeScene, setActiveScene] = useState<{ scene: Scene; wordId: string } | null>(null)
 
-  // Onboarding głosowy — 1× przy pierwszym otwarciu albumu
+  // Onboarding głosowy — 1× przy pierwszym otwarciu albumu. `playIntroOnce`
+  // pali flagę dopiero po udanym odtworzeniu (zablokowany autoplay / brak
+  // pliku kasowały intro na zawsze) i chroni przed dublem w StrictMode.
   useEffect(() => {
-    const key = 'reading-album-intro'
-    if (!useReading.getState().hasSeenIntro(key)) {
-      void audioBus.play(key)
-      useReading.getState().markIntroSeen(key)
-    }
+    void playIntroOnce(
+      audioBus,
+      'reading-album-intro',
+      (k) => useReading.getState().hasSeenIntro(k),
+      (k) => useReading.getState().markIntroSeen(k),
+    )
     // mount-only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -80,7 +85,17 @@ export function WordAlbum({ audioBus, onExit }: Props) {
         <button
           {...exitHandlers}
           aria-label="Wróć"
-          style={{ padding: '8px 16px', borderRadius: 12, background: '#fef9f2', border: '2px solid #d1d5db', fontSize: 18, cursor: 'pointer' }}
+          style={{
+            width: tapTargets.minSize,
+            height: tapTargets.minSize,
+            borderRadius: 12,
+            background: '#fef9f2',
+            border: '2px solid #d1d5db',
+            fontSize: 24,
+            cursor: 'pointer',
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+          }}
         >
           🏠
         </button>

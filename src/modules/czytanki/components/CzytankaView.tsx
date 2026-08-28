@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { getSyllableColor } from '@/shared/ui/syllableColors'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
@@ -18,7 +19,9 @@ const SCENE_PCT_BY_GROUP: Record<CzytankaGroup, number> = { 1: 40, 2: 40, 3: 38,
 const MIN_FONT = 26
 const SCENE_BASIS_MIN = 18
 const SCENE_BASIS_STEP = 6
-const FONT_STEP = 2
+// Margines bezpieczeństwa oszacowania — wysokość tekstu nie skaluje się idealnie
+// liniowo z fontSize (zawijanie zmienia liczbę linii skokowo).
+const FIT_SAFETY = 0.95
 const WORD_HIGHLIGHT_MS = 600
 
 type Props = {
@@ -54,10 +57,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     const mountTimeout = window.setTimeout(() => {
       const cue = takePendingCue()
       if (cue) void audioBus.play(cue)
-      if (!hasSeenIntro('czytanka-first')) {
-        markIntroSeen('czytanka-first')
-        void audioBus.play('czytanki-intro')
-      }
+      void playIntroOnce(audioBus, 'czytanka-first', hasSeenIntro, markIntroSeen, 'czytanki-intro')
     }, 0)
     return () => window.clearTimeout(mountTimeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,9 +109,10 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   })
   const readTap = useTapHandler({ onTap: toggle })
 
-  // Bez scrolla i bez przycinania: zaczynamy od rozmiaru dla grupy i zmniejszamy
-  // krokami, aż wszystkie zdania zmieszczą się w dostępnej wysokości. Zależy od
-  // orientacji i długości zdań (zawijanie), więc liczone z realnego layoutu.
+  // Bez scrolla i bez przycinania: mierzymy raz przy rozmiarze bazowym grupy
+  // i liczymy docelowy fontSize z proporcji dostępne/potrzebne — zamiast serii
+  // przebiegów layoutu po 2px. Zależy od orientacji i zawijania zdań, więc
+  // pomiar idzie z realnego layoutu.
   const baseFont = FONT_BY_GROUP[czytanka.group]
   const boxRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLDivElement>(null)
@@ -123,7 +124,11 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   // oddajemy mu miejsce kosztem sceny — scena jest tłem, tekst jest celem.
   const [sceneBasis, setSceneBasis] = useState(SCENE_PCT_BY_GROUP[czytanka.group])
 
+  // 0 = jeszcze nie oszacowano, 1 = po oszacowaniu, 2 = po korekcie (dalej tylko scena)
+  const fitStepRef = useRef(0)
+
   const refit = useCallback(() => {
+    fitStepRef.current = 0
     setFontSize(baseFont)
     setSceneBasis(SCENE_PCT_BY_GROUP[czytanka.group])
     setFitPass((n) => n + 1)
@@ -157,10 +162,24 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     if (!box || !text) return
     const available = box.clientHeight
     if (available <= 0) return
-    if (text.offsetHeight <= available) return
-    if (fontSize > MIN_FONT) {
-      setFontSize((f) => Math.max(MIN_FONT, f - FONT_STEP))
-    } else if (sceneBasis > SCENE_BASIS_MIN) {
+    const needed = text.offsetHeight
+    if (needed <= available) return
+
+    // Oszacowanie + najwyżej jedna korekta; potem zostaje już tylko oddanie
+    // miejsca scenie (długie czytanki w portrait nie mieszczą się nawet w MIN_FONT).
+    if (fitStepRef.current < 2) {
+      fitStepRef.current += 1
+      const scaled = Math.max(
+        MIN_FONT,
+        Math.floor(fontSize * (available / needed) * FIT_SAFETY),
+      )
+      if (scaled < fontSize) {
+        setFontSize(scaled)
+        return
+      }
+      fitStepRef.current = 2
+    }
+    if (sceneBasis > SCENE_BASIS_MIN) {
       setSceneBasis((b) => Math.max(SCENE_BASIS_MIN, b - SCENE_BASIS_STEP))
     }
   }, [fontSize, sceneBasis, fitPass])
@@ -198,7 +217,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
                       }}
                     >
                       {word.syllables.map((syl, i) => (
-                        <SyllableButton key={i} text={syl} color={getSyllableColor(i)} fontSize={fontSize} highlighted={false}
+                        <SyllableButton key={i} text={syl} color={getSyllableColor(i)} fontSize={fontSize}
                           onTap={() => tapSyllable(syl)} onLongPress={() => holdWord(s, w, word.syllables)} />
                       ))}
                     </span>

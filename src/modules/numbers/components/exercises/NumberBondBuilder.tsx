@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DndContext, type DragEndEvent } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { NumberBondShape } from '../representations/NumberBondShape'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
+import { shuffled } from '@/shared/srs/distractors'
+import { clamp } from '../../utils/clamp'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -24,7 +27,6 @@ export function NumberBondBuilder({ audioBus, payload, onAnswer }: Props) {
   const [resolved, setResolved] = useState(false)
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-build-bond')
   }, [audioBus])
 
@@ -59,7 +61,7 @@ export function NumberBondBuilder({ audioBus, payload, onAnswer }: Props) {
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} onDragEnd={handleDragEnd}>
       <div
         data-testid="exercise-number-bond-builder"
         style={{
@@ -95,10 +97,6 @@ export function NumberBondBuilder({ audioBus, payload, onAnswer }: Props) {
   )
 }
 
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, Math.floor(n)))
-}
-
 type BondChoice = { id: string; digit: number }
 
 function buildBondChoices(a: number, b: number, whole: number): BondChoice[] {
@@ -107,13 +105,13 @@ function buildBondChoices(a: number, b: number, whole: number): BondChoice[] {
   for (let n = 1; n <= whole - 1; n++) {
     if (!set.has(n)) pool.push(n)
   }
-  const shuffled = pool.sort(() => Math.random() - 0.5)
-  const distractorCount = Math.min(3, shuffled.length)
-  const distractors = shuffled.slice(0, distractorCount)
+  const shuffledPool = shuffled(pool, Math.random)
+  const distractorCount = Math.min(3, shuffledPool.length)
+  const distractors = shuffledPool.slice(0, distractorCount)
   const digits = a === b ? [a, a, ...distractors] : [a, b, ...distractors]
   const choices: BondChoice[] = digits.map((d, idx) => ({
     id: `bond-digit-${idx}-${d}`,
     digit: d,
   }))
-  return choices.sort(() => Math.random() - 0.5)
+  return shuffled(choices, Math.random)
 }

@@ -8,16 +8,21 @@ export type Fact = {
 
 export function generateFactsForConcept(conceptId: ConceptId): Fact[] {
   switch (conceptId) {
+    // WHY prefiks count5-/count10-: oba koncepty liczą te same wartości, a id
+    // faktu jest kluczem SRS. Wspólne `count-N` dawało podwójną wagę w losowaniu
+    // i przypisywało zaliczenie do złego konceptu (levelFacts.find brał pierwszy).
     case 'iskierka-counting-5':
       return Array.from({ length: 5 }, (_, i) => ({
-        id: `count-${i + 1}`,
+        id: `count5-${i + 1}`,
         conceptId,
         args: [i + 1],
       }))
 
+    // 1..10 — pełny zakres kropek do dziesięciu (match-digit-dots); wartości
+    // 1..5 powtarzają się z counting-5 celowo, ale pod własnym id.
     case 'iskierka-counting-10':
       return Array.from({ length: 10 }, (_, i) => ({
-        id: `count-${i + 1}`,
+        id: `count10-${i + 1}`,
         conceptId,
         args: [i + 1],
       }))

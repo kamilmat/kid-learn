@@ -3,6 +3,34 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
+## CR 2026-08-28 — poprawki po 3 przeglądach
+
+Trzy rundy code review (`fix/cr-batch-p/r/n` → `fix/cr-2026-08-28`) + ten batch:
+- **Audio core** — `AudioBus` generation token (`stop()` bez zombie drain),
+  `play()` resolves boolean zamiast rzucać, unlock iOS, `playIntroOnce`
+  oznacza intro widziane dopiero po odtworzeniu.
+- **Moduł 3 (Cyferki)** — SRS folding, unikalne id faktów, anti-cheat,
+  feedback advance po audio, correct-show 25–50.
+- **Moduł 2 (Czytanie)** — intro w kolejce `start()`, feedback auto-advance,
+  eventy sesji, `questionsPerSession`.
+- **Nawigacja** `replace` przy wejściu do sesji; **persist `migrate`** we
+  wszystkich store'ach; **fonty offline**; **100dvh/overscroll/safe-area**.
+- **Raport rodzica** — `exportReportToMarkdown` przyjmuje scalone sesje
+  (`shared/stats/aggregate.ts`); Aktywność i Anti-cheat agregują wszystkie
+  moduły z etykietami zamiast tylko litery.
+
+Testy: 746/746 zielone (628 `src` + 118 `scripts`), `pnpm tsc -b` czysto.
+
+### Znane odstępstwa
+
+- Czytanki: tap-target sylaby ma 56 px (auto-fit) — poniżej deklarowanego
+  minimum 60×60. Sprawdzić na realnym iPadzie, czy to problem.
+- Back z `/numbers/tree` i `/reading/album` trafia na Home (nawigacja robi
+  `replace` w historii zamiast wracać do ekranu wyboru poziomu) — do
+  rozważenia w kolejnej sesji.
+- Home ma ~70 px zapasu w 820 px wysokości (iPad 10" w orientacji pionowej) —
+  nie jest to zapchane, ale warto zweryfikować na docelowym urządzeniu.
+
 ## Aktualny stan (2026-08-26 — moduł 4 Czytanki)
 
 Zbudowano moduł 4 — **Czytanki**: 60 czytanek: od 1 zdania × 3 słowa (grupa 1)

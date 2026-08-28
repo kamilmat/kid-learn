@@ -31,7 +31,7 @@ src/
 ├── modules/reading/       # moduł 2 — kompletny, działa
 │   ├── components/        # ReadingLevelSelect, ReadingSessionView, DragDropExercise, WordAlbum
 │   │                      # MiniScene, WildCelebration, IskraAnimated, StatusBar
-│   ├── data/              # syllables (23), words (67), levelPools, miniScenes (55), phonemeHeatmap
+│   ├── data/              # syllables (24), words (67), levelPools, miniScenes (55), phonemeHeatmap
 │   ├── hooks/             # useReadingSession (orkiestrator), useDragSyllable
 │   ├── store/             # readingStore (Zustand + persist) — persist key `iskierki-reading-v1`
 │   └── index.tsx          # entry: routes reading/ + reading/session/:level + reading/album
@@ -46,9 +46,10 @@ src/
 ├── shared/
 │   ├── audio/             # AudioBus singleton — kolejka FIFO HTMLAudioElement
 │   ├── srs/               # Leitner 5-box, scoring, distractors (generalized BaseItemState)
-│   ├── settings/          # store + math gate + UI; persist key `iskierki-state-v4`
+│   ├── settings/          # store + math gate + UI; persist key `iskierki-state-v1` (persist version: 4)
 │   │                      # settings: humorMode + reading.wordAnimations + reading.wildCelebrationFreq
 │   ├── stats/             # SessionLog/SessionEvent types + raport rodzica UI
+│   │                      # sekcje Aktywność/Live/Anti-cheat agregują wszystkie moduły (`shared/stats/aggregate.ts`)
 │   │                      # moduł 2: sylaby opanowane/trudne + heatmapa fonemów PL
 │   ├── engagement/        # idle, page-visibility, fast-click, anti-cheat flags
 │   └── ui/                # KidNav, Button, IskraMascot, HandwrittenLetter
@@ -59,7 +60,7 @@ audio-source/              # source teksty dla TTS
 ├── letters.json           # litera → tekst (moduł 1)
 ├── words.json             # słowa-asocjacje + frazy "X jak Y" (moduł 1)
 ├── ui-strings.json        # pochwały, korekty, nawigacja, onboarding, koniec (moduł 1)
-├── syllables.json         # 23 sylaby + intros poziomów (moduł 2)
+├── syllables.json         # 24 sylaby + intros poziomów (moduł 2)
 ├── reading-ui-strings.json # pochwały czytania, scenki, wild celebrations (moduł 2)
 ├── iskra-reactions.json   # reakcje Iskry: easter eggs, silly, fail (moduł 2; głos Marek)
 ├── numbers.json / math-ui-strings.json # koncepty, fakty, UI (moduł 3)
@@ -72,7 +73,7 @@ scripts/generate-audio.ts  # idempotentny: hash text vs manifest, trzy silniki (
 scripts/polishG2p.ts       # ortografia PL → IPA (toIpa) dla `_engine: azure-ipa`
 scripts/azureTts.ts        # REST Azure Speech: buildSsml (phoneme IPA) + buildPlainSsml (plain), backoff 429/5xx, loader .env.local
 scripts/czytanki-audio-source.ts # generuje czytanki-syllables.json (agnieszka/azure-ipa) + czytanki-words.json (agnieszka/azure)
-public/audio/              # build artifact: 1135 plików mp3 + .manifest.json
+public/audio/              # build artifact: 1140 plików mp3 + .manifest.json
 ```
 
 ## Kluczowe decyzje (już zaakceptowane)
@@ -84,7 +85,7 @@ public/audio/              # build artifact: 1135 plików mp3 + .manifest.json
 - **Brak fonemów IPA w Edge** — publiczny endpoint Edge TTS nie obsługuje SSML phoneme tags. Dla liter zostały polskie nazwy ("be", "pe", "em") albo manual recordings.
 - **Theme: jeden tryb** — warm light (`#fef9f2` tło, `#2d2d33` tekst), ignoruje `prefers-color-scheme`. Brak dark mode.
 - **No-text UI dla dziecka** — tylko ikony + audio cues. Wszystkie tap-targety ≥60×60. Brak gestów (tylko tap); moduł 2 używa drag-drop (@dnd-kit) dla ćwiczenia Płomyk.
-- **Persist kilka storage**: `iskierki-state-v4` (settings + math gate + humorMode + reading.*), `iskierki-letters-v1` (moduł 1 progres), `iskierki-reading-v1` (moduł 2 progres), `iskierki-numbers-v1` (moduł 3 progres) i `iskierki-czytanki-v1` (moduł 4 progres — openedIds, seenIntros). Reset jednego nie kasuje pozostałych.
+- **Persist kilka storage**: `iskierki-state-v1` (settings + math gate + humorMode + reading.*; klucz `name` to `iskierki-state-v1`, `version: 4` — nie mylić jednego z drugim), `iskierki-letters-v1` (moduł 1 progres), `iskierki-reading-v1` (moduł 2 progres), `iskierki-numbers-v1` (moduł 3 progres) i `iskierki-czytanki-v1` (moduł 4 progres — openedIds, seenIntros). Reset jednego nie kasuje pozostałych.
 - **Ciągłość uczenia**: `BaseItemState` (generalized SRS) persistowany — w **kolejnej sesji** litery/sylaby/słowa z `recentWrong>0` lub niskim `box` mają wyższy score → częściej w pytaniach.
 
 ## Workflow rozwoju
@@ -100,11 +101,11 @@ public/audio/              # build artifact: 1135 plików mp3 + .manifest.json
 pnpm dev              # dev server z HMR
 pnpm build            # production build (lokalnie base='/'; CI ustawia VITE_BASE=/kid-learn/)
 pnpm tsc -b           # type check
-pnpm test --run       # testy (586/586 zielone)
+pnpm test --run       # testy (746/746 zielone: 628 src + 118 scripts)
 pnpm audio:czytanki   # generuj czytanki-syllables.json + czytanki-words.json z data/czytanki.ts (moduł 4)
 pnpm audio:build      # audio:czytanki + generuj/aktualizuj mp3 (azure-ipa wymaga .env.local)
 pnpm audio:dry        # plan buildu bez TTS: engine + tekst + IPA + akcja (nie wymaga klucza)
-pnpm audio:check      # sprawdź czy wszystkie klucze mają plik (1128 plików)
+pnpm audio:check      # sprawdź czy wszystkie klucze mają plik (1133 pliki; działa bez klucza Azure)
 
 # GitHub
 gh run list --repo kamilmat/kid-learn --limit 3      # status ostatnich deploy
@@ -128,13 +129,14 @@ git push                                              # auto-deploy ~40s przez G
 ## Gdzie ŁATWO się pomylić
 
 - **AudioBus to singleton** — `import { audioBus }` wszędzie gra przez tę samą kolejkę. Stan `playing/queue` przeżywa zmianę route'a. `audioBus.stop()` jest wywoływany w `useSession.start()` żeby wyczyścić leftover z home/intro.
-- **Feedback duration vs audio length** — duration musi pokrywać CAŁĄ kolejkę audio dla wariantu, inaczej audio gra po pojawieniu się następnego pytania. Aktualne wartości w `useSession.ts` i `useReadingSession.ts` w stałej `FEEDBACK_DURATION_BASE_MS`.
+- **Feedback duration vs audio length** — duration musi pokrywać CAŁĄ kolejkę audio dla wariantu, inaczej audio gra po pojawieniu się następnego pytania. Moduł 1: `FEEDBACK_DURATION_BASE_MS` w `useSession.ts`. Moduł 3: `FEEDBACK_DURATION_MS` w `numbers/components/SessionView.tsx`. Moduł 2: feedback auto-advance po zakończeniu audio (`await audioBus.play()` + `MIN_FEEDBACK_MS`), tap = skip. Moduł 3 od CR 2026-08-28: advance po zakończeniu audio feedbacku, nie po sztywnym timerze.
 - **`tilesPerQuestion` per-level (moduł 1)** — `Partial<Record<Level, TilesPerQuestion>>` z fallback do `levelDefaults`. Domyślnie: Iskierka/Płomyk = 4, Ognik = 5, Pochodnia = 6.
-- **persist `merge` callbacki** — w `settingsStore`, `lettersStore` i `readingStore`. Gdy dodajesz nowe pole, dopisz default w merge inaczej stary localStorage da `undefined`.
+- **persist `merge` + `migrate`** — wszystkie pięć store'ów (`settingsStore`, `lettersStore`, `readingStore`, `numbersStore`, `czytankiStore`). Gdy dodajesz nowe pole, dopisz default w `merge`, inaczej stary localStorage da `undefined`. Każdy store ma też `migrate: (persisted) => persisted` — bez niego zustand ODRZUCA persist przy bumpie `version` (merge dostaje `undefined` → skasowany postęp).
 - **`level` może być nieprawidłowy z URL** — sesje obu modułów filtrują przez `VALID_LEVELS`, redirectują na `index` jeśli zły.
 - **`.test.ts` excludowany z `tsconfig.app.json`** — testy mogą mieć type errors bez zatrzymywania `pnpm build`. Test errors trzeba sprawdzać przez `pnpm test --run`.
 - **@dnd-kit w moduł 2 (Płomyk)** — drag-drop z `useDraggable`/`useDroppable`. DndContext musi opakowywać cały ekran ćwiczenia; `over?.id` to null gdy upuścimy poza target. Nie używać `onDragEnd` do mutacji store — tylko do lokalnego state syllableSlots.
 - **wildCelebrationCounter i jitter** — licznik i ostatni stan w `readingStore`. Reset na nową sesję, nie per-pytanie. Jitter ±2 zapobiega przewidywalności.
+- **`audioBus.play()` resolves boolean, nigdy nie rzuca** — `true` = klip FAKTYCZNIE wystartował (choćby zaraz potem przerwany przez `stop()`), `false` = nigdy nie ruszył: zablokowany autoplay, brak/uszkodzony plik, albo `stop()` gdy klucz wciąż czekał w kolejce; `await` bez try/catch jest bezpieczny. `stop()` inkrementuje generation token — trwające `play()` z poprzedniej generacji settluje się cicho (wartością „czy zdążyło wystartować") zamiast dograć w tle ("zombie drain"). `playIntroOnce` (`src/shared/audio/playIntroOnce.ts`) oznacza intro jako widziane dopiero gdy `play()` rozstrzygnie się na `true` — inaczej zablokowany autoplay/brak pliku skasowałby onboarding na zawsze; intro przerwane tapem dziecka liczy się jako usłyszane.
 - **Zmiana reguł w `polishG2p.ts` = regeneracja 375 sylab** — hash `azure-ipa` zawiera IPA, więc każda poprawka G2P wymusza ponowny build tych kluczy (i zużycie limitu F0). Najpierw `pnpm audio:dry`, potem build.
 
 ## Konwencje kodu

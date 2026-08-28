@@ -6,7 +6,7 @@
 // Pod siatką: kompaktowa "ściana osiągnięć" — alfabet 4×8, opanowane (box=5)
 // świecą jak węgielek, pozostałe są przytłumione.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { colors, radii } from '@/app/theme'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
@@ -16,11 +16,7 @@ import { LevelIconView, LevelStars, LEVEL_TILE_BG, LEVEL_TILE_BORDER } from '@/s
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { LevelHeader } from '@/shared/ui/LevelHeader'
 import { toUpper } from '@/modules/letters/data/alphabet'
-import {
-  selectMasteredLetters,
-  useLetters,
-  type LettersState,
-} from '@/modules/letters/store/lettersStore'
+import { selectMasteredLetters, useLetters } from '@/modules/letters/store/lettersStore'
 
 export type LevelSelectProps = {
   onSelect: (level: Level) => void
@@ -181,21 +177,18 @@ export function LevelSelect({
   onSelect,
   audioBus = defaultAudioBus,
 }: LevelSelectProps) {
-  const lettersState = useLetters()
-  const masteredSet = useMemo<Set<string>>(() => {
-    // selectMasteredLetters operuje na czystym shape — wyciągamy tylko letters
-    const snapshot: LettersState = {
-      letters: lettersState.letters,
-      sessions: lettersState.sessions,
-      seenIntros: lettersState.seenIntros,
-      lastUsedLevel: lettersState.lastUsedLevel,
-    }
-    return new Set(selectMasteredLetters(snapshot))
-  }, [lettersState.letters, lettersState.sessions, lettersState.seenIntros, lettersState.lastUsedLevel])
+  // Selektory zamiast całego store'u — ekran nie rerenderuje się przy zapisie
+  // historii sesji ani seenIntros.
+  const letters = useLetters((s) => s.letters)
+  const persistedLastUsedLevel = useLetters((s) => s.lastUsedLevel)
+  const masteredSet = useMemo<Set<string>>(
+    () => new Set(selectMasteredLetters({ letters })),
+    [letters],
+  )
 
   // Mastery wall: pokazujemy tylko pulę aktywnego (lub ostatniego) poziomu.
   // Default Iskierka (6 liter) — dziecko widzi tylko to czego się uczy.
-  const lastUsedLevel = lettersState.lastUsedLevel ?? 'iskierka'
+  const lastUsedLevel = persistedLastUsedLevel ?? 'iskierka'
   const visibleLetters = useMemo<readonly string[]>(
     () => levelLetterPools[lastUsedLevel],
     [lastUsedLevel],
@@ -207,14 +200,28 @@ export function LevelSelect({
   // Onboarding głosowy — `level-select-intro` tylko 1× (sekcja 5.2).
   useEffect(() => {
     if (!hasSeenIntro(LEVEL_SELECT_INTRO_KEY)) {
-      void audioBus.play(LEVEL_SELECT_INTRO_KEY)
-      markIntroSeen(LEVEL_SELECT_INTRO_KEY)
+      // Flaga "widziane" dopiero po faktycznym odtworzeniu (play() → true) —
+      // zablokowany autoplay / brak pliku nie może skasować onboardingu.
+      void audioBus.play(LEVEL_SELECT_INTRO_KEY).then((played) => {
+        if (played) markIntroSeen(LEVEL_SELECT_INTRO_KEY)
+      })
     }
     // mount-only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const [celebratingLetter, setCelebratingLetter] = useState<string | null>(null)
+  // Timer celebracji trzymany w refie — bez cleanupu odmontowanie ekranu w
+  // trakcie animacji wołało setState na zniknionym komponencie.
+  const celebrationTimerRef = useRef<number | null>(null)
+  useEffect(
+    () => () => {
+      if (celebrationTimerRef.current !== null) {
+        window.clearTimeout(celebrationTimerRef.current)
+      }
+    },
+    [],
+  )
 
   const handleTileClick = (level: Level) => {
     // iPad/Safari unlock: pierwsze synchroniczne audioBus.play() w user-gesture
@@ -230,7 +237,11 @@ export function LevelSelect({
     void audioBus.play('mastery-celebration')
     setCelebratingLetter(letter)
     // krótka animacja celebration (UX cue + audio)
-    window.setTimeout(() => {
+    if (celebrationTimerRef.current !== null) {
+      window.clearTimeout(celebrationTimerRef.current)
+    }
+    celebrationTimerRef.current = window.setTimeout(() => {
+      celebrationTimerRef.current = null
       setCelebratingLetter((cur) => (cur === letter ? null : cur))
     }, 600)
   }

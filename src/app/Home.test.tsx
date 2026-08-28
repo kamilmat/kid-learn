@@ -55,12 +55,14 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-const audioPlayMock = vi.fn().mockResolvedValue(undefined)
+const audioPlayMock = vi.fn().mockResolvedValue(true)
 const audioStopMock = vi.fn()
+const audioUnlockMock = vi.fn()
 vi.mock('@/shared/audio/AudioBus', () => ({
   audioBus: {
     play: (key: string) => audioPlayMock(key),
     stop: () => audioStopMock(),
+    unlock: () => audioUnlockMock(),
   },
 }))
 
@@ -91,7 +93,8 @@ describe('Home', () => {
     navigateMock.mockClear()
     audioPlayMock.mockClear()
     audioStopMock.mockClear()
-    audioPlayMock.mockResolvedValue(undefined)
+    audioPlayMock.mockResolvedValue(true)
+    audioUnlockMock.mockClear()
     try {
       window.localStorage.clear()
     } catch {
@@ -136,10 +139,11 @@ describe('Home', () => {
     expect(screen.getByRole('button', { name: 'Raport' })).toBeInTheDocument()
   })
 
-  it('clicking "Litery" navigates to /letters', () => {
+  it('clicking "Litery" navigates to /letters i gra nav-tap (cue + iOS unlock)', () => {
     renderHome()
     screen.getByTestId('module-letters').click()
     expect(navigateMock).toHaveBeenCalledWith('/letters')
+    expect(audioPlayMock).toHaveBeenCalledWith('nav-tap')
   })
 
   it('clicking "Czytanie" navigates to /reading', () => {

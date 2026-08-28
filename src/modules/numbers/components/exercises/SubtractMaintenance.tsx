@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, type DragEndEvent } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors } from '@/app/theme'
 import { TenFrame } from '../representations/TenFrame'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices, NEAR_MISS_OFFSETS } from '../../utils/buildChoices'
+import { DropTarget } from './shared/DropTarget'
+import { clamp } from '../../utils/clamp'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -24,7 +28,6 @@ export function SubtractMaintenance({ audioBus, payload, onAnswer }: Props) {
   const [removed, setRemoved] = useState(false)
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany-left')
     const t = setTimeout(() => setRemoved(true), REMOVE_DELAY_MS)
     return () => clearTimeout(t)
@@ -33,7 +36,11 @@ export function SubtractMaintenance({ audioBus, payload, onAnswer }: Props) {
   const displayCount = removed ? result : a
   const highlightAfter = removed ? undefined : result
 
-  const choices = useMemo(() => buildChoices(result, 0, 20), [result])
+  const choices = useMemo(
+    () =>
+      buildChoices(result, { min: 0, max: 20, offsets: NEAR_MISS_OFFSETS }),
+    [result],
+  )
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
@@ -43,7 +50,7 @@ export function SubtractMaintenance({ audioBus, payload, onAnswer }: Props) {
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} onDragEnd={handleDragEnd}>
       <div
         data-testid="exercise-subtract-maintenance"
         style={{
@@ -82,7 +89,7 @@ export function SubtractMaintenance({ audioBus, payload, onAnswer }: Props) {
           <MathSymbol>−</MathSymbol>
           <NumberCell>{b}</NumberCell>
           <MathSymbol>=</MathSymbol>
-          <DropTarget>
+          <DropTarget droppableId={DROP_TARGET_ID} minSize={140}>
             <span style={{ fontSize: 80, opacity: 0.3, fontFamily: 'var(--font-block)' }}>?</span>
           </DropTarget>
         </div>
@@ -135,39 +142,4 @@ function NumberCell({ children }: { children: ReactNode }) {
       {children}
     </div>
   )
-}
-
-function DropTarget({ children }: { children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: DROP_TARGET_ID })
-  return (
-    <div
-      ref={setNodeRef}
-      data-testid="drop-target"
-      style={{
-        minWidth: 140,
-        minHeight: 140,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: `4px dashed ${isOver ? '#16a34a' : '#cbd5e1'}`,
-        borderRadius: 16,
-        background: isOver ? '#dcfce7' : '#fff',
-        transition: 'background 120ms',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, Math.floor(n)))
-}
-
-function buildChoices(correct: number, min: number, max: number): number[] {
-  const candidates = [-3, -2, -1, 1, 2, 3]
-    .map((d) => correct + d)
-    .filter((v) => v >= min && v <= max && v !== correct)
-  const distractors = candidates.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

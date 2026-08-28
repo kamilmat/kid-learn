@@ -8,7 +8,7 @@ const SCENES: readonly Scene[] = [
   { stage: 3, offsetMs: 2600 },
 ]
 
-function OgnikDoubles({ stage }: { stage: number }) {
+export function OgnikDoubles({ stage }: { stage: number }) {
   const star = CONCRETE_SETS[1] ?? CONCRETE_SETS[0]!
   return (
     <div data-testid="anim-ognik-doubles" style={{ display: 'flex', alignItems: 'center', gap: 16, fontFamily: 'var(--font-handwritten)', fontSize: 56 }}>
@@ -21,4 +21,3 @@ function OgnikDoubles({ stage }: { stage: number }) {
   )
 }
 OgnikDoubles.SCENES = SCENES
-export default OgnikDoubles

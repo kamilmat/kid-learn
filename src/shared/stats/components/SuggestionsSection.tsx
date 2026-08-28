@@ -135,7 +135,9 @@ export function SuggestionsSection({
         color: SUGGESTIONS_COLOR_TEXT,
       }}
     >
-      <h2 style={{ margin: '0 0 12px', fontSize: 22 }}>Sugestie</h2>
+      {/* Heurystyki są policzone wyłącznie ze stanu liter (moduł 1) — etykieta
+          mówi to wprost, żeby rodzic nie czytał ich jako oceny całej apki. */}
+      <h2 style={{ margin: '0 0 12px', fontSize: 22 }}>Sugestie (Litery)</h2>
       <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.6 }}>
         {suggestions.map((s, i) => (
           <li key={i} data-testid="suggestion-item">

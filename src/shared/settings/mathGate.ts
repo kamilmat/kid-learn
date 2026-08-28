@@ -12,6 +12,7 @@ export const MAX_FAILED_ATTEMPTS = 3
 
 const MIN_DIGIT = 1
 const MAX_DIGIT = 9
+const MAX_GENERATION_ATTEMPTS = 20
 
 export const initialMathGateState: MathGateState = {
   failedAttempts: 0,
@@ -32,14 +33,21 @@ function randInt(rng: () => number, min: number, max: number): number {
  *              Wstrzykiwany dla testowalności.
  */
 export function generateMathProblem(rng: () => number = Math.random): MathProblem {
-  const a = randInt(rng, MIN_DIGIT, MAX_DIGIT)
+  let a = MIN_DIGIT
   // b musi spełniać a+b > 10 → b > 10-a → b ≥ 11-a
-  const bMin = Math.max(MIN_DIGIT, 11 - a)
-  // bMin może być >9 jeśli a=1 (bMin=10), ale a≥1 i b∈[1,9] muszą dać a+b>10.
-  // Dla a=1 nie istnieje takie b, więc gwarantujemy a ≥ 2 przez retry.
+  let bMin = MAX_DIGIT + 1
+  // Dla a=1 nie istnieje b ∈ [1,9] dające a+b>10 — losujemy ponownie, ale
+  // z twardym limitem: zdegenerowany rng (np. stała 0) inaczej zapętliłby się
+  // w nieskończoność (wcześniej: nieograniczona rekurencja → stack overflow).
+  for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
+    a = randInt(rng, MIN_DIGIT, MAX_DIGIT)
+    bMin = Math.max(MIN_DIGIT, 11 - a)
+    if (bMin <= MAX_DIGIT) break
+  }
   if (bMin > MAX_DIGIT) {
-    // a=1 — niemożliwe, regeneruj. Maksymalnie kilka iteracji w praktyce.
-    return generateMathProblem(rng)
+    // Fallback dla zdegenerowanego rng — najmniejsze a, dla którego b istnieje.
+    a = MIN_DIGIT + 1
+    bMin = 11 - a
   }
   const b = randInt(rng, bMin, MAX_DIGIT)
   const c = randInt(rng, MIN_DIGIT, MAX_DIGIT)

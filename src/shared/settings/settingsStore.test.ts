@@ -287,3 +287,53 @@ describe('timeLimit migration (v3 → v4)', () => {
     expect(settings.timeLimit).toEqual({ iskierka: 25, plomyk: 'off' })
   })
 })
+
+describe('activeLettersOverride validation on rehydrate', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSettings.getState()._resetForTests()
+  })
+
+  const persist = (
+    activeLettersOverride: (typeof defaultSettings)['activeLettersOverride'],
+  ) => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        state: {
+          settings: { ...defaultSettings, activeLettersOverride },
+          mathGateState: initialMathGateState,
+          parentGateUnlockedUntil: 0,
+        },
+        version: 4,
+      }),
+    )
+    useSettings.persist.rehydrate()
+    return useSettings.getState().settings.activeLettersOverride
+  }
+
+  // I6: merge NIE kasuje override'u za rozmiar — wybór rodzica zostaje w
+  // persistcie, a fallback na domyślną pulę robi dopiero `getActiveLetterPool`.
+  it('keeps an override too small for the level tilesPerQuestion', () => {
+    expect(persist({ iskierka: ['a'] })).toEqual({ iskierka: ['a'] })
+  })
+
+  it('filters letters outside the level pool but keeps a usable override', () => {
+    expect(persist({ iskierka: ['a', 'm', 'l', 'e', 'o', 'ż'] })).toEqual({
+      iskierka: ['a', 'm', 'l', 'e', 'o'],
+    })
+  })
+
+  it('keeps a valid override untouched', () => {
+    const valid = ['a', 'm', 'l', 'e', 'o', 't']
+    expect(persist({ iskierka: valid })).toEqual({ iskierka: valid })
+  })
+
+  // Override złożony wyłącznie z liter spoza puli poziomu odfiltrowuje się do
+  // pustej tablicy — persistowanie jej nadal jako override oszukiwałoby
+  // edytor (pokazywałby pusty wybór zamiast puli domyślnej). Klucz musi
+  // zniknąć, żeby `getActiveLetterPool`/edytor wzięły domyślną pulę poziomu.
+  it('drops the key entirely when the override has only letters outside the level pool', () => {
+    expect(persist({ iskierka: ['ż', 'ó', 'ś'] })).toEqual({})
+  })
+})

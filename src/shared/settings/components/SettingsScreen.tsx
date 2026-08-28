@@ -27,6 +27,7 @@ import type {
   TimeLimit,
   WordAnimations,
 } from '@/shared/settings/types'
+import { DEFAULT_QUESTIONS_PER_SESSION as DEFAULT_READING_QUESTIONS_PER_SESSION } from '@/modules/reading/constants'
 import { ActiveLettersEditor } from './ActiveLettersEditor'
 import { MathGate } from './MathGate'
 
@@ -174,6 +175,7 @@ const STYLE_OPTIONS: StyleMode[] = [
 const SESSION_LENGTH_OPTIONS: SessionLength[] = [5, 10, 15]
 const TIME_LIMIT_OPTIONS: TimeLimit[] = ['off', 10, 15, 20, 25]
 const TILES_PER_QUESTION_OPTIONS: TilesPerQuestion[] = [3, 4, 5, 6, 8, 10]
+const READING_QUESTIONS_PER_SESSION_OPTIONS = [6, 8, 10] as const
 const CELEBRATION_OPTIONS: CelebrationTempo[] = ['short', 'medium', 'long']
 const CELEBRATION_LABELS: Record<CelebrationTempo, string> = {
   short: 'krótka',
@@ -686,6 +688,72 @@ export function SettingsScreen({
           }
           testId="reading-wild-celebration-freq"
         />
+
+        <div style={{ padding: '12px 0' }}>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>Pytań na sesję (per poziom)</div>
+          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+            Mniej = krócej; więcej = solidniej
+          </div>
+          {LEVELS.map((level) => {
+            const value =
+              settings.reading.questionsPerSession[level] ??
+              DEFAULT_READING_QUESTIONS_PER_SESSION
+            return (
+              <div
+                key={level}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                  marginTop: 8,
+                }}
+              >
+                <span>{LEVEL_LABELS[level]}</span>
+                <div
+                  role="radiogroup"
+                  aria-label={`Pytań na sesję czytania dla poziomu ${LEVEL_LABELS[level]}`}
+                  style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+                >
+                  {READING_QUESTIONS_PER_SESSION_OPTIONS.map((n) => (
+                    <label
+                      key={n}
+                      style={{
+                        display: 'flex',
+                        gap: 4,
+                        padding: '6px 12px',
+                        borderRadius: 8,
+                        border: `1px solid ${
+                          value === n ? colors.accentBlue : '#d8d8de'
+                        }`,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name={`reading-questions-per-session-${level}`}
+                        value={n}
+                        checked={value === n}
+                        onChange={() =>
+                          updateSetting('reading', {
+                            ...settings.reading,
+                            questionsPerSession: {
+                              ...settings.reading.questionsPerSession,
+                              [level]: n,
+                            },
+                          })
+                        }
+                        data-testid={`reading-questions-per-session-${level}-${n}`}
+                      />
+                      <span>{n}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </section>
 
       {/* Matematyka (moduł 3) */}

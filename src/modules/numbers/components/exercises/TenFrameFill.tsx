@@ -1,9 +1,13 @@
-import { useEffect, useMemo, type ReactNode } from 'react'
-import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { useEffect, useMemo } from 'react'
+import { DndContext, type DragEndEvent } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { TenFrame } from '../representations/TenFrame'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices } from '../../utils/buildChoices'
+import { DropTarget } from './shared/DropTarget'
+import { clamp } from '../../utils/clamp'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -18,11 +22,10 @@ export function TenFrameFill({ audioBus, payload, onAnswer }: Props) {
   const missing = clamp(payload.args[1] ?? 10 - filled, 1, 10)
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany-missing')
   }, [audioBus])
 
-  const choices = useMemo(() => buildChoices(missing, 1, 10), [missing])
+  const choices = useMemo(() => buildChoices(missing, { min: 1, max: 10 }), [missing])
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
@@ -32,7 +35,7 @@ export function TenFrameFill({ audioBus, payload, onAnswer }: Props) {
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} onDragEnd={handleDragEnd}>
       <div
         data-testid="exercise-ten-frame-fill"
         style={{
@@ -54,7 +57,7 @@ export function TenFrameFill({ audioBus, payload, onAnswer }: Props) {
           }}
         >
           <TenFrame count={filled} size={48} />
-          <DropTarget>
+          <DropTarget droppableId={DROP_TARGET_ID}>
             <span style={{ fontSize: 96, opacity: 0.3, fontFamily: 'var(--font-block)' }}>?</span>
           </DropTarget>
         </div>
@@ -66,38 +69,4 @@ export function TenFrameFill({ audioBus, payload, onAnswer }: Props) {
       </div>
     </DndContext>
   )
-}
-
-function DropTarget({ children }: { children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: DROP_TARGET_ID })
-  return (
-    <div
-      ref={setNodeRef}
-      data-testid="drop-target"
-      style={{
-        minWidth: 160,
-        minHeight: 160,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: `4px dashed ${isOver ? '#16a34a' : '#cbd5e1'}`,
-        borderRadius: 16,
-        background: isOver ? '#dcfce7' : '#fff',
-        transition: 'background 120ms',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, Math.floor(n)))
-}
-
-function buildChoices(correct: number, min: number, max: number): number[] {
-  const pool: number[] = []
-  for (let n = min; n <= max; n++) if (n !== correct) pool.push(n)
-  const distractors = pool.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

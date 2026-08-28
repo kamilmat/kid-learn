@@ -339,10 +339,15 @@ export function writeManifest(path: string, manifest: Manifest): void {
 export type BuildAction =
   | { kind: 'override' }
   | { kind: 'cache-hit' }
-  | { kind: 'generate'; reason: 'missing-file' | 'hash-mismatch' | 'no-manifest-entry' }
+  | {
+      kind: 'generate'
+      reason: 'missing-file' | 'hash-mismatch' | 'no-manifest-entry' | 'override-removed'
+    }
 
 export function decideAction(params: {
   hasOverride: boolean
+  /** Czy katalog `audio-source/manual-overrides/` w ogóle istnieje. */
+  overridesDirExists: boolean
   hasOutputFile: boolean
   text: string
   voice: string
@@ -351,12 +356,44 @@ export function decideAction(params: {
   ipa?: string
 }): BuildAction {
   if (params.hasOverride) return { kind: 'override' }
+  // Skasowany manual override: plik wyjściowy to nadal skopiowany mp3, a hash
+  // w manifeście zgadza się z tekstem — bez tego guardu cache-hit zamroziłby
+  // stare nagranie na zawsze. Regenerujemy z TTS.
+  //
+  // ALE tylko gdy katalog `manual-overrides/` faktycznie istnieje. Gdy go nie
+  // ma (świeży klon, sparse checkout, katalog nie w repo), brak pliku override
+  // niczego nie dowodzi — a regeneracja nadpisałaby ręczne nagrania TTS-em.
+  // Wymagamy też istniejącego pliku wyjściowego: bez niego i tak schodzimy
+  // niżej na `missing-file`.
+  if (
+    params.overridesDirExists &&
+    params.hasOutputFile &&
+    params.manifestEntry?.source === 'override'
+  ) {
+    return { kind: 'generate', reason: 'override-removed' }
+  }
   if (!params.hasOutputFile) return { kind: 'generate', reason: 'missing-file' }
   if (!params.manifestEntry) return { kind: 'generate', reason: 'no-manifest-entry' }
   if (params.manifestEntry.hash !== expectedHash(params)) {
     return { kind: 'generate', reason: 'hash-mismatch' }
   }
   return { kind: 'cache-hit' }
+}
+
+/**
+ * Czy jakikolwiek wpis `azure`/`azure-ipa` faktycznie wymaga syntezy w tym
+ * run (`action.kind === 'generate'`). Cache-hity i override'y nie potrzebują
+ * kredencji Azure ani ffmpeg — tylko realna generacja. Pure, testowalne bez IO.
+ */
+export function needsAzureSynthesis(
+  sources: SourceMap,
+  actions: Readonly<Record<string, BuildAction>>,
+): boolean {
+  return Object.entries(sources).some(
+    ([key, entry]) =>
+      (entry.engine === 'azure' || entry.engine === 'azure-ipa') &&
+      actions[key]?.kind === 'generate',
+  )
 }
 
 function expectedHash(entry: {
@@ -424,12 +461,8 @@ function runEdgeTts(text: string, voice: string, outPath: string): void {
   }
 }
 
-/** Zwraca dane Azure albo null, gdy żaden wpis ich nie potrzebuje. */
-function ensureAzureAvailable(sources: SourceMap): { key: string; region: string } | null {
-  const needsAzure = Object.values(sources).some(
-    (e) => e.engine === 'azure-ipa' || e.engine === 'azure',
-  )
-  if (!needsAzure) return null
+/** Wołane tylko gdy `needsAzureSynthesis` zwróciło true dla tego runu. */
+function ensureAzureAvailable(): { key: string; region: string } {
   loadEnvLocal(ROOT)
   const credentials = readAzureCredentials()
   if (!credentials) {
@@ -465,10 +498,12 @@ function outputPath(key: string): string {
 function runDryRun(sources: SourceMap, overrides: PronunciationOverrides): void {
   const manifest = readManifest(MANIFEST_PATH)
   const counts: Record<string, number> = {}
+  const overridesDirExists = existsSync(MANUAL_OVERRIDES_DIR)
 
   for (const [key, entry] of Object.entries(sources)) {
     const action = decideAction({
       hasOverride: existsSync(overridePath(key)),
+      overridesDirExists,
       hasOutputFile: existsSync(outputPath(key)),
       text: entry.text,
       voice: entry.voice,
@@ -507,14 +542,16 @@ async function runBuild(sources: SourceMap): Promise<void> {
 
   const manifest = readManifest(MANIFEST_PATH)
 
-  // Pre-compute actions so we know, before making any Azure request, whether
-  // ffmpeg (needed for post-processing) will actually be used this run.
+  // Pre-compute actions so we know, before requiring Azure credentials or
+  // ffmpeg, whether this run actually needs to synthesize anything via Azure
+  // (cache-hits and manual overrides need neither).
   const actions: Record<string, BuildAction> = {}
-  let needsAzureGeneration = false
+  const overridesDirExists = existsSync(MANUAL_OVERRIDES_DIR)
   for (const [key, entry] of Object.entries(sources)) {
     const { text, voice, engine, ipa } = entry
-    const action = decideAction({
+    actions[key] = decideAction({
       hasOverride: existsSync(overridePath(key)),
+      overridesDirExists,
       hasOutputFile: existsSync(outputPath(key)),
       text,
       voice,
@@ -522,13 +559,10 @@ async function runBuild(sources: SourceMap): Promise<void> {
       engine,
       ipa,
     })
-    actions[key] = action
-    if (action.kind === 'generate' && (engine === 'azure' || engine === 'azure-ipa')) {
-      needsAzureGeneration = true
-    }
   }
 
-  const azure = ensureAzureAvailable(sources)
+  const needsAzureGeneration = needsAzureSynthesis(sources, actions)
+  const azure = needsAzureGeneration ? ensureAzureAvailable() : null
   if (needsAzureGeneration) ensureFfmpegAvailable()
 
   let generated = 0

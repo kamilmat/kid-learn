@@ -5,7 +5,7 @@ import type { UseSessionConfig } from './useSession'
 
 function makeAudioBus() {
   return {
-    play: vi.fn(() => Promise.resolve()),
+    play: vi.fn(() => Promise.resolve(true)),
     stop: vi.fn(),
   }
 }
@@ -62,6 +62,29 @@ describe('useSession — lifecycle', () => {
     expect(result.current.status).toBe('playing')
     expect(result.current.currentQuestion).not.toBeNull()
     expect(result.current.currentQuestion?.tiles).toHaveLength(4)
+  })
+
+  it('numeruje pytania kolejno 0,1,2 (bez zdublowanego indeksu 0)', () => {
+    const cfg = makeConfig({ sessionLength: 3 })
+    const { result } = renderHook(() => useSession(cfg))
+    act(() => {
+      result.current.start()
+    })
+    const indices = [result.current.currentQuestion!.index]
+    for (let i = 0; i < 2; i += 1) {
+      const q = result.current.currentQuestion!
+      act(() => {
+        result.current.answer(q.targetLetter, q.targetSlot)
+      })
+      act(() => {
+        vi.advanceTimersByTime(6500)
+      })
+      act(() => {
+        vi.advanceTimersByTime(1200)
+      })
+      indices.push(result.current.currentQuestion!.index)
+    }
+    expect(indices).toEqual([0, 1, 2])
   })
 
   it('plays the letter audio prompt on first question', () => {
@@ -192,6 +215,44 @@ describe('useSession — lifecycle', () => {
     expect(states[q.targetLetter].totalCorrect).toBe(1)
   })
 
+  it('flush() zapisuje częściowy postęp raz — bez podsumowania i bez fanfary', () => {
+    const onSessionEnd = vi.fn()
+    const audioBus = makeAudioBus()
+    const cfg = makeConfig({ sessionLength: 5, onSessionEnd, audioBus })
+    const { result } = renderHook(() => useSession(cfg))
+    act(() => {
+      result.current.start()
+    })
+
+    // Bez żadnej odpowiedzi flush jest no-opem i NIE zamyka sesji
+    act(() => {
+      result.current.flush()
+    })
+    expect(onSessionEnd).not.toHaveBeenCalled()
+
+    const q = result.current.currentQuestion!
+    act(() => {
+      result.current.answer(q.targetLetter, q.targetSlot)
+    })
+
+    audioBus.play.mockClear()
+    act(() => {
+      result.current.flush()
+      result.current.flush()
+    })
+    expect(onSessionEnd).toHaveBeenCalledTimes(1)
+    expect(onSessionEnd.mock.calls[0]![1][q.targetLetter].totalCorrect).toBe(1)
+    // brak ekranu podsumowania i brak `session-end` — to nie jest koniec sesji
+    expect(result.current.status).not.toBe('finished')
+    expect(audioBus.play.mock.calls.map((c) => c[0])).not.toContain('session-end')
+
+    // quit() po flushu nie dokłada drugiego wywołania
+    act(() => {
+      result.current.quit()
+    })
+    expect(onSessionEnd).toHaveBeenCalledTimes(1)
+  })
+
   it('plays praise audio on correct answer', () => {
     const audioBus = makeAudioBus()
     const cfg = makeConfig({ audioBus })
@@ -263,6 +324,55 @@ describe('useSession — pause / resume', () => {
     const types = result.current.sessionEvents.map((e) => e.type)
     expect(types).toContain('pause')
     expect(types).toContain('resume')
+  })
+
+  it('pause() zatrzymuje kolejkę audio zanim zagra nav-pause', () => {
+    const audioBus = makeAudioBus()
+    const cfg = makeConfig({ audioBus })
+    const { result } = renderHook(() => useSession(cfg))
+    act(() => {
+      result.current.start()
+    })
+    audioBus.stop.mockClear()
+    audioBus.play.mockClear()
+    act(() => {
+      result.current.pause('visibility')
+    })
+    expect(audioBus.stop).toHaveBeenCalled()
+    expect(audioBus.play).toHaveBeenCalledWith('nav-pause')
+    expect(audioBus.stop.mock.invocationCallOrder[0]!).toBeLessThan(
+      audioBus.play.mock.invocationCallOrder[0]!,
+    )
+  })
+
+  it('pauza w trakcie wdechu wznawia sam wdech, nie cały timer feedbacku', () => {
+    const cfg = makeConfig({ sessionLength: 3 })
+    const { result } = renderHook(() => useSession(cfg))
+    act(() => {
+      result.current.start()
+    })
+    const q = result.current.currentQuestion!
+    act(() => {
+      result.current.answer(q.targetLetter, q.targetSlot)
+    })
+    // overlay znika po 4500 ms (correct @ medium), ale status zostaje
+    // 'feedback' jeszcze przez 1200 ms wdechu
+    act(() => {
+      vi.advanceTimersByTime(4500)
+    })
+    expect(result.current.status).toBe('feedback')
+    expect(result.current.lastFeedback).toBeNull()
+    act(() => {
+      result.current.pause('idle')
+    })
+    act(() => {
+      result.current.resume()
+    })
+    act(() => {
+      vi.advanceTimersByTime(1200)
+    })
+    expect(result.current.status).toBe('playing')
+    expect(result.current.currentQuestion!.index).toBe(1)
   })
 
   it('returns to playing on resume()', () => {

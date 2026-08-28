@@ -20,14 +20,15 @@ if (typeof localStorage === 'undefined' || typeof localStorage.clear !== 'functi
   }
 }
 
-const { useReadingSession } = await import('./useReadingSession')
+const { useReadingSession, MIN_FEEDBACK_MS } = await import('./useReadingSession')
 const { useReading } = await import('../store/readingStore')
 
 import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
-const mockAudioBus = { play: vi.fn().mockResolvedValue(undefined), stop: vi.fn() }
-const mockSettings = { reading: { wildCelebrationFreq: 8 } } as any
+// play() zwraca Promise<boolean> (true = klip dograł do końca) — patrz AudioBus
+const mockAudioBus = { play: vi.fn().mockResolvedValue(true), stop: vi.fn() }
+const mockSettings = { reading: { wildCelebrationFreq: 8, questionsPerSession: {} } } as any
 
 describe('useReadingSession', () => {
   beforeEach(() => {
@@ -245,8 +246,15 @@ describe('useReadingSession', () => {
     expect(result.current.pickedScene).toBeNull()
   })
 
+  it('start() zeruje persistowany wildCelebrationCounter z poprzedniej sesji', () => {
+    useReading.setState({ wildCelebrationCounter: 7 })
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+    expect(useReading.getState().wildCelebrationCounter).toBe(0)
+  })
+
   it('triggers wild celebration when correct count >= wildCelebrationFreq + jitter', () => {
-    const settings = { reading: { wildCelebrationFreq: 2 } } as any
+    const settings = { reading: { wildCelebrationFreq: 2, questionsPerSession: {} } } as any
     // rng=0.5 → jitter = Math.floor(0.5*5) - 2 = 0; trigger at counter >= 2
     const { result } = renderHook(() => useReadingSession({
       level: 'iskierka',
@@ -346,7 +354,7 @@ describe('useReadingSession', () => {
     expect(result.current.questionOutcomes[0]).toBe('dontKnow')
   })
 
-  it('pause during feedback → resume → skipFeedback advances to next question', () => {
+  it('pause during feedback → resume powtarza korektę i dopiero potem idzie dalej', async () => {
     const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
     act(() => result.current.start())
 
@@ -357,15 +365,207 @@ describe('useReadingSession', () => {
     // Pauza podczas feedback
     act(() => result.current.pause())
     expect(result.current.status).toBe('paused')
+    expect(result.current.paused).toBe(true)
 
-    // Resume powinien przywrócić 'feedback' (nie 'asking')
-    act(() => result.current.resume())
-    expect(result.current.status).toBe('feedback')
+    // `pause()` zrobiło stop() — po wznowieniu korekta ("spróbuj jeszcze raz"
+    // + cel) leci PONOWNIE, inaczej dziecko nigdy nie usłyszy odpowiedzi.
+    mockAudioBus.play.mockClear()
+    await act(async () => {
+      result.current.resume()
+    })
+    expect(mockAudioBus.play).toHaveBeenCalledWith('reading-wrong-prefix')
 
-    // skipFeedback powinno zadziałać (nie zgubić się z powodu złego statusu)
-    act(() => result.current.skipFeedback())
-    expect(result.current.currentQuestionIndex).toBe(1)
+    // Dalej przechodzimy dopiero gdy kolejka korekty wybrzmi
+    await act(async () => {
+      await result.current.waitForFeedbackAudio()
+    })
+    expect(result.current.paused).toBe(false)
     expect(result.current.status).toBe('asking')
+    expect(result.current.currentQuestionIndex).toBe(1)
+    expect(result.current.questionOutcomes).toHaveLength(1)
+  })
+
+  it('pause podczas wild celebration → resume nie zakleszcza sesji (po MIN_FEEDBACK_MS)', () => {
+    vi.useFakeTimers()
+    try {
+      const settings = {
+        reading: { wildCelebrationFreq: 1, questionsPerSession: { iskierka: 5 }, wordAnimations: 'off' },
+      } as any
+      const { result } = renderHook(() =>
+        useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings, rng: () => 0.5 }),
+      )
+      act(() => result.current.start())
+      const target = result.current.currentQuestion
+      expect(target?.type).toBe('syllable-match')
+      if (target?.type !== 'syllable-match') return
+      act(() => result.current.submitAnswer(target.targetSyllable))
+      expect(result.current.feedbackVariant).toBe('wild')
+
+      act(() => result.current.pause())
+      act(() => result.current.resume())
+      // Bez audio do powtórzenia advance() nie leci w tej samej klatce —
+      // dziecko musi jeszcze zobaczyć feedback przez (resztę) MIN_FEEDBACK_MS.
+      expect(result.current.status).toBe('feedback')
+      act(() => {
+        vi.advanceTimersByTime(MIN_FEEDBACK_MS)
+      })
+      expect(result.current.status).toBe('asking')
+      expect(result.current.feedbackVariant).toBeNull()
+      expect(result.current.currentQuestionIndex).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('resume z pauzy w trakcie feedbacku "correct" czeka resztę MIN_FEEDBACK_MS zanim przejdzie dalej', () => {
+    vi.useFakeTimers()
+    try {
+      const { result } = renderHook(() =>
+        useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }),
+      )
+      act(() => result.current.start())
+      const target = result.current.currentQuestion
+      expect(target?.type).toBe('syllable-match')
+      if (target?.type !== 'syllable-match') return
+      act(() => result.current.submitAnswer(target.targetSyllable))
+      expect(result.current.feedbackVariant).toBe('correct')
+
+      // 400ms widoczne PRZED pauzą powinny liczyć się do minimum.
+      act(() => {
+        vi.advanceTimersByTime(400)
+      })
+      act(() => result.current.pause())
+      act(() => result.current.resume())
+      expect(result.current.status).toBe('feedback')
+
+      // Reszta (MIN_FEEDBACK_MS - 400) jeszcze nie wystarcza.
+      act(() => {
+        vi.advanceTimersByTime(MIN_FEEDBACK_MS - 400 - 1)
+      })
+      expect(result.current.status).toBe('feedback')
+
+      act(() => {
+        vi.advanceTimersByTime(1)
+      })
+      expect(result.current.status).toBe('asking')
+      expect(result.current.currentQuestionIndex).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('totalQuestions honors settings.reading.questionsPerSession[level]', () => {
+    const settings = {
+      reading: { wildCelebrationFreq: 8, questionsPerSession: { iskierka: 3 } },
+    } as any
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings }))
+    act(() => result.current.start())
+    expect(result.current.totalQuestions).toBe(3)
+    for (let i = 0; i < 3; i++) {
+      act(() => result.current.submitAnswer('NIE-ISTNIEJE'))
+      act(() => result.current.skipFeedback())
+    }
+    expect(result.current.status).toBe('complete')
+  })
+
+  it('start() kolejkuje intro poziomu i pali flage dopiero po odtworzeniu', async () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+    expect(mockAudioBus.play).toHaveBeenCalledWith('reading-iskierka-intro')
+    await act(async () => { await Promise.resolve() })
+    expect(useReading.getState().hasSeenIntro('reading-iskierka-intro')).toBe(true)
+  })
+
+  it('start() nie pali flagi intro gdy play() zostalo anulowane', async () => {
+    const bus = { play: vi.fn().mockResolvedValue(false), stop: vi.fn() }
+    const { result } = renderHook(() => useReadingSession({ level: 'ognik', audioBus: bus, settings: mockSettings }))
+    act(() => result.current.start())
+    await act(async () => { await Promise.resolve() })
+    expect(useReading.getState().hasSeenIntro('reading-ognik-intro')).toBe(false)
+  })
+
+  it('pause() ucisza kolejke przed nav-pause', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+    mockAudioBus.stop.mockClear()
+    act(() => result.current.pause())
+    expect(mockAudioBus.stop).toHaveBeenCalled()
+    expect(mockAudioBus.play).toHaveBeenCalledWith('nav-pause')
+  })
+
+  it('skipFeedback(true) gra cue nav-tap, auto-advance nie', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+    act(() => result.current.submitAnswer('NIE-ISTNIEJE'))
+    mockAudioBus.play.mockClear()
+    act(() => result.current.skipFeedback(true))
+    expect(mockAudioBus.play).toHaveBeenCalledWith('nav-tap')
+
+    act(() => result.current.submitAnswer('NIE-ISTNIEJE'))
+    mockAudioBus.play.mockClear()
+    act(() => result.current.skipFeedback())
+    expect(mockAudioBus.play).not.toHaveBeenCalledWith('nav-tap')
+  })
+
+  it('sesja zapisuje eventy per pytanie do session logu', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+    for (let i = 0; i < 8; i++) {
+      act(() => result.current.submitAnswer('NIE-ISTNIEJE'))
+      act(() => result.current.skipFeedback())
+    }
+    const sessions = useReading.getState().sessions
+    expect(sessions).toHaveLength(1)
+    const log = sessions[0]!
+    expect(log.events).toHaveLength(8)
+    expect(log.events[0]?.outcome).toBe('wrong')
+    expect(log.events[0]?.exerciseType).toBe('syllable-match')
+    expect(log.events[0]?.targetId).toMatch(/^syl-/)
+    expect(log.events[0]?.responseMs).toBeGreaterThanOrEqual(0)
+  })
+
+  it('quit() zapisuje czesciowe wyniki, jest idempotentne i nie loguje pustej sesji', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+
+    // wyjscie bez zadnej odpowiedzi — brak wpisu w historii
+    act(() => result.current.quit())
+    expect(useReading.getState().sessions).toHaveLength(0)
+
+    act(() => result.current.submitAnswer('NIE-ISTNIEJE'))
+    act(() => result.current.skipFeedback())
+    act(() => result.current.quit())
+    expect(useReading.getState().sessions).toHaveLength(1)
+    expect(useReading.getState().sessions[0]?.events).toHaveLength(1)
+    // SRS czastkowy zapisany
+    const wrongId = useReading.getState().sessions[0]?.events[0]?.targetId as string
+    expect(useReading.getState().syllables[wrongId]?.totalWrong).toBe(1)
+
+    act(() => result.current.quit())
+    expect(useReading.getState().sessions).toHaveLength(1)
+  })
+
+  it('flush() zapisuje raz, nie ucisza audio i nie dubluje po quit()', () => {
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+
+    // Pusta sesja — flush nic nie zapisuje (i nie zamyka sesji na przyszłość)
+    act(() => result.current.flush())
+    expect(useReading.getState().sessions).toHaveLength(0)
+
+    act(() => result.current.submitAnswer('NIE-ISTNIEJE'))
+    act(() => result.current.skipFeedback())
+
+    // flush nie robi stop() — inaczej zjadłby świeże cue `nav-back`/`nav-home`
+    mockAudioBus.stop.mockClear()
+    act(() => result.current.flush())
+    act(() => result.current.flush())
+    expect(mockAudioBus.stop).not.toHaveBeenCalled()
+    expect(useReading.getState().sessions).toHaveLength(1)
+
+    // quit() po flushu też nie dokłada drugiego wpisu
+    act(() => result.current.quit())
+    expect(useReading.getState().sessions).toHaveLength(1)
   })
 
   it('Pochodnia distractors match target syllable length within ±2', () => {

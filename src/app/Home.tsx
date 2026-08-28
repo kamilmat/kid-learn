@@ -13,6 +13,7 @@
 import { useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { audioBus } from '@/shared/audio/AudioBus'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { IskraHero } from '@/shared/ui/IskraHero'
 import { colors, radii, tapTargets } from '@/app/theme'
@@ -34,42 +35,42 @@ export function Home() {
 
   // Onboarding głosowy — pierwsze odwiedzenie home wymaga jednego z intro
   useEffect(() => {
+    // Flagę "widziane" palimy dopiero gdy intro faktycznie dograło (play()
+    // → true). Inaczej pierwszy wjazd z zablokowanym autoplay / brakiem pliku
+    // kasował onboarding na zawsze. `playIntroOnce` dokłada guard na czas
+    // trwania play() — bez niego podwójny efekt StrictMode grał intro dwa razy.
+    const playIntro = (key: string, seen: boolean, mark: (k: string) => void) => {
+      void playIntroOnce(audioBus, key, () => seen, mark)
+    }
     if (!lettersIntroSeen) {
-      void audioBus.play('home-letters-intro')
-      markLettersIntro('home-letters-intro')
+      playIntro('home-letters-intro', lettersIntroSeen, markLettersIntro)
     } else if (!readingIntroSeen) {
-      void audioBus.play('home-reading-intro')
-      markReadingIntro('home-reading-intro')
+      playIntro('home-reading-intro', readingIntroSeen, markReadingIntro)
     } else if (!numbersIntroSeen) {
-      void audioBus.play('home-numbers-intro')
-      markNumbersIntro('home-numbers-intro')
+      playIntro('home-numbers-intro', numbersIntroSeen, markNumbersIntro)
     } else if (!czytankiIntroSeen) {
-      void audioBus.play('home-czytanki-intro')
-      markCzytankiIntro('home-czytanki-intro')
+      playIntro('home-czytanki-intro', czytankiIntroSeen, markCzytankiIntro)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleLetters = useCallback(() => {
-    // Bez nav-tap "klik" — moduł sam zagra swoje intro/audio.
-    audioBus.stop()
-    navigate('/letters')
-  }, [navigate])
+  // „Każdy klik mówi co zrobił" — nav-tap potwierdza tap w kafelek. Przy okazji
+  // to synchroniczne play() w geście odblokowuje audio na iOS Safari (wcześniej
+  // robił to cichy klip z unlock(), ale po obejrzeniu intro kafelki milczały).
+  // Intro modułu dokleja się za nav-tap w kolejce FIFO.
+  const goToModule = useCallback(
+    (path: string) => {
+      audioBus.stop()
+      void audioBus.play('nav-tap')
+      navigate(path)
+    },
+    [navigate],
+  )
 
-  const handleReading = useCallback(() => {
-    audioBus.stop()
-    navigate('/reading')
-  }, [navigate])
-
-  const handleNumbers = useCallback(() => {
-    audioBus.stop()
-    navigate('/numbers')
-  }, [navigate])
-
-  const handleCzytanki = useCallback(() => {
-    audioBus.stop()
-    navigate('/czytanki')
-  }, [navigate])
+  const handleLetters = useCallback(() => goToModule('/letters'), [goToModule])
+  const handleReading = useCallback(() => goToModule('/reading'), [goToModule])
+  const handleNumbers = useCallback(() => goToModule('/numbers'), [goToModule])
+  const handleCzytanki = useCallback(() => goToModule('/czytanki'), [goToModule])
 
   const lettersTap = useTapHandler({ onTap: handleLetters })
   const readingTap = useTapHandler({ onTap: handleReading })
@@ -82,13 +83,17 @@ export function Home() {
     <div
       data-testid="page-home"
       style={{
-        minHeight: '100vh',
+        // '100%' zamiast '100vh' — na iOS Safari 100vh liczy się do paska URL,
+        // przez co Home dostawał kilkanaście pikseli scrolla.
+        minHeight: '100%',
         position: 'relative',
         padding: 32,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 32,
+        // Siatka 2×2 kafelków musi zmieścić się bez scrolla na iPadzie
+        // w orientacji poziomej (820 px wysokości) — stąd ciasne odstępy.
+        gap: 24,
         background: colors.bg,
       }}
     >
@@ -120,10 +125,10 @@ export function Home() {
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 16,
+          gap: 12,
           width: '100%',
           maxWidth: 820,
-          marginTop: 16,
+          marginTop: 4,
         }}
       >
         {/* Kafelek: Litery (moduł 1) — wizualnie kolorowe ABC dla nieczytających */}
@@ -133,8 +138,8 @@ export function Home() {
           aria-label="Litery"
           {...lettersTap}
           style={{
-            minHeight: 220,
-            padding: 24,
+            minHeight: 196,
+            padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#fef3c7',
             border: '4px solid #f59e0b',
@@ -185,8 +190,8 @@ export function Home() {
           aria-label="Czytanie"
           {...readingTap}
           style={{
-            minHeight: 220,
-            padding: 24,
+            minHeight: 196,
+            padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#dbeafe',
             border: '4px solid #3b82f6',
@@ -235,8 +240,8 @@ export function Home() {
           aria-label="Cyferki"
           {...numbersTap}
           style={{
-            minHeight: 220,
-            padding: 24,
+            minHeight: 196,
+            padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#dcfce7',
             border: '4px solid #16a34a',
@@ -287,8 +292,8 @@ export function Home() {
           aria-label="Czytanki"
           {...czytankiTap}
           style={{
-            minHeight: 220,
-            padding: 24,
+            minHeight: 196,
+            padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#f3e8ff',
             border: '4px solid #9333ea',
@@ -347,6 +352,9 @@ export function Home() {
           position: 'fixed',
           right: tapTargets.minMargin,
           bottom: tapTargets.minMargin,
+          // viewport-fit=cover → bez insetów guziki wchodzą pod home-indicator.
+          paddingRight: 'env(safe-area-inset-right, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           display: 'flex',
           gap: 8,
           opacity: 0.85,

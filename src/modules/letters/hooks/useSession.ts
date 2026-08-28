@@ -44,7 +44,7 @@ import type { IskraIntensity } from '@/shared/ui/IskraMascot'
 import { CONTRASTIVE_PAIRS } from '@/modules/letters/data/contrastivePairs'
 import { getAssociation } from '@/modules/letters/data/associations'
 import { createInitialLetterState } from '@/shared/srs/createInitialLetterState'
-import { pickDistractors } from '@/shared/srs/distractors'
+import { pickDistractors, pickRandom, shuffled } from '@/shared/srs/distractors'
 import { pickNextLetter } from '@/shared/srs/select'
 import { updateLetterState } from '@/shared/srs/update'
 import type {
@@ -117,7 +117,13 @@ export type UseSessionApi = {
   dontKnow: () => void
   /** Pomiń wybrzmiewanie feedback i przejdź do następnego pytania od razu. */
   skipFeedback: () => void
+  /** Kończy sesję i pokazuje podsumowanie (przycisk „Wyjdź" na pauzie). */
   quit: () => void
+  /**
+   * Zapisuje częściowy postęp BEZ ekranu podsumowania i bez audio — wyjście
+   * przez KidNav / unmount komponentu. Idempotentne.
+   */
+  flush: () => void
 }
 
 const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
@@ -171,25 +177,6 @@ const STREAK_AUDIO_DURATION_MS = 2000
 function defaultUuid(): string {
   // Krótki UUID-lite — dla testów i logów wystarcza.
   return `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
-}
-
-function shuffleInPlace<T>(arr: T[], rng: () => number): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    const a = arr[i]
-    const b = arr[j]
-    if (a !== undefined && b !== undefined) {
-      arr[i] = b
-      arr[j] = a
-    }
-  }
-  return arr
-}
-
-function pickRandom<T>(arr: readonly T[], rng: () => number): T {
-  const idx = Math.floor(rng() * arr.length)
-  // Cast bezpieczny — arr.length > 0 zakłada wywołanie tylko z niepustą listą.
-  return arr[idx] as T
 }
 
 function caseModeToInitialChosenCase(mode: CaseMode): 'upper' | 'lower' {
@@ -348,6 +335,10 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   // Pamiętany efektywny duration ostatniego feedbacku (z extra streak/mastery audio)
   // — używany przy resume po pauzie podczas feedback.
   const lastFeedbackEffectiveMsRef = useRef<number>(0)
+  // Feedback w refie — `resume` czyta go imperatywnie; jako dependency
+  // przebudowywał callback po każdej odpowiedzi bez żadnego zysku.
+  const lastFeedbackRef = useRef<FeedbackState | null>(null)
+  lastFeedbackRef.current = lastFeedback
 
   // Init letter states z poolu (lub początkowych jeśli przekazane).
   const initActiveLettersStableRef = useRef<string[]>(activeLetters)
@@ -436,7 +427,10 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     }, COUNTDOWN_TICK_MS)
   }, [clearCountdown])
 
-  const generateNextQuestion = useCallback(() => {
+  // `num` przekazujemy jawnie — `questionNumber` ze state'u jest stale w
+  // momencie wywołania (setQuestionNumber jeszcze nie przerenderowało), przez
+  // co indeksy pytań szły 0,0,1,2… i psuły alternację stylu w Ogniku.
+  const generateNextQuestion = useCallback((num: number) => {
     const cfg = cfgRef.current
     const states = Object.values(statesRef.current)
     const target = pickNextLetter(
@@ -467,11 +461,11 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       cfg.rng,
       distractorCount,
     )
-    const tiles = shuffleInPlace([target, ...distractors], cfg.rng)
-    const targetSlot = tiles.indexOf(target) as Slot
+    const tiles = shuffled([target, ...distractors], cfg.rng)
+    const targetSlot: Slot = tiles.indexOf(target)
     const chosenStyle = pickStyleForQuestion(
       cfg.styleMode,
-      questionNumber,
+      num,
       cfg.rng,
     )
     const chosenCase = pickCaseForQuestion(cfg.caseMode, cfg.rng)
@@ -479,7 +473,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     questionStartedAtRef.current = ts
 
     const question: Question = {
-      index: questionNumber,
+      index: num,
       targetLetter: target,
       tiles,
       targetSlot,
@@ -496,7 +490,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       ts,
       targetLetter: target,
       distractors,
-      positions: tiles.map((_, i) => i as Slot),
+      positions: tiles.map((_, i): Slot => i),
       style: chosenStyle,
       case: deriveDisplayCase(cfg.caseMode, chosenCase),
     })
@@ -510,7 +504,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
 
     // Timer
     startCountdown()
-  }, [pushEvent, questionNumber, startCountdown])
+  }, [pushEvent, startCountdown])
 
   const finishSession = useCallback(() => {
     if (finishedRef.current) return
@@ -531,6 +525,89 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     }
     cfgRef.current.onSessionEnd?.(log, { ...statesRef.current })
   }, [clearCountdown, clearFeedbackTimer])
+
+  /**
+   * Kolejkuje audio feedbacku dla wariantu i zwraca dodatkowy czas overlaya
+   * (streak audio). Wydzielone z `handleOutcome`, bo `resume` po pauzie
+   * złapanej w trakcie feedbacku musi odegrać je PONOWNIE — `pause()` robi
+   * `audioBus.stop()`, więc bez tego dziecko oglądało kilka sekund niemego
+   * overlaya.
+   */
+  const playFeedbackAudio = useCallback(
+    (
+      variant: FeedbackVariant,
+      target: string,
+      chosenLetter: string | undefined,
+      newStreak: number,
+    ): number => {
+      const cfg = cfgRef.current
+      let extraDurationMs = 0
+
+      switch (variant) {
+        case 'correct': {
+          // Bez assoc-X audio — gdy dziecko zna literę, "X jak Y" wydłuża
+          // sequence niepotrzebnie. Asocjacja gra tylko dla dontKnow/timeout
+          // (gdy dziecko potrzebuje wskazówki). Guzik "→ Dalej" daje opcję
+          // pominięcia czekania.
+          void cfg.audioBus.play('sfx-correct-ding')
+          const praiseKey = pickPraiseKey(lastPraiseKeyRef.current, cfg.rng)
+          lastPraiseKeyRef.current = praiseKey
+          void cfg.audioBus.play(praiseKey)
+          // Streak audio (jeśli próg)
+          const skey = streakAudioKey(newStreak)
+          if (skey !== null) {
+            void cfg.audioBus.play(skey)
+            extraDurationMs += STREAK_AUDIO_DURATION_MS
+          }
+          break
+        }
+        case 'wrong': {
+          const prefixKey = pickCorrectionPrefix(
+            target,
+            chosenLetter ?? '',
+            CONTRASTIVE_PAIRS as Record<string, readonly string[]>,
+            cfg.rng,
+          )
+          void cfg.audioBus.play(prefixKey)
+          void cfg.audioBus.play(`letter-${target}`)
+          break
+        }
+        case 'dontKnow':
+        case 'timeout': {
+          // Scalone audio dla obu wariantów: wsparcie + litera + asocjacja.
+          // Asocjacja "X jak Y" gra TYLKO tu (nie przy correct) — gdy dziecko
+          // nie wiedziało, "X jak Y" pomaga zapamiętać. NIE gramy
+          // correction-prefix — to było zaprojektowane dla `wrong` (komentarz
+          // do błędu). Dziecko nie pomyliło się, świadomie/biernie nie
+          // odpowiedziało.
+          void cfg.audioBus.play(pickRandom(DONTKNOW_KEYS, cfg.rng))
+          void cfg.audioBus.play(`letter-${target}`)
+          try {
+            const assoc = getAssociation(target)
+            void cfg.audioBus.play(assoc.audioKey)
+          } catch {
+            // brak asocjacji = pomijamy bez kruszenia hooka
+          }
+          break
+        }
+        case 'mastery': {
+          void cfg.audioBus.play('sfx-mastery-fanfara')
+          void cfg.audioBus.play('mastery-celebration')
+          // Mastery dziedziczy streak (firstMastery zawsze == correct outcome).
+          // Jeśli próg streak osiągnięty, dorzucamy też streak audio — dziecko
+          // dostaje pełen "wow" zamiast cichego pominięcia.
+          const skey = streakAudioKey(newStreak)
+          if (skey !== null) {
+            void cfg.audioBus.play(skey)
+            extraDurationMs += STREAK_AUDIO_DURATION_MS
+          }
+          break
+        }
+      }
+      return extraDurationMs
+    },
+    [],
+  )
 
   const handleOutcome = useCallback(
     (outcome: Outcome, chosenLetter: string | undefined, chosenSlot: Slot | undefined) => {
@@ -615,69 +692,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       currentStreakRef.current = newStreak
       setCurrentStreak(newStreak)
 
-      let extraDurationMs = 0
-
-      switch (variant) {
-        case 'correct': {
-          // Bez assoc-X audio — gdy dziecko zna literę, "X jak Y" wydłuża
-          // sequence niepotrzebnie. Asocjacja gra tylko dla dontKnow/timeout
-          // (gdy dziecko potrzebuje wskazówki). Guzik "→ Dalej" daje opcję
-          // pominięcia czekania.
-          void cfg.audioBus.play('sfx-correct-ding')
-          const praiseKey = pickPraiseKey(lastPraiseKeyRef.current, cfg.rng)
-          lastPraiseKeyRef.current = praiseKey
-          void cfg.audioBus.play(praiseKey)
-          // Streak audio (jeśli próg)
-          const skey = streakAudioKey(newStreak)
-          if (skey !== null) {
-            void cfg.audioBus.play(skey)
-            extraDurationMs += STREAK_AUDIO_DURATION_MS
-          }
-          break
-        }
-        case 'wrong': {
-          const prefixKey = pickCorrectionPrefix(
-            target,
-            chosenLetter ?? '',
-            CONTRASTIVE_PAIRS as Record<string, readonly string[]>,
-            cfg.rng,
-          )
-          void cfg.audioBus.play(prefixKey)
-          void cfg.audioBus.play(`letter-${target}`)
-          break
-        }
-        case 'dontKnow':
-        case 'timeout': {
-          // Scalone audio dla obu wariantów: wsparcie + litera + asocjacja.
-          // Asocjacja "X jak Y" gra TYLKO tu (nie przy correct) — gdy dziecko
-          // nie wiedziało, "X jak Y" pomaga zapamiętać. NIE gramy
-          // correction-prefix — to było zaprojektowane dla `wrong` (komentarz
-          // do błędu). Dziecko nie pomyliło się, świadomie/biernie nie
-          // odpowiedziało.
-          void cfg.audioBus.play(pickRandom(DONTKNOW_KEYS, cfg.rng))
-          void cfg.audioBus.play(`letter-${target}`)
-          try {
-            const assoc = getAssociation(target)
-            void cfg.audioBus.play(assoc.audioKey)
-          } catch {
-            // brak asocjacji = pomijamy bez kruszenia hooka
-          }
-          break
-        }
-        case 'mastery': {
-          void cfg.audioBus.play('sfx-mastery-fanfara')
-          void cfg.audioBus.play('mastery-celebration')
-          // Mastery dziedziczy streak (firstMastery zawsze == correct outcome).
-          // Jeśli próg streak osiągnięty, dorzucamy też streak audio — dziecko
-          // dostaje pełen "wow" zamiast cichego pominięcia.
-          const skey = streakAudioKey(newStreak)
-          if (skey !== null) {
-            void cfg.audioBus.play(skey)
-            extraDurationMs += STREAK_AUDIO_DURATION_MS
-          }
-          break
-        }
-      }
+      const extraDurationMs = playFeedbackAudio(variant, target, chosenLetter, newStreak)
 
       // Po feedbacku — następne pytanie lub koniec.
       // Sekwencja: durationMs+extra → zamknij overlay → 500ms wdech → next.
@@ -705,6 +720,26 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   // Pipeline po feedbacku: timer1 (effectiveMs) zamyka overlay i utrzymuje
   // status='feedback' przez wdech (kafelki disabled — chroni przed re-tap).
   // Timer2 (POST_FEEDBACK_BREATH_MS) flipuje na 'playing' i generuje next.
+  // Timer2 — "wdech" po zamknięciu overlaya. Wydzielony, bo resume po pauzie
+  // złapanej w tej fazie ma wznowić sam wdech, a nie odtwarzać od nowa pełny
+  // (już niewidoczny) feedback.
+  const scheduleBreathThenNext = useCallback(
+    (nextNum: number) => {
+      clearFeedbackTimer()
+      feedbackTimerRef.current = setTimeout(() => {
+        feedbackTimerRef.current = null
+        // Czyścimy kolejkę audio przed nowym promptem (urywa ewentualny
+        // ogon streak audio — dla 7-latka 100-200ms ucięcia niedostrzegalne).
+        cfgRef.current.audioBus.stop()
+        questionNumberRef.current = nextNum
+        setQuestionNumber(nextNum)
+        setStatus('playing')
+        generateNextQuestion(nextNum)
+      }, POST_FEEDBACK_BREATH_MS)
+    },
+    [clearFeedbackTimer, generateNextQuestion],
+  )
+
   const scheduleFeedbackDismiss = useCallback(
     (effectiveMs: number) => {
       clearFeedbackTimer()
@@ -718,19 +753,10 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
         // Zamykamy overlay (lastFeedback=null) ale status pozostaje 'feedback'
         // — kafelki disabled, dziecko nie może re-tapnąć starego pytania.
         setLastFeedback(null)
-        feedbackTimerRef.current = setTimeout(() => {
-          feedbackTimerRef.current = null
-          // Czyścimy kolejkę audio przed nowym promptem (urywa ewentualny
-          // ogon streak audio — dla 7-latka 100-200ms ucięcia niedostrzegalne).
-          cfgRef.current.audioBus.stop()
-          questionNumberRef.current = nextNum
-          setQuestionNumber(nextNum)
-          setStatus('playing')
-          generateNextQuestion()
-        }, POST_FEEDBACK_BREATH_MS)
+        scheduleBreathThenNext(nextNum)
       }, effectiveMs)
     },
-    [clearFeedbackTimer, finishSession, generateNextQuestion],
+    [clearFeedbackTimer, finishSession, scheduleBreathThenNext],
   )
   scheduleFeedbackDismissRef.current = scheduleFeedbackDismiss
 
@@ -771,7 +797,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     statesRef.current = next
 
     setStatus('playing')
-    generateNextQuestion()
+    generateNextQuestion(0)
   }, [generateNextQuestion, initialStates, status, uuid])
 
   const pause = useCallback(
@@ -783,6 +809,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       clearCountdown()
       clearFeedbackTimer()
       pushEvent({ type: 'pause', ts: cfgRef.current.now(), reason })
+      // Najpierw stop() — inaczej prompt/feedback mówi dalej pod overlayem pauzy
+      // (najbardziej widoczne przy auto-pauzie z visibility/idle).
+      cfgRef.current.audioBus.stop()
       void cfgRef.current.audioBus.play('nav-pause')
       setStatus('paused')
     },
@@ -800,7 +829,22 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     if (pausedDuringFeedbackRef.current) {
       pausedDuringFeedbackRef.current = false
       setStatus('feedback')
-      scheduleFeedbackDismissRef.current(lastFeedbackEffectiveMsRef.current)
+      const fb = lastFeedbackRef.current
+      if (fb !== null) {
+        // `pause()` zrobiło stop() — bez ponownego zakolejkowania overlay
+        // odliczałby pełny czas w kompletnej ciszy.
+        playFeedbackAudio(
+          fb.variant,
+          fb.targetLetter,
+          fb.chosenLetter,
+          currentStreakRef.current,
+        )
+        scheduleFeedbackDismissRef.current(lastFeedbackEffectiveMsRef.current)
+      } else {
+        // Overlay był już zamknięty — pauza złapała "wdech". Odtwarzanie
+        // pełnego timera feedbacku oznaczałoby kilka sekund pustego ekranu.
+        scheduleBreathThenNext(questionNumberRef.current + 1)
+      }
       return
     }
 
@@ -810,7 +854,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       questionStartedAtRef.current = cfgRef.current.now()
       startCountdown()
     }
-  }, [pushEvent, startCountdown, status])
+  }, [playFeedbackAudio, pushEvent, scheduleBreathThenNext, startCountdown, status])
 
   const answer = useCallback(
     (chosenLetter: string, position: Slot) => {
@@ -842,7 +886,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     questionNumberRef.current = nextNum
     setQuestionNumber(nextNum)
     setStatus('playing')
-    generateNextQuestion()
+    generateNextQuestion(nextNum)
   }, [finishSession, generateNextQuestion, status])
 
   const dontKnow = useCallback(() => {
@@ -858,6 +902,32 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     if (finishedRef.current) return
     finishSession()
   }, [finishSession])
+
+  /**
+   * Wyjście bez ekranu podsumowania (KidNav ⬅️/🏠, unmount). W odróżnieniu od
+   * `quit()` nie ustawia statusu `finished` i nie gra fanfary — tylko utrwala
+   * to, co dziecko zdążyło odpowiedzieć.
+   *
+   * Warunek „choć jedna ODPOWIEDŹ" (a nie „choć jeden event") jest istotny:
+   * `question-start` pojawia się już przy starcie, a StrictMode montuje
+   * komponent dwa razy — bez tego cleanup pierwszego mountu zamykałby sesję
+   * flagą `finishedRef` i realny postęp nigdy by się nie zapisał.
+   */
+  const flush = useCallback(() => {
+    if (finishedRef.current) return
+    if (!eventsRef.current.some((e) => e.type === 'answer')) return
+    finishedRef.current = true
+    clearCountdown()
+    clearFeedbackTimer()
+    const log: SessionLog = {
+      id: sessionIdRef.current,
+      startedAt: startedAtRef.current,
+      endedAt: cfgRef.current.now(),
+      level: cfgRef.current.level,
+      events: eventsRef.current,
+    }
+    cfgRef.current.onSessionEnd?.(log, { ...statesRef.current })
+  }, [clearCountdown, clearFeedbackTimer])
 
   // Cleanup przy unmount
   useEffect(() => {
@@ -908,5 +978,6 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     dontKnow,
     skipFeedback,
     quit,
+    flush,
   }
 }

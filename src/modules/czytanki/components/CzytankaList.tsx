@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
 import { IskraMascot } from '@/shared/ui/IskraMascot'
 import { LevelIconView, LevelStars } from '@/shared/ui/levelIcons'
 import { colors } from '@/app/theme'
@@ -23,10 +24,7 @@ export function CzytankaList({ audioBus, onOpen }: { audioBus: Pick<AudioBus, 'p
     const introTimeout = window.setTimeout(() => {
       const cue = takePendingCue()
       if (cue) void audioBus.play(cue)
-      if (!hasSeenIntro('czytanki-list-intro')) {
-        markIntroSeen('czytanki-list-intro')
-        void audioBus.play('czytanki-list-intro')
-      }
+      void playIntroOnce(audioBus, 'czytanki-list-intro', hasSeenIntro, markIntroSeen)
     }, 0)
     if (lastOpenedId) document.getElementById(`tile-${lastOpenedId}`)?.scrollIntoView({ block: 'center' })
     return () => window.clearTimeout(introTimeout)

@@ -1,9 +1,13 @@
 import { useEffect, useMemo, type ReactNode } from 'react'
-import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, type DragEndEvent } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors } from '@/app/theme'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices } from '../../utils/buildChoices'
+import { DropTarget } from './shared/DropTarget'
+import { clamp } from '../../utils/clamp'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -19,7 +23,6 @@ export function SkipCountChase({ audioBus, payload, onAnswer }: Props) {
   const nextValue = clamp(payload.args[2] ?? step * (currentIdx + 1), 1, 100)
 
   useEffect(() => {
-    audioBus.stop()
     const audioKey =
       step === 5
         ? 'ask-skip-count-5'
@@ -36,7 +39,11 @@ export function SkipCountChase({ audioBus, payload, onAnswer }: Props) {
   }, [step, currentIdx])
 
   const choices = useMemo(
-    () => buildChoices(nextValue, step, 1, 100),
+    () => buildChoices(nextValue, {
+      min: 1,
+      max: 100,
+      offsets: [-step, step, -1, 1, -2, 2],
+    }),
     [nextValue, step],
   )
 
@@ -48,7 +55,7 @@ export function SkipCountChase({ audioBus, payload, onAnswer }: Props) {
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} onDragEnd={handleDragEnd}>
       <div
         data-testid="exercise-skip-count"
         style={{
@@ -73,7 +80,7 @@ export function SkipCountChase({ audioBus, payload, onAnswer }: Props) {
           {sequence.map((value, idx) => (
             <NumberCell key={idx}>{value}</NumberCell>
           ))}
-          <DropTarget>
+          <DropTarget droppableId={DROP_TARGET_ID} minSize={140}>
             <span style={{ fontSize: 80, opacity: 0.3, fontFamily: 'var(--font-block)' }}>?</span>
           </DropTarget>
         </div>
@@ -111,41 +118,4 @@ function NumberCell({ children }: { children: ReactNode }) {
       {children}
     </div>
   )
-}
-
-function DropTarget({ children }: { children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: DROP_TARGET_ID })
-  return (
-    <div
-      ref={setNodeRef}
-      data-testid="drop-target"
-      style={{
-        minWidth: 140,
-        minHeight: 140,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: `4px dashed ${isOver ? '#16a34a' : '#cbd5e1'}`,
-        borderRadius: 16,
-        background: isOver ? '#dcfce7' : '#fff',
-        transition: 'background 120ms',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, Math.floor(n)))
-}
-
-function buildChoices(correct: number, step: number, min: number, max: number): number[] {
-  const offsets = [-step, step, -1, 1, -2, 2]
-  const candidates = offsets
-    .map((d) => correct + d)
-    .filter((v) => v >= min && v <= max && v !== correct)
-  const unique = Array.from(new Set(candidates))
-  const distractors = unique.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

@@ -38,8 +38,16 @@ describe('scoreLetter', () => {
 
   it('recentWrong boost increases score multiplicatively', () => {
     const base: LetterState = { ...createInitialLetterState('a'), recentWrong: 0 }
-    const wrong5: LetterState = { ...createInitialLetterState('a'), recentWrong: 5 }
-    expect(scoreLetter(wrong5, now) / scoreLetter(base, now)).toBeCloseTo(11, 6)
+    const wrong2: LetterState = { ...createInitialLetterState('a'), recentWrong: 2 }
+    expect(scoreLetter(wrong2, now) / scoreLetter(base, now)).toBeCloseTo(5, 6)
+  })
+
+  it('recentWrong jest clampowany do 3 — jeden trudny item nie monopolizuje losowania', () => {
+    const base: LetterState = { ...createInitialLetterState('a'), recentWrong: 0 }
+    const wrong3: LetterState = { ...createInitialLetterState('a'), recentWrong: 3 }
+    const wrong20: LetterState = { ...createInitialLetterState('a'), recentWrong: 20 }
+    expect(scoreLetter(wrong3, now) / scoreLetter(base, now)).toBeCloseTo(7, 6)
+    expect(scoreLetter(wrong20, now)).toBeCloseTo(scoreLetter(wrong3, now), 6)
   })
 
   it('recency grows linearly within cap', () => {
@@ -64,6 +72,18 @@ describe('scoreLetter', () => {
     }
     expect(scoreLetter(stateA, now)).toBeCloseTo(boxWeight(1) * 3.0, 6)
     expect(scoreLetter(stateB, now)).toBeCloseTo(boxWeight(1) * 3.0, 6)
+  })
+
+  it('clamps recency when the clock went backwards (now < lastSeen)', () => {
+    const oneDay = 24 * 60 * 60 * 1000
+    const state: LetterState = {
+      ...createInitialLetterState('a'),
+      box: 2,
+      lastSeen: now + oneDay,
+    }
+    // Ujemny upływ czasu → recency = 1.0 (baseline), nigdy ujemny score.
+    expect(scoreLetter(state, now)).toBeCloseTo(boxWeight(2) * 1.0, 6)
+    expect(scoreLetter(state, now)).toBeGreaterThan(0)
   })
 
   it('combines all three multipliers', () => {

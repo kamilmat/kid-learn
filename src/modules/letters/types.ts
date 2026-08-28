@@ -17,8 +17,10 @@ export type DisplayStyle = SrsDisplayStyle
 export type LetterState = SrsLetterState
 export type Outcome = SrsOutcome
 
-// Pozycja kafelka w siatce 2x2 — sekcja 6.3.
-export type Slot = 0 | 1 | 2 | 3
+// Indeks kafelka w siatce odpowiedzi. Liczba kafelków jest konfigurowalna
+// per poziom (`tilesPerQuestion`: 4..9), więc union 0|1|2|3 byłby kłamstwem —
+// kod i tak asertował na niego indeksy spoza zakresu.
+export type Slot = number
 
 // Sekcja 18: SessionEvent — log struktura per sesja.
 export type SessionEvent =

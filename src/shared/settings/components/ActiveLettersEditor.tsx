@@ -2,7 +2,8 @@
 //
 // Pokazuje pełen polski alfabet (32 litery) jako siatkę checkboxów.
 // Domyślnie zaznaczone: aktualny override LUB pula poziomu (jeśli brak override).
-// Walidacja: min 4 (komunikat błędu jeśli próba zapisać mniej).
+// Walidacja: min `max(4, tilesPerQuestion poziomu)` — tyle kafelków pokazuje
+// jedno pytanie, więc mniejsza pula zagłodziłaby generator dystraktorów.
 // Save wywołuje validateAndApplyOverride przez settings store.
 
 import { useMemo, useState } from 'react'
@@ -12,8 +13,7 @@ import { POLISH_ALPHABET, toUpper } from '@/modules/letters/data/alphabet'
 import { useSettings } from '@/shared/settings/settingsStore'
 import { LEVEL_LABEL, levelLetterPools } from '@/shared/settings/defaults'
 import {
-  MIN_ACTIVE_LETTERS,
-  isActiveLettersValid,
+  getMinActiveLetters,
   validateAndApplyOverride,
 } from '@/shared/settings/activeLettersValidation'
 import type { Level } from '@/shared/settings/types'
@@ -64,14 +64,10 @@ export function ActiveLettersEditor({
     })
   }
 
+  const minLetters = getMinActiveLetters(settings, level)
+
   const handleSave = () => {
     const arr = Array.from(selected)
-    if (!isActiveLettersValid(arr)) {
-      setError(
-        `Wybierz co najmniej ${MIN_ACTIVE_LETTERS} liter (wybrano ${arr.length}).`,
-      )
-      return
-    }
     const result = validateAndApplyOverride(level, arr, settings)
     if ('error' in result) {
       setError(result.error)
@@ -82,6 +78,7 @@ export function ActiveLettersEditor({
   }
 
   const selectedCount = selected.size
+  const belowMinimum = selectedCount < minLetters
 
   return (
     <div
@@ -100,11 +97,29 @@ export function ActiveLettersEditor({
       </h2>
       <div style={{ fontSize: 14, color: '#6a6a72' }}>
         Zaznaczone litery będą używane w sesji. Litery wyszarzone nie należą do
-        puli tego poziomu. Wybierz co najmniej {MIN_ACTIVE_LETTERS}.
+        puli tego poziomu. Wybierz co najmniej {minLetters} — tyle kafelków
+        pokazuje jedno pytanie na tym poziomie.
       </div>
       <div data-testid="selected-count" style={{ fontSize: 14 }}>
         Wybrano: <strong>{selectedCount}</strong> / {levelPool.size}
       </div>
+
+      {belowMinimum && (
+        <div
+          data-testid="active-letters-below-minimum-warning"
+          role="status"
+          style={{
+            color: colors.accentOrange,
+            fontSize: 14,
+            padding: 8,
+            borderRadius: radii.kid,
+            background: '#fff3e6',
+          }}
+        >
+          Ten wybór jest mniejszy niż liczba kafelków — sesja używa domyślnej
+          puli.
+        </div>
+      )}
 
       <div
         data-testid="letters-grid"

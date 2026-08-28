@@ -1,0 +1,37 @@
+Fonty self-hostowane w Iskierkach
+=================================
+
+Oba kroje są udostępnione na SIL Open Font License 1.1 (OFL). Licencja pozwala
+na hosting i redystrybucję plików wraz z aplikacją, pod warunkiem zachowania
+noty licencyjnej (ten plik) i nie sprzedawania samych fontów.
+
+Kalam
+  Autor:    Indian Type Foundry
+  Licencja: SIL Open Font License 1.1
+  Źródło:   https://fonts.google.com/specimen/Kalam
+  Tekst OFL: https://openfontlicense.org/
+
+Lexend
+  Autorzy:  Bonnie Shaver-Troup, Thomas Jockin i in.
+  Licencja: SIL Open Font License 1.1
+  Źródło:   https://fonts.google.com/specimen/Lexend
+  Tekst OFL: https://openfontlicense.org/
+
+Pliki w tym katalogu to subsety `latin` i `latin-ext` pobrane z Google Fonts
+(fonts.gstatic.com). `latin-ext` niesie polskie znaki ą ć ę ł ń ś ź ż;
+`ó` mieści się w `latin`.
+
+  kalam-400-latin-ext.woff2   https://fonts.gstatic.com/s/kalam/v18/YA9dr0Wd4kDdMthfOCfhsCkAj7g.woff2
+  kalam-400-latin.woff2       https://fonts.gstatic.com/s/kalam/v18/YA9dr0Wd4kDdMthROCfhsCkA.woff2
+  kalam-700-latin-ext.woff2   https://fonts.gstatic.com/s/kalam/v18/YA9Qr0Wd4kDdMtDqHTLCkiQqtbGstvY.woff2
+  kalam-700-latin.woff2       https://fonts.gstatic.com/s/kalam/v18/YA9Qr0Wd4kDdMtDqHTLMkiQqtbGs.woff2
+  lexend-400-latin-ext.woff2  https://fonts.gstatic.com/s/lexend/v26/wlptgwvFAVdoq2_F94zlCfv0bz1WCzsWzLlneoCrCEsAgaSP.woff2
+  lexend-400-latin.woff2      https://fonts.gstatic.com/s/lexend/v26/wlptgwvFAVdoq2_F94zlCfv0bz1WCzsWzLdneoCrCEsAgQ.woff2
+  lexend-700-latin-ext.woff2  https://fonts.gstatic.com/s/lexend/v26/wlptgwvFAVdoq2_F94zlCfv0bz1WC9wRzLlneoCrCEsAgaSP.woff2
+  lexend-700-latin.woff2      https://fonts.gstatic.com/s/lexend/v26/wlptgwvFAVdoq2_F94zlCfv0bz1WC9wRzLdneoCrCEsAgQ.woff2
+  lexend-800-latin-ext.woff2  https://fonts.gstatic.com/s/lexend/v26/wlptgwvFAVdoq2_F94zlCfv0bz1WC7sRzLlneoCrCEsAgaSP.woff2
+  lexend-800-latin.woff2      https://fonts.gstatic.com/s/lexend/v26/wlptgwvFAVdoq2_F94zlCfv0bz1WC7sRzLdneoCrCEsAgQ.woff2
+
+Odświeżenie: pobierz CSS z fonts.googleapis.com nowoczesnym User-Agentem
+(inaczej Google odda ttf/woff zamiast woff2), zachowaj subsety latin +
+latin-ext i podmień pliki oraz `@font-face` w `src/index.css`.

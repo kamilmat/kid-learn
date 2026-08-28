@@ -3,7 +3,7 @@
 // Główny ekran raportu rodzica. Bez unlocku → MathGate. Po unlocku → 5
 // scrollowalnych sekcji + przycisk "Skopiuj raport" w toolbar.
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { colors } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
 import { MathGate } from '@/shared/settings/components/MathGate'
@@ -16,6 +16,7 @@ import { ALL_WORDS } from '@/modules/reading/data/words'
 import { ALL_SYLLABLES } from '@/modules/reading/data/syllables'
 import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '@/modules/czytanki/data/czytanki'
 import { exportReportToMarkdown } from '@/shared/stats/exporter'
+import { toUnifiedSessions } from '@/shared/stats/aggregate'
 import { LettersSection } from './LettersSection'
 import { ActivitySection } from './ActivitySection'
 import { LiveSessionSection } from './LiveSessionSection'
@@ -41,26 +42,36 @@ function ReadingStats() {
   const words = useReading((s) => s.words)
   const albumUnlocked = useReading((s) => s.albumUnlocked)
 
-  const syllableEntries = Object.values(syllables)
-  const masteredSyl = syllableEntries.filter((s) => s.box >= 5)
-  const difficultSyl = syllableEntries.filter(
-    (s) => s.recentWrong > 0 || s.box <= 2,
+  const syllableEntries = useMemo(() => Object.values(syllables), [syllables])
+  const masteredSyl = useMemo(
+    () => syllableEntries.filter((s) => s.box >= 5),
+    [syllableEntries],
+  )
+  const difficultSyl = useMemo(
+    () => syllableEntries.filter((s) => s.recentWrong > 0 || s.box <= 2),
+    [syllableEntries],
   )
 
-  const heatmap = PHONEMES.map((p) => {
-    const wordsContaining = ALL_WORDS.filter((w) =>
-      w.text.toUpperCase().includes(p.fonem),
-    )
-    const states = wordsContaining
-      .map((w) => words[w.id])
-      .filter((s): s is NonNullable<typeof s> => s !== undefined)
-    if (states.length === 0)
-      return { ...p, difficulty: null as number | null, sampleSize: 0 }
-    const avgDifficulty =
-      states.reduce((sum, s) => sum + (s.recentWrong + (5 - s.box)), 0) /
-      states.length
-    return { ...p, difficulty: avgDifficulty, sampleSize: states.length }
-  })
+  // Skan 10 fonemów × 67 słów — przelicza się tylko gdy zmieni się stan słów,
+  // nie przy każdym renderze raportu.
+  const heatmap = useMemo(
+    () =>
+      PHONEMES.map((p) => {
+        const wordsContaining = ALL_WORDS.filter((w) =>
+          w.text.toUpperCase().includes(p.fonem),
+        )
+        const states = wordsContaining
+          .map((w) => words[w.id])
+          .filter((s): s is NonNullable<typeof s> => s !== undefined)
+        if (states.length === 0)
+          return { ...p, difficulty: null as number | null, sampleSize: 0 }
+        const avgDifficulty =
+          states.reduce((sum, s) => sum + (s.recentWrong + (5 - s.box)), 0) /
+          states.length
+        return { ...p, difficulty: avgDifficulty, sampleSize: states.length }
+      }),
+    [words],
+  )
 
   const sectionStyle = {
     padding: 16,
@@ -158,7 +169,10 @@ function ReadingStats() {
 function CzytankiStats() {
   const openedIds = useCzytanki((s) => s.openedIds)
 
-  const openedList = CZYTANKI.filter((c) => openedIds.includes(c.id))
+  const openedList = useMemo(
+    () => CZYTANKI.filter((c) => openedIds.includes(c.id)),
+    [openedIds],
+  )
 
   const sectionStyle = {
     padding: 16,
@@ -237,6 +251,20 @@ export function ReportScreen({
   const settings = useSettings((s) => s.settings)
   const letters = useLetters((s) => s.letters)
   const sessions = useLetters((s) => s.sessions)
+  const readingSessions = useReading((s) => s.sessions)
+  const numbersSessions = useNumbers((s) => s.sessions)
+
+  // Raport rodzica pokazuje całą aplikację, nie tylko moduł 1 — Aktywność,
+  // Ostatnia sesja i Flagi zaangażowania jadą na scalonej liście sesji.
+  const allSessions = useMemo(
+    () =>
+      toUnifiedSessions({
+        letters: sessions,
+        reading: readingSessions,
+        numbers: numbersSessions,
+      }),
+    [sessions, readingSessions, numbersSessions],
+  )
 
   // Rerender hook dla MathGate sukcesu
   const [, setUnlockTick] = useState(0)
@@ -245,6 +273,10 @@ export function ReportScreen({
   >('idle')
 
   const unlocked = isUnlocked(now())
+  // Kwantyzacja do pełnej minuty: raport agreguje per dzień, a stabilna wartość
+  // sprawia, że tik cooldownu MathGate (co sekundę) nie unieważnia useMemo
+  // w sekcjach zależnych od `now`.
+  const nowMs = Math.floor(now() / 60_000) * 60_000
 
   const handleCopy = useCallback(async () => {
     const numbersSnapshot = {
@@ -256,7 +288,7 @@ export function ReportScreen({
     }
     const md = exportReportToMarkdown(
       letters,
-      sessions,
+      allSessions,
       settings,
       now(),
       numbersSnapshot,
@@ -270,7 +302,7 @@ export function ReportScreen({
       setCopyStatus('error')
       window.setTimeout(() => setCopyStatus('idle'), COPY_FEEDBACK_MS)
     }
-  }, [copyToClipboard, letters, sessions, settings, now])
+  }, [copyToClipboard, letters, allSessions, settings, now])
 
   const handleCancel = useCallback(() => {
     if (onExit) onExit()
@@ -361,10 +393,10 @@ export function ReportScreen({
         }}
       >
         <LettersSection letters={letters} sessions={sessions} />
-        <ActivitySection sessions={sessions} now={now()} />
-        <LiveSessionSection sessions={sessions} />
+        <ActivitySection sessions={allSessions} now={nowMs} />
+        <LiveSessionSection sessions={allSessions} />
         <SuggestionsSection letters={letters} sessions={sessions} />
-        <AntiCheatSection sessions={sessions} />
+        <AntiCheatSection sessions={allSessions} />
         <ReadingStats />
         <NumbersStats />
         <CzytankiStats />

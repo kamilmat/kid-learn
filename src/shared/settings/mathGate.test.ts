@@ -50,6 +50,18 @@ describe('generateMathProblem', () => {
     expect(p.c).toBe(5)
     expect(p.answer).toBe(8)
   })
+
+  it('terminates with a degenerate rng (always 0) and still satisfies a + b > 10', () => {
+    const p = generateMathProblem(() => 0)
+    expect(p.a).toBeGreaterThanOrEqual(1)
+    expect(p.a).toBeLessThanOrEqual(9)
+    expect(p.b).toBeGreaterThanOrEqual(1)
+    expect(p.b).toBeLessThanOrEqual(9)
+    expect(p.c).toBeGreaterThanOrEqual(1)
+    expect(p.c).toBeLessThanOrEqual(9)
+    expect(p.a + p.b).toBeGreaterThan(10)
+    expect(p.answer).toBe(p.a + p.b - p.c)
+  })
 })
 
 describe('validateAnswer', () => {

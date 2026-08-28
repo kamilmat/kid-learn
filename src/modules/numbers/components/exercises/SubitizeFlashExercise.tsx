@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import { useEffect, useMemo, useState } from 'react'
+import { DndContext, type DragEndEvent } from '@dnd-kit/core'
+import { SILENT_DND_ACCESSIBILITY } from '@/shared/ui/dndAccessibility'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { DotPattern } from '../representations/DotPattern'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices } from '../../utils/buildChoices'
+import { DropTarget } from './shared/DropTarget'
+import { clamp } from '../../utils/clamp'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -19,13 +23,12 @@ export function SubitizeFlashExercise({ audioBus, payload, onAnswer }: Props) {
   const [phase, setPhase] = useState<'flash' | 'answer'>('flash')
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany')
     const t = setTimeout(() => setPhase('answer'), FLASH_MS)
     return () => clearTimeout(t)
   }, [audioBus])
 
-  const choices = useMemo(() => buildChoices(correct, 1, 6), [correct])
+  const choices = useMemo(() => buildChoices(correct, { min: 1, max: 6 }), [correct])
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
@@ -35,7 +38,7 @@ export function SubitizeFlashExercise({ audioBus, payload, onAnswer }: Props) {
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext accessibility={SILENT_DND_ACCESSIBILITY} onDragEnd={handleDragEnd}>
       <div
         data-testid="exercise-subitize-flash"
         style={{
@@ -48,7 +51,7 @@ export function SubitizeFlashExercise({ audioBus, payload, onAnswer }: Props) {
           gap: 24,
         }}
       >
-        <DropTarget>
+        <DropTarget droppableId={DROP_TARGET_ID} minSize={240}>
           {phase === 'flash' ? (
             <DotPattern count={correct} pattern="dice" size={200} />
           ) : (
@@ -65,38 +68,4 @@ export function SubitizeFlashExercise({ audioBus, payload, onAnswer }: Props) {
       </div>
     </DndContext>
   )
-}
-
-function DropTarget({ children }: { children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: DROP_TARGET_ID })
-  return (
-    <div
-      ref={setNodeRef}
-      data-testid="drop-target"
-      style={{
-        minWidth: 240,
-        minHeight: 240,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: `4px dashed ${isOver ? '#16a34a' : '#cbd5e1'}`,
-        borderRadius: 16,
-        background: isOver ? '#dcfce7' : '#fff',
-        transition: 'background 120ms',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, Math.floor(n)))
-}
-
-function buildChoices(correct: number, min: number, max: number): number[] {
-  const pool: number[] = []
-  for (let n = min; n <= max; n++) if (n !== correct) pool.push(n)
-  const distractors = pool.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

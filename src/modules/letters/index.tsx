@@ -9,11 +9,12 @@
 //   - `quiz-intro`        1× przy pierwszym wejściu na ekran sesji
 //   - `dont-know-intro`   1× w sekwencji po `quiz-intro`
 //
-// KidNav — wpięty w sticky pasku górnym przez App.tsx; tu nie duplikujemy
-// (App już renderuje `<KidNav />` poza `<Routes />`). Zostawiamy hook do
-// mountu lokalnego KidNav tylko gdyby moduł był używany standalone.
+// KidNav jest renderowany W ŚRODKU komponentów route'ów (nie nad `<Routes/>`),
+// bo ekran sesji musi podmienić jego akcje: ⬅️/🏠 najpierw zapisują częściowy
+// postęp, a ⬅️ wraca do wyboru poziomu zamiast `navigate(-1)` na Home.
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import type { ReactNode } from 'react'
 import {
   Navigate,
   Route,
@@ -25,6 +26,7 @@ import {
 
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
+import { playIntroOnce } from '@/shared/audio/playIntroOnce'
 import { useSettings } from '@/shared/settings/settingsStore'
 import type { Level } from '@/shared/settings/types'
 import { KidNav } from '@/shared/ui/KidNav'
@@ -72,18 +74,27 @@ export function LettersModule({
       data-testid="letters-module"
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
     >
-      {showNav && <KidNav />}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <Routes>
-          <Route index element={<LettersIndex audioBus={audioBus} />} />
-          <Route
-            path="session/:level"
-            element={<LettersSession audioBus={audioBus} />}
-          />
-          <Route path="*" element={<Navigate to="." replace />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route index element={<LettersIndex audioBus={audioBus} showNav={showNav} />} />
+        <Route
+          path="session/:level"
+          element={<LettersSession audioBus={audioBus} showNav={showNav} />}
+        />
+        <Route path="*" element={<Navigate to="." replace />} />
+      </Routes>
     </div>
+  )
+}
+
+// Wspólny szkielet ekranu modułu: pasek nawigacji + reszta viewportu.
+function Screen({ nav, children }: { nav: ReactNode; children: ReactNode }) {
+  return (
+    <>
+      {nav}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {children}
+      </div>
+    </>
   )
 }
 
@@ -91,9 +102,10 @@ export function LettersModule({
 
 type LettersIndexProps = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
+  showNav: boolean
 }
 
-function LettersIndex({ audioBus }: LettersIndexProps) {
+function LettersIndex({ audioBus, showNav }: LettersIndexProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const setLastUsedLevel = useLetters((s) => s.setLastUsedLevel)
@@ -115,17 +127,16 @@ function LettersIndex({ audioBus }: LettersIndexProps) {
       defaultLevel === 'last-used' ? lastUsedLevel : defaultLevel
     if (targetLevel) {
       setLastUsedLevel(targetLevel)
-      // Push (nie replace) — żeby Wróć z sesji wracało do LevelSelect, nie Home.
-      navigate(`session/${targetLevel}`)
+      // replace — patrz handleSelect: wyjście z sesji samo robi replace na
+      // LevelSelect, więc push zostawiałby duplikat w historii.
+      navigate(`session/${targetLevel}`, { replace: true })
     }
   }, [defaultLevel, lastUsedLevel, location.state, navigate, setLastUsedLevel])
 
   // Onboarding `letters-intro` — 1× per `seenIntros`.
   useEffect(() => {
-    if (!hasSeenIntro(LETTERS_INTRO_KEY)) {
-      void audioBus.play(LETTERS_INTRO_KEY)
-      markIntroSeen(LETTERS_INTRO_KEY)
-    }
+    // Flaga "widziane" dopiero po faktycznym odtworzeniu (play() → true).
+    void playIntroOnce(audioBus, LETTERS_INTRO_KEY, hasSeenIntro, markIntroSeen)
     // mount-only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -133,21 +144,30 @@ function LettersIndex({ audioBus }: LettersIndexProps) {
   const handleSelect = useCallback(
     (level: Level) => {
       setLastUsedLevel(level)
-      navigate(`session/${level}`)
+      // replace — wejście w sesję podmienia LevelSelect zamiast go dokładać.
+      // Wyjście z sesji też robi replace (na LevelSelect), więc historia to
+      // [Home, sesja] → [Home, LevelSelect]: jedno "wstecz" wraca do Home.
+      // Push w obie strony dawał [Home, LevelSelect, LevelSelect].
+      navigate(`session/${level}`, { replace: true })
     },
     [navigate, setLastUsedLevel],
   )
 
-  return <LevelSelect onSelect={handleSelect} audioBus={audioBus} />
+  return (
+    <Screen nav={showNav ? <KidNav /> : null}>
+      <LevelSelect onSelect={handleSelect} audioBus={audioBus} />
+    </Screen>
+  )
 }
 
 // ---------- Session — pojedyncza sesja dla danego poziomu ----------
 
 type LettersSessionProps = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
+  showNav: boolean
 }
 
-function LettersSession({ audioBus }: LettersSessionProps) {
+function LettersSession({ audioBus, showNav }: LettersSessionProps) {
   const params = useParams<{ level: string }>()
   const navigate = useNavigate()
 
@@ -156,22 +176,27 @@ function LettersSession({ audioBus }: LettersSessionProps) {
   const markIntroSeen = useLetters((s) => s.markIntroSeen)
   const hasSeenIntro = useLetters((s) => s.hasSeenIntro)
 
-  // Wyciągamy całe state'y liter raz — selektor robi lazy init dla aktywnej puli
-  const lettersStateRaw = useLetters()
+  // Selektory zamiast subskrypcji całego store'u — bez tego każdy zapis
+  // (markIntroSeen, applySessionResults…) przerenderowywał sesję i przebudowywał
+  // initialStates.
+  const letters = useLetters((s) => s.letters)
+  const sessions = useLetters((s) => s.sessions)
+  const seenIntros = useLetters((s) => s.seenIntros)
+  const lastUsedLevel = useLetters((s) => s.lastUsedLevel)
   const level = (params.level ?? '') as Level
   const isValidLevel = VALID_LEVELS.has(level)
+
+  // Lazy init aktywnej puli — gwarancja że każda aktywna litera ma initial state
+  const initialStates = useMemo(() => {
+    const snapshot: LettersState = { letters, sessions, seenIntros, lastUsedLevel }
+    return selectLetterStateMap(snapshot, isValidLevel ? level : 'iskierka', settings)
+  }, [isValidLevel, lastUsedLevel, letters, level, seenIntros, sessions, settings])
 
   // Onboardingi sesji — `quiz-intro` + `dont-know-intro`, sekwencja, 1× per klucz.
   useEffect(() => {
     if (!isValidLevel) return
-    if (!hasSeenIntro(QUIZ_INTRO_KEY)) {
-      void audioBus.play(QUIZ_INTRO_KEY)
-      markIntroSeen(QUIZ_INTRO_KEY)
-    }
-    if (!hasSeenIntro(DONT_KNOW_INTRO_KEY)) {
-      void audioBus.play(DONT_KNOW_INTRO_KEY)
-      markIntroSeen(DONT_KNOW_INTRO_KEY)
-    }
+    void playIntroOnce(audioBus, QUIZ_INTRO_KEY, hasSeenIntro, markIntroSeen)
+    void playIntroOnce(audioBus, DONT_KNOW_INTRO_KEY, hasSeenIntro, markIntroSeen)
     // mount-only (nawet jeśli level zmieni się w URL — i tak remountujemy przez key)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isValidLevel])
@@ -179,7 +204,20 @@ function LettersSession({ audioBus }: LettersSessionProps) {
   const handleExit = useCallback(() => {
     // state.fromExit informuje LettersIndex że to powrót, żeby nie aktywował
     // auto-navigate na defaultLevel (zapętlenie sesji).
-    navigate('..', { state: { fromExit: true } })
+    // replace — inaczej ⬅️ z LevelSelect wraca do sesji, która auto-startuje.
+    navigate('..', { state: { fromExit: true }, replace: true })
+  }, [navigate])
+
+  // KidNav w sesji: najpierw zapis częściowego postępu, dopiero potem wyjście.
+  // Bez tego ⬅️ (domyślnie `navigate(-1)`) wyrzucało na Home i gubiło SRS.
+  const quitRef = useRef<(() => void) | null>(null)
+  const handleNavBack = useCallback(() => {
+    quitRef.current?.()
+    navigate('..', { state: { fromExit: true }, replace: true })
+  }, [navigate])
+  const handleNavHome = useCallback(() => {
+    quitRef.current?.()
+    navigate('/')
   }, [navigate])
 
   const handleSessionComplete = useCallback(
@@ -193,24 +231,20 @@ function LettersSession({ audioBus }: LettersSessionProps) {
     return <Navigate to=".." replace />
   }
 
-  // Lazy init aktywnej puli — gwarancja że każda aktywna litera ma initial state
-  const snapshot: LettersState = {
-    letters: lettersStateRaw.letters,
-    sessions: lettersStateRaw.sessions,
-    seenIntros: lettersStateRaw.seenIntros,
-    lastUsedLevel: lettersStateRaw.lastUsedLevel,
-  }
-  const initialStates = selectLetterStateMap(snapshot, level, settings)
-
   return (
-    <SessionView
-      level={level}
-      settings={settings}
-      initialStates={initialStates}
-      onExit={handleExit}
-      onSessionComplete={handleSessionComplete}
-      audioBus={audioBus}
-    />
+    <Screen
+      nav={showNav ? <KidNav onBack={handleNavBack} onHome={handleNavHome} /> : null}
+    >
+      <SessionView
+        level={level}
+        settings={settings}
+        initialStates={initialStates}
+        onExit={handleExit}
+        onSessionComplete={handleSessionComplete}
+        audioBus={audioBus}
+        quitRef={quitRef}
+      />
+    </Screen>
   )
 }
 

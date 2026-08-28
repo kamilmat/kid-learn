@@ -25,6 +25,8 @@ const { useNumbers } = await import('@/modules/numbers/store/numbersStore')
 describe('formatFactId', () => {
   it('formatuje znane typy faktów', () => {
     expect(formatFactId('add-5-2')).toBe('5+2')
+    // I5: legacy id z persistu v1 (przed rozbiciem na count5-/count10-).
+    expect(formatFactId('count-3')).toBe('Liczenie: 3')
     expect(formatFactId('sub-7-3')).toBe('7-3')
     expect(formatFactId('bond-7-3-4')).toBe('3+4')
     expect(formatFactId('double-6')).toBe('6+6')
@@ -32,6 +34,8 @@ describe('formatFactId', () => {
     expect(formatFactId('array-3x4')).toBe('3×4')
     expect(formatFactId('tenframe-7')).toBe('TF·7')
     expect(formatFactId('skip5-step3')).toBe('+5')
+    expect(formatFactId('count5-3')).toBe('Liczenie do 5: 3')
+    expect(formatFactId('count10-8')).toBe('Liczenie do 10: 8')
   })
 
   it('nieznane formaty zwraca jako-jest (no-op defensywny)', () => {

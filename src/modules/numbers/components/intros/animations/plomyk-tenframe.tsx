@@ -7,7 +7,7 @@ const SCENES: readonly Scene[] = [
   { stage: 3, offsetMs: 2400 },
 ]
 
-function PlomykTenframe({ stage }: { stage: number }) {
+export function PlomykTenframe({ stage }: { stage: number }) {
   const count = stage >= 2 ? 7 : 0
   return (
     <div data-testid="anim-plomyk-tenframe" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
@@ -19,4 +19,3 @@ function PlomykTenframe({ stage }: { stage: number }) {
   )
 }
 PlomykTenframe.SCENES = SCENES
-export default PlomykTenframe

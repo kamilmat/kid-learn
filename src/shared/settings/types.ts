@@ -16,7 +16,6 @@ export type SessionLength = 5 | 10 | 15
 export type TimeLimit = 'off' | 10 | 15 | 20 | 25
 export type CelebrationTempo = 'short' | 'medium' | 'long'
 export type DefaultLevelSetting = Level | 'last-used'
-export type Voice = 'zofia' // tylko Zofia w MVP — sekcja 13.2
 export type TilesPerQuestion = 3 | 4 | 5 | 6 | 8 | 10
 export type HumorMode = 'on' | 'off'
 export type WordAnimations = 'on' | 'off'
@@ -48,7 +47,6 @@ export type Settings = {
   showCountdownBar: Partial<Record<Level, boolean>>
   celebrationTempo: CelebrationTempo
   defaultLevel: DefaultLevelSetting
-  voice: Voice
   // override per poziom; brak klucza = używaj domyślnej liczby kafelków poziomu
   tilesPerQuestion: Partial<Record<Level, TilesPerQuestion>>
   // Tryb humoru — śmieszne reakcje Iskry (beknięcie, czkawka, apsik)
@@ -58,7 +56,6 @@ export type Settings = {
     wordAnimations: WordAnimations
     wildCelebrationFreq: number                           // 3-15, default 8
     questionsPerSession: Partial<Record<Level, number>>  // default 8 dla wszystkich poziomów
-    timeLimit: Partial<Record<Level, TimeLimit>>         // default 'off' dla czytania
   }
   // Ustawienia modułu matematyki (moduł 3)
   numbers: NumbersSettings

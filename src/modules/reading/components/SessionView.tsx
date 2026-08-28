@@ -6,6 +6,7 @@
 // Phase 12: status bar (iskierki + kropki postępu + pauza), onboarding intro, anti-cheat.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 import { WildCelebration } from './WildCelebration'
 import { pickRandomWildCelebration, type WildCelebrationDef } from '../data/wildCelebrations'
 import type { AudioBus } from '@/shared/audio/AudioBus'
@@ -18,7 +19,7 @@ import { WordAssemblyExercise } from './exercises/WordAssemblyExercise'
 import { WordChoiceExercise } from './exercises/WordChoiceExercise'
 import { SyllableFillExercise } from './exercises/SyllableFillExercise'
 import { FeedbackOverlay } from './FeedbackOverlay'
-import { PauseOverlay } from './PauseOverlay'
+import { PauseOverlay } from '@/shared/ui/PauseOverlay'
 import { SessionEnd } from './SessionEnd'
 import { WordScene } from './WordScene'
 import { pickRandomScene } from '../data/scenes'
@@ -37,6 +38,11 @@ export type SessionViewProps = {
   onExit: () => void
   onAlbum?: () => void
   onSessionComplete?: () => void
+  /**
+   * Ref, do którego sesja wpina „zapisz częściowy postęp". KidNav w routingu
+   * modułu woła go zanim odejdzie z ekranu — ⬅️/🏠 nie mogą gubić SRS.
+   */
+  quitRef?: RefObject<(() => void) | null>
 }
 
 function getDotColor(
@@ -59,6 +65,7 @@ export function SessionView({
   onExit,
   onAlbum,
   onSessionComplete,
+  quitRef,
 }: SessionViewProps) {
   const session = useReadingSession({ level, audioBus, settings })
   const seenVariants = useReading(s => s.seenSceneVariants)
@@ -70,21 +77,14 @@ export function SessionView({
 
   const wordAnimationsEnabled = settings.reading.wordAnimations !== 'off'
 
-  // Onboarding głosowy — 1× per poziom
-  useEffect(() => {
-    const key = `reading-${level}-intro`
-    if (!useReading.getState().hasSeenIntro(key)) {
-      void audioBus.play(key)
-      useReading.getState().markIntroSeen(key)
-    }
-    // mount-only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Onboarding głosowy poziomu odpala się w `session.start()` — kolejka FIFO
+  // (intro -> prompt), inaczej `stop()` ze start() ucinał intro w tym samym mouncie.
 
-  // Anti-cheat: idle detection — auto-pauza po 20s bez interakcji
+  // Anti-cheat: idle detection — auto-pauza po 20s bez interakcji.
+  // Także podczas feedbacku: overlay auto-znika, ale dziecko może odejść w trakcie.
   useIdleDetector({
     thresholdMs: 20_000,
-    enabled: session.status === 'asking',
+    enabled: session.status === 'asking' || session.status === 'feedback',
     onIdle: () => session.pause(),
   })
 
@@ -98,6 +98,24 @@ export function SessionView({
   })
 
   const pauseHandlers = useTapHandler({ onTap: () => session.pause() })
+
+  // `session` to nowy obiekt co render — flush trzymamy w refie, żeby efekt
+  // unmountu miał zawsze aktualną wersję i nie restartował się co render.
+  const flushFnRef = useRef(session.flush)
+  flushFnRef.current = session.flush
+  const flush = useCallback(() => {
+    flushFnRef.current()
+  }, [])
+
+  // Wyjście dowolną drogą (KidNav ⬅️/🏠, wstecz przeglądarki, zmiana route'a)
+  // musi utrwalić częściowy postęp. `flush` jest idempotentne.
+  useEffect(() => {
+    if (quitRef) quitRef.current = flush
+    return () => {
+      flush()
+      if (quitRef) quitRef.current = null
+    }
+  }, [flush, quitRef])
 
   // Startuj sesję przy mounto
   useEffect(() => {
@@ -176,6 +194,14 @@ export function SessionView({
     setActiveScene(null)
   }, [])
 
+  // Wyjście w trakcie sesji — zapisz częściowy postęp SRS zanim odejdziemy
+  const handleExit = useCallback(() => {
+    session.quit()
+    onExit()
+  // session nie jest stabilny (nowy obiekt co render) — quit odczytuje refy
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onExit, session.quit])
+
   if (session.status === 'idle') {
     return (
       <div style={{ padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -188,8 +214,8 @@ export function SessionView({
     return (
       <SessionEnd
         results={session.results}
-        onExit={onExit}
-        onAlbum={onAlbum ?? onExit}
+        onExit={handleExit}
+        onAlbum={onAlbum ?? handleExit}
         audioBus={audioBus}
       />
     )
@@ -308,8 +334,10 @@ export function SessionView({
           />
         )}
 
-        {/* WordScene plays above everything as the celebration IS the feedback */}
-        {activeScene && !activeWildCelebration && (
+        {/* WordScene plays above everything as the celebration IS the feedback.
+            Na pauzie nie renderujemy overlayów feedbacku — inaczej blokowały
+            tapy w PauseOverlay i sesja się zakleszczała. */}
+        {activeScene && !activeWildCelebration && !session.paused && (
           <WordScene
             scene={activeScene}
             audioBus={audioBus}
@@ -318,15 +346,17 @@ export function SessionView({
         )}
 
         {/* FeedbackOverlay shown only when no active scene and not wild (scene/wild replace it) */}
-        {session.feedbackVariant !== null && session.feedbackVariant !== 'wild' && !activeScene && !activeWildCelebration && (
+        {session.feedbackVariant !== null && session.feedbackVariant !== 'wild' && !activeScene && !activeWildCelebration && !session.paused && (
           <FeedbackOverlay
             variant={session.feedbackVariant}
             onSkip={session.skipFeedback}
+            waitForAudio={session.waitForFeedbackAudio}
+            paused={session.paused}
           />
         )}
 
         {/* WildCelebration — z-index 1500, renders above everything */}
-        {activeWildCelebration && (
+        {activeWildCelebration && !session.paused && (
           <WildCelebration
             def={activeWildCelebration}
             audioBus={audioBus}
@@ -338,10 +368,7 @@ export function SessionView({
         )}
 
         {session.paused && (
-          <PauseOverlay
-            onResume={session.resume}
-            onExit={onExit}
-          />
+          <PauseOverlay onResume={session.resume} onQuit={handleExit} />
         )}
       </div>
     </div>

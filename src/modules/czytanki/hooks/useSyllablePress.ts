@@ -1,5 +1,11 @@
 import { useCallback, useRef } from 'react'
-import type { PointerEvent } from 'react'
+import type { MouseEvent, PointerEvent } from 'react'
+
+// Okno deduplikacji click-po-pointerup — jak w `useTapHandler`. `onPointerDown`
+// robi preventDefault (blokada lupy iOS przy long-pressie), więc natywny click
+// zwykle nie leci; ale AT (VoiceOver) i syntetyczne kliknięcia go emitują i bez
+// dedupe sylaba odezwałaby się dwa razy.
+const POINTER_TAP_DEDUP_MS = 300
 
 export type UseSyllablePressOptions = {
   onTap: () => void
@@ -17,6 +23,7 @@ export function useSyllablePress({
   const timer = useRef<number | null>(null)
   const start = useRef<{ x: number; y: number } | null>(null)
   const fired = useRef(false)
+  const pointerHandledAt = useRef(0)
 
   const clear = useCallback(() => {
     if (timer.current !== null) {
@@ -50,9 +57,21 @@ export function useSyllablePress({
   )
 
   const onPointerUp = useCallback(() => {
+    // Każda domknięta sekwencja pointera (tap ORAZ long-press) blokuje kolejny
+    // click — inaczej long-press wymówiłby jeszcze sylabę po całym słowie.
+    pointerHandledAt.current = Date.now()
     if (start.current && !fired.current) onTap()
     clear()
   }, [onTap, clear])
+
+  // Aktywacja bez pointer eventów: VoiceOver / syntetyczny click w teście.
+  const onClick = useCallback(
+    (_: MouseEvent) => {
+      if (Date.now() - pointerHandledAt.current < POINTER_TAP_DEDUP_MS) return
+      onTap()
+    },
+    [onTap],
+  )
 
   return {
     onPointerDown,
@@ -60,6 +79,7 @@ export function useSyllablePress({
     onPointerUp,
     onPointerCancel: clear,
     onPointerLeave: clear,
+    onClick,
     onContextMenu: (e: PointerEvent | { preventDefault: () => void }) => e.preventDefault(),
   }
 }
