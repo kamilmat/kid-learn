@@ -17,7 +17,6 @@ export function MatchDigitDotsExercise({ audioBus, payload, onAnswer }: Props) {
   const correct = clamp(payload.args[0] ?? 1, 1, 10)
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany')
   }, [audioBus])
 

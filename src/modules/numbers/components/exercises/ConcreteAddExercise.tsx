@@ -23,7 +23,6 @@ export function ConcreteAddExercise({ audioBus, payload, onAnswer }: Props) {
   const [showSecond, setShowSecond] = useState(false)
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany-total')
     const t = setTimeout(() => setShowSecond(true), SECOND_GROUP_DELAY_MS)
     return () => clearTimeout(t)

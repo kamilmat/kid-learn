@@ -24,7 +24,6 @@ export function SubtractMaintenance({ audioBus, payload, onAnswer }: Props) {
   const [removed, setRemoved] = useState(false)
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany-left')
     const t = setTimeout(() => setRemoved(true), REMOVE_DELAY_MS)
     return () => clearTimeout(t)

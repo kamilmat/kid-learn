@@ -20,7 +20,6 @@ export function DoublesExercise({ audioBus, payload, onAnswer }: Props) {
   const correct = n * 2
 
   useEffect(() => {
-    audioBus.stop()
     void audioBus.play('ask-howmany-total')
   }, [audioBus])
 

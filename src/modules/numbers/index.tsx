@@ -58,12 +58,13 @@ function NumbersSession({ audioBus }: { audioBus: Pick<AudioBus, 'play' | 'stop'
   const level = (params.level ?? '') as Level
   const isValid = VALID_LEVELS.has(level)
 
+  // replace — inaczej ⬅️ z level-selectu wraca do sesji, która sama startuje.
   const handleExit = useCallback(() => {
-    navigate('..')
+    navigate('..', { replace: true })
   }, [navigate])
 
   const handleTree = useCallback(() => {
-    navigate('../tree')
+    navigate('../tree', { replace: true })
   }, [navigate])
 
   if (!isValid) return <Navigate to=".." replace />

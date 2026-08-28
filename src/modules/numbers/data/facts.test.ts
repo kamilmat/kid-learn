@@ -1,14 +1,30 @@
 import { describe, expect, it } from 'vitest'
 import { generateFactsForConcept } from './facts'
+import { getLevelFacts } from './levelFacts'
 import { CONCEPTS } from './concepts'
 import type { ConceptId } from '../types'
+import type { Level } from '@/shared/settings/types'
+
+const LEVELS: Level[] = ['iskierka', 'plomyk', 'ognik', 'pochodnia']
 
 describe('generateFactsForConcept', () => {
   it('iskierka-counting-5 generates 5 facts', () => {
     const facts = generateFactsForConcept('iskierka-counting-5')
     expect(facts).toHaveLength(5)
-    expect(facts[0]?.id).toBe('count-1')
-    expect(facts[4]?.id).toBe('count-5')
+    expect(facts[0]?.id).toBe('count5-1')
+    expect(facts[4]?.id).toBe('count5-5')
+  })
+
+  it('iskierka-counting-10 liczy 6..10 pod własnym prefiksem', () => {
+    const facts = generateFactsForConcept('iskierka-counting-10')
+    expect(facts.map((f) => f.id)).toEqual([
+      'count10-6',
+      'count10-7',
+      'count10-8',
+      'count10-9',
+      'count10-10',
+    ])
+    expect(facts.map((f) => f.args[0])).toEqual([6, 7, 8, 9, 10])
   })
 
   it('plomyk-bonds-5 generates 2 bonds (1+4, 2+3)', () => {
@@ -63,6 +79,32 @@ describe('generateFactsForConcept', () => {
       const facts = generateFactsForConcept(id)
       const ids = facts.map((f) => f.id)
       expect(new Set(ids).size).toBe(ids.length)
+    }
+  })
+
+  // Id faktu jest kluczem SRS w jednym wspólnym `facts` recordzie — kolizja
+  // między konceptami dawała podwójną wagę losowania i zaliczenie do złego
+  // konceptu (`levelFacts.find` bierze pierwszy pasujący).
+  it('fact ids są globalnie unikalne między konceptami', () => {
+    const owner = new Map<string, ConceptId>()
+    const collisions: string[] = []
+    for (const id of Object.keys(CONCEPTS) as ConceptId[]) {
+      for (const fact of generateFactsForConcept(id)) {
+        const prev = owner.get(fact.id)
+        if (prev !== undefined) {
+          collisions.push(`${fact.id}: ${prev} vs ${id}`)
+        } else {
+          owner.set(fact.id, id)
+        }
+      }
+    }
+    expect(collisions).toEqual([])
+  })
+
+  it('pule poziomów też nie mają kolizji id (z maintenance Pochodni)', () => {
+    for (const level of LEVELS) {
+      const ids = getLevelFacts(level).map((f) => f.id)
+      expect(new Set(ids).size, `poziom ${level}`).toBe(ids.length)
     }
   })
 })
