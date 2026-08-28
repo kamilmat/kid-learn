@@ -125,17 +125,87 @@ describe('getActiveLetterPool', () => {
   })
 
   it('returns override when present', () => {
+    // Płomyk ma tilesPerQuestion=6, więc override musi mieć >=6 liter.
     const settings = {
       ...defaultSettings,
-      activeLettersOverride: { plomyk: ['a', 'm', 'l', 'e'] },
+      activeLettersOverride: { plomyk: ['a', 'm', 'l', 'e', 's', 'k'] },
     }
     expect(getActiveLetterPool(settings, 'plomyk')).toEqual([
       'a',
       'm',
       'l',
       'e',
+      's',
+      'k',
     ])
     // inne poziomy nadal default
+    expect(getActiveLetterPool(settings, 'iskierka')).toEqual(
+      levelLetterPools.iskierka,
+    )
+  })
+
+  it('falls back to level default when override is smaller than tilesPerQuestion', () => {
+    const settings = {
+      ...defaultSettings,
+      activeLettersOverride: { iskierka: ['a'] },
+    }
+    expect(getActiveLetterPool(settings, 'iskierka')).toEqual(
+      levelLetterPools.iskierka,
+    )
+  })
+
+  it('filters out letters outside the level pool', () => {
+    // 'ż' jest w puli Pochodni, nie Iskierki; po odfiltrowaniu zostaje 5 liter,
+    // czyli nadal >= tilesPerQuestion (4) → override obowiązuje bez 'ż'.
+    const settings = {
+      ...defaultSettings,
+      activeLettersOverride: { iskierka: ['a', 'm', 'l', 'e', 'o', 'ż', 'q'] },
+    }
+    expect(getActiveLetterPool(settings, 'iskierka')).toEqual([
+      'a',
+      'm',
+      'l',
+      'e',
+      'o',
+    ])
+  })
+
+  it('falls back when filtering leaves fewer letters than tiles', () => {
+    const settings = {
+      ...defaultSettings,
+      activeLettersOverride: { iskierka: ['a', 'm', 'ż', 'ó', 'ś', 'ń'] },
+    }
+    expect(getActiveLetterPool(settings, 'iskierka')).toEqual(
+      levelLetterPools.iskierka,
+    )
+  })
+
+  it('respects a tilesPerQuestion override when sizing the pool', () => {
+    const base = ['a', 'm', 'l', 'e', 'o']
+    expect(
+      getActiveLetterPool(
+        { ...defaultSettings, activeLettersOverride: { iskierka: base } },
+        'iskierka',
+      ),
+    ).toEqual(base)
+    // ten sam override, ale 6 kafelków → 5 liter nie wystarcza
+    expect(
+      getActiveLetterPool(
+        {
+          ...defaultSettings,
+          activeLettersOverride: { iskierka: base },
+          tilesPerQuestion: { iskierka: 6 as const },
+        },
+        'iskierka',
+      ),
+    ).toEqual(levelLetterPools.iskierka)
+  })
+
+  it('de-duplicates the override before checking its size', () => {
+    const settings = {
+      ...defaultSettings,
+      activeLettersOverride: { iskierka: ['a', 'a', 'm', 'm', 'l'] },
+    }
     expect(getActiveLetterPool(settings, 'iskierka')).toEqual(
       levelLetterPools.iskierka,
     )

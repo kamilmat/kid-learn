@@ -168,21 +168,49 @@ export function getEffectiveTimeLimit(
 }
 
 /**
- * Zwraca aktywną pulę liter dla poziomu — override jeśli istnieje
- * (i ma sens), w przeciwnym wypadku domyślna pula poziomu.
+ * Sanityzuje override puli aktywnych liter dla poziomu.
  *
- * Override z pustą tablicą lub mniejszy niż minimum (sekcja 13.2: min 4)
- * jest ignorowany przez `validateAndApplyOverride`, ale `getActiveLetterPool`
- * pozostaje konserwatywny: jeśli override istnieje (klucz obecny), zwracamy
- * go w niezmienionej postaci — walidacja jest warstwą wyżej.
+ * Zwraca `null` gdy override jest nieużywalny i trzeba wziąć default poziomu:
+ *  - litery spoza puli poziomu są odrzucane (SRS i generator dystraktorów
+ *    zakładają, że każda litera w puli należy do zakresu poziomu),
+ *  - po odfiltrowaniu musi zostać co najmniej `tilesPerQuestion` unikalnych
+ *    liter — inaczej nie da się zbudować pytania (1 cel + N-1 dystraktorów).
+ *
+ * Używane zarówno przez `getActiveLetterPool` (read path), jak i przez `merge`
+ * w settingsStore (localStorage z poprzedniej wersji mógł zapisać override,
+ * który dziś nie przechodzi walidacji).
+ */
+export function sanitizeActiveLetterOverride(
+  override: readonly string[] | undefined,
+  level: Level,
+  requiredSize: number,
+): string[] | null {
+  if (!Array.isArray(override)) return null
+  const allowed = new Set(levelLetterPools[level])
+  const filtered = Array.from(new Set(override)).filter((letter) =>
+    allowed.has(letter),
+  )
+  if (filtered.length < requiredSize) return null
+  return filtered
+}
+
+/**
+ * Zwraca aktywną pulę liter dla poziomu — override jeśli istnieje i jest
+ * użyteczny, w przeciwnym wypadku domyślna pula poziomu.
+ *
+ * Override jest sanityzowany (`sanitizeActiveLetterOverride`): litery spoza
+ * puli poziomu wypadają, a zbyt mała reszta (< efektywne `tilesPerQuestion`)
+ * powoduje fallback na default. WHY: pula mniejsza niż liczba kafelków
+ * zagłodziłaby generator dystraktorów — pytanie nie dałoby się złożyć.
  */
 export function getActiveLetterPool(
   settings: Settings,
   level: Level,
 ): string[] {
-  const override = settings.activeLettersOverride[level]
-  if (override !== undefined) {
-    return [...override]
-  }
-  return [...levelLetterPools[level]]
+  const sanitized = sanitizeActiveLetterOverride(
+    settings.activeLettersOverride[level],
+    level,
+    getEffectiveTilesPerQuestion(settings, level),
+  )
+  return sanitized ?? [...levelLetterPools[level]]
 }

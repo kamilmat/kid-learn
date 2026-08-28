@@ -7,7 +7,12 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
-import { defaultSettings } from './defaults'
+import {
+  ALL_LEVELS,
+  defaultSettings,
+  getEffectiveTilesPerQuestion,
+  sanitizeActiveLetterOverride,
+} from './defaults'
 import {
   applyAttempt,
   cooldownRemainingMs,
@@ -15,7 +20,7 @@ import {
   isCooldown,
   validateAnswer,
 } from './mathGate'
-import type { MathGateState, MathProblem, Settings } from './types'
+import type { Level, MathGateState, MathProblem, Settings } from './types'
 
 export const STORAGE_KEY = 'iskierki-state-v1'
 export const UNLOCK_TTL_MS = 5 * 60_000 // 5 min — sekcja 13.1
@@ -169,10 +174,34 @@ export const useSettings = create<SettingsStore>()(
           ...defaultSettings.numbers,
           ...(persistedNumbers ?? {}),
         }
+        const mergedSettings = {
+          ...defaultSettings,
+          ...sanitizedSettings,
+        } as Settings
+        // Override puli aktywnych liter mógł zdezaktualizować się od czasu zapisu
+        // (zmiana puli poziomu albo `tilesPerQuestion`). Sanityzujemy tutaj, żeby
+        // niepoprawny blob z localStorage nie zagłodził generatora dystraktorów.
+        const persistedOverrides = mergedSettings.activeLettersOverride
+        const rawOverrides: Partial<Record<Level, string[]>> =
+          persistedOverrides &&
+          typeof persistedOverrides === 'object' &&
+          !Array.isArray(persistedOverrides)
+            ? persistedOverrides
+            : {}
+        const validOverrides: Partial<Record<Level, string[]>> = {}
+        for (const level of ALL_LEVELS) {
+          const sanitized = sanitizeActiveLetterOverride(
+            rawOverrides[level],
+            level,
+            getEffectiveTilesPerQuestion(mergedSettings, level),
+          )
+          if (sanitized) validOverrides[level] = sanitized
+        }
+        mergedSettings.activeLettersOverride = validOverrides
         return {
           ...current,
           ...p,
-          settings: { ...defaultSettings, ...sanitizedSettings },
+          settings: mergedSettings,
         }
       },
     },

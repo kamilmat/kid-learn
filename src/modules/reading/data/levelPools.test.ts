@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { getReadingPool } from './levelPools'
 
 describe('reading level pools', () => {
-  it('Iskierka returns 23 syllable ids', () => {
+  it('Iskierka returns 24 syllable ids', () => {
     const pool = getReadingPool('iskierka')
-    expect(pool.itemIds).toHaveLength(23)
+    expect(pool.itemIds).toHaveLength(24)
     expect(pool.itemIds.every(id => id.startsWith('syl-'))).toBe(true)
   })
 
