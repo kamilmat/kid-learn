@@ -1,5 +1,6 @@
 {
   "_voice": "zofia",
+  "_engine": "azure-ipa",
   "syl-MA": "ma",
   "syl-TA": "ta",
   "syl-LA": "la",
