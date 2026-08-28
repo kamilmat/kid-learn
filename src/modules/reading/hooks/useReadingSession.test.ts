@@ -246,6 +246,13 @@ describe('useReadingSession', () => {
     expect(result.current.pickedScene).toBeNull()
   })
 
+  it('start() zeruje persistowany wildCelebrationCounter z poprzedniej sesji', () => {
+    useReading.setState({ wildCelebrationCounter: 7 })
+    const { result } = renderHook(() => useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings }))
+    act(() => result.current.start())
+    expect(useReading.getState().wildCelebrationCounter).toBe(0)
+  })
+
   it('triggers wild celebration when correct count >= wildCelebrationFreq + jitter', () => {
     const settings = { reading: { wildCelebrationFreq: 2, questionsPerSession: {} } } as any
     // rng=0.5 → jitter = Math.floor(0.5*5) - 2 = 0; trigger at counter >= 2

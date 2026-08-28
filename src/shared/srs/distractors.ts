@@ -40,7 +40,9 @@ function shapeOf(letter: string): string {
   return SHAPE_GROUPS[letter] ?? 'other'
 }
 
-function shuffled<T>(arr: T[], rng: () => number): T[] {
+// Fisher-Yates — nieobciążony, w przeciwieństwie do `sort(() => Math.random() - 0.5)`.
+// Wspólny dla wszystkich modułów, żeby tasowanie zużywało rng tak samo wszędzie.
+export function shuffled<T>(arr: readonly T[], rng: () => number): T[] {
   const copy = arr.slice()
   for (let i = copy.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1))
@@ -54,9 +56,14 @@ function shuffled<T>(arr: T[], rng: () => number): T[] {
   return copy
 }
 
-function pickOne<T>(arr: T[], rng: () => number): T | undefined {
+// Wariant dla list, o których wywołujący wie, że są niepuste.
+export function pickRandom<T>(arr: readonly T[], rng: () => number): T {
+  return arr[Math.floor(rng() * arr.length)] as T
+}
+
+function pickOne<T>(arr: readonly T[], rng: () => number): T | undefined {
   if (arr.length === 0) return undefined
-  return arr[Math.floor(rng() * arr.length)]
+  return pickRandom(arr, rng)
 }
 
 const CONTRASTIVE_PROBABILITY = 0.7

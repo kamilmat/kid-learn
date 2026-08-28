@@ -8,7 +8,7 @@ const SCENES: readonly Scene[] = [
   { stage: 3, offsetMs: 3200 },
 ]
 
-function OgnikNeardoubles({ stage }: { stage: number }) {
+export function OgnikNeardoubles({ stage }: { stage: number }) {
   const star = CONCRETE_SETS[1] ?? CONCRETE_SETS[0]!
   const rightCount = stage >= 2 ? 5 : 4
   const result = stage >= 3 ? 9 : stage >= 1 ? 8 : 0
@@ -23,4 +23,3 @@ function OgnikNeardoubles({ stage }: { stage: number }) {
   )
 }
 OgnikNeardoubles.SCENES = SCENES
-export default OgnikNeardoubles

@@ -26,6 +26,7 @@ import { getReadingPool } from '../data/levelPools'
 import { ALL_SYLLABLES, getSyllableAudioKey } from '../data/syllables'
 import { ALL_WORDS, getWordById, getWordsByLevel, getWordAudioKey } from '../data/words'
 import { pickNextItem } from '@/shared/srs/select'
+import { pickRandom, shuffled } from '@/shared/srs/distractors'
 import { nextBox, nextRecentWrong } from '@/shared/srs/update'
 import { useReading } from '../store/readingStore'
 import type { Outcome } from '@/shared/srs/types'
@@ -124,24 +125,6 @@ function makeInitialWordState(wordId: string, level: Level): WordState {
   }
 }
 
-function shuffleArray<T>(arr: T[], rng: () => number): T[] {
-  const result = [...arr]
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    const a = result[i]
-    const b = result[j]
-    if (a !== undefined && b !== undefined) {
-      result[i] = b
-      result[j] = a
-    }
-  }
-  return result
-}
-
-function pickRandom<T>(arr: readonly T[], rng: () => number): T {
-  return arr[Math.floor(rng() * arr.length)] as T
-}
-
 // Generuje N unikalnych losowych elementów z tablicy wykluczając podane id
 function pickRandomDistinct<T extends { id: string }>(
   pool: readonly T[],
@@ -150,8 +133,7 @@ function pickRandomDistinct<T extends { id: string }>(
   rng: () => number,
 ): T[] {
   const available = pool.filter((x) => !exclude.includes(x.id))
-  const shuffled = shuffleArray(available, rng)
-  return shuffled.slice(0, count)
+  return shuffled(available, rng).slice(0, count)
 }
 
 // Generuje pytanie syllable-match (Iskierka)
@@ -166,7 +148,7 @@ function generateSyllableMatch(
   const targetSyllable = targetId.replace('syl-', '')
   // 3 dystraktorów z puli sylab (różne od targetu)
   const distractors = pickRandomDistinct(ALL_SYLLABLES, CHOICE_COUNT - 1, [targetId], rng)
-  const choices = shuffleArray(
+  const choices = shuffled(
     [targetSyllable, ...distractors.map((d) => d.text)],
     rng,
   )
@@ -213,7 +195,7 @@ function generateWordChoice(
   // 3 dystraktorów z puli tego poziomu
   const levelWords = getWordsByLevel(word.level)
   const distractors = pickRandomDistinct(levelWords, CHOICE_COUNT - 1, [targetId], rng)
-  const choices = shuffleArray(
+  const choices = shuffled(
     [word.text, ...distractors.map((d) => d.text)],
     rng,
   )
@@ -258,7 +240,7 @@ function pickSyllableFillDistractors(
         ? preferred2
         : fallback
 
-  return shuffleArray(pool, rng).slice(0, count)
+  return shuffled(pool, rng).slice(0, count)
 }
 
 // Generuje pytanie syllable-fill (Pochodnia)
@@ -306,7 +288,7 @@ function generateSyllableFill(
 
   // Dystraktorzy dobrani z bogatej puli z dopasowaniem długości (bug-fix: nie MA/TA dla DŹWIEDŹ)
   const distractorTexts = pickSyllableFillDistractors(missingSyllable, CHOICE_COUNT - 1, rng)
-  const choices = shuffleArray(
+  const choices = shuffled(
     [missingSyllable, ...distractorTexts],
     rng,
   )
@@ -348,7 +330,10 @@ function playPromptAudio(
 }
 
 export function useReadingSession({ level, audioBus, settings, rng = Math.random, now = () => Date.now() }: Args): Hook {
-  const store = useReading()
+  // Selektory zamiast `useReading()` — hook rerenderuje się tylko przy zmianie
+  // map SRS, a nie przy każdym zapisie do store'u (album, ceremonie, licznik).
+  const persistedSyllables = useReading((st) => st.syllables)
+  const persistedWords = useReading((st) => st.words)
 
   const [status, setStatus] = useState<Status>('idle')
   const [currentQuestion, setCurrentQuestion] = useState<ReadingQuestion | null>(null)
@@ -410,11 +395,11 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   const buildSyllableStates = useCallback((): Record<string, SyllableState> => {
     const states: Record<string, SyllableState> = {}
     for (const syl of ALL_SYLLABLES) {
-      const persisted = store.syllables[syl.id]
+      const persisted = persistedSyllables[syl.id]
       states[syl.id] = persisted ?? makeInitialSyllableState(syl.id)
     }
     return states
-  }, [store.syllables])
+  }, [persistedSyllables])
 
   // Buduje mapę SRS states dla puli słów danego poziomu
   const buildWordStates = useCallback(
@@ -422,12 +407,12 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       const states: Record<string, WordState> = {}
       const words = getWordsByLevel(lvl)
       for (const w of words) {
-        const persisted = store.words[w.id]
+        const persisted = persistedWords[w.id]
         states[w.id] = persisted ?? makeInitialWordState(w.id, lvl)
       }
       return states
     },
-    [store.words],
+    [persistedWords],
   )
 
   // Generuje następne pytanie i ustawia state
@@ -723,6 +708,10 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
 
     // Oblicz jitter dla tej sesji: ±2
     wildJitterRef.current = Math.floor(rng() * 5) - 2  // -2, -1, 0, 1, 2
+
+    // Licznik wild celebration jest persistowany — bez resetu nowa sesja startowała
+    // z licznikiem z poprzedniej i potrafiła odpalić fajerwerki na pierwszym pytaniu.
+    useReading.getState().resetWildCounter()
 
     // Inicjalizuj SRS states z persisted store lub default
     syllableStatesRef.current = buildSyllableStates()

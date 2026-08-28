@@ -18,7 +18,7 @@ import { WordAssemblyExercise } from './exercises/WordAssemblyExercise'
 import { WordChoiceExercise } from './exercises/WordChoiceExercise'
 import { SyllableFillExercise } from './exercises/SyllableFillExercise'
 import { FeedbackOverlay } from './FeedbackOverlay'
-import { PauseOverlay } from './PauseOverlay'
+import { PauseOverlay } from '@/shared/ui/PauseOverlay'
 import { SessionEnd } from './SessionEnd'
 import { WordScene } from './WordScene'
 import { pickRandomScene } from '../data/scenes'
@@ -341,10 +341,7 @@ export function SessionView({
         )}
 
         {session.paused && (
-          <PauseOverlay
-            onResume={session.resume}
-            onExit={handleExit}
-          />
+          <PauseOverlay onResume={session.resume} onQuit={handleExit} />
         )}
       </div>
     </div>

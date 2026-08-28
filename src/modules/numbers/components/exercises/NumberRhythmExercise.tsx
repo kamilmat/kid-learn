@@ -6,6 +6,7 @@ import { DotPattern } from '../representations/DotPattern'
 import { DigitTile } from '../representations/DigitTile'
 import { colors, radii } from '@/app/theme'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices } from '../../utils/buildChoices'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -25,7 +26,7 @@ export function NumberRhythmExercise({ audioBus, payload, onAnswer }: Props) {
 
   // Sekwencja: pattern × 2 + slot na pytanie
   const sequence = useMemo(() => [...pattern, ...pattern], [pattern])
-  const choices = useMemo(() => buildChoices(expectedNext, 1, 6), [expectedNext])
+  const choices = useMemo(() => buildChoices(expectedNext, { min: 1, max: 6 }), [expectedNext])
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
@@ -115,11 +116,4 @@ function DropTarget({ children }: { children: ReactNode }) {
       {children}
     </div>
   )
-}
-
-function buildChoices(correct: number, min: number, max: number): number[] {
-  const pool: number[] = []
-  for (let n = min; n <= max; n++) if (n !== correct) pool.push(n)
-  const distractors = pool.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

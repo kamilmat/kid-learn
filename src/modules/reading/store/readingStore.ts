@@ -2,8 +2,6 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { SyllableState, WordState, ReadingSessionEvent } from '../types'
 import type { Level } from '@/shared/settings/types'
-import { getSyllableAudioKey } from '../data/syllables'
-import { getWordById } from '../data/words'
 
 type SessionLog = {
   startedAt: number
@@ -23,8 +21,6 @@ export type ReadingState = {
   seenSceneVariants: Record<string, string[]>
   pendingCeremonyMilestone: number | null
 
-  ensureSyllableInitialized: (syllable: string) => void
-  ensureWordInitialized: (wordId: string) => void
   applySessionResults: (
     updatedSyllables: Record<string, SyllableState>,
     updatedWords: Record<string, WordState>,
@@ -62,51 +58,6 @@ export const useReading = create<ReadingState>()(
   persist(
     (set, get) => ({
       ...initialState,
-
-      ensureSyllableInitialized: (syllable) => {
-        const id = getSyllableAudioKey(syllable)
-        if (!get().syllables[id]) {
-          set((s) => ({
-            syllables: {
-              ...s.syllables,
-              [id]: {
-                id,
-                syllable,
-                box: 1,
-                lastSeen: 0,
-                recentWrong: 0,
-                totalSeen: 0,
-                totalCorrect: 0,
-                totalWrong: 0,
-              },
-            },
-          }))
-        }
-      },
-
-      ensureWordInitialized: (wordId) => {
-        if (!get().words[wordId]) {
-          const word = getWordById(wordId)
-          if (!word) return
-          set((s) => ({
-            words: {
-              ...s.words,
-              [wordId]: {
-                id: wordId,
-                word: word.text,
-                box: 1,
-                lastSeen: 0,
-                recentWrong: 0,
-                totalSeen: 0,
-                totalCorrect: 0,
-                totalWrong: 0,
-                level: word.level,
-                album: false,
-              },
-            },
-          }))
-        }
-      },
 
       applySessionResults: (updatedSyllables, updatedWords, log) => {
         set((s) => ({

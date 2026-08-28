@@ -1,6 +1,7 @@
-// PauseOverlay — modal "Pauza".
-// Sekcja 6.7 spec: pełnoekranowy duży przycisk wznowienia + wyjście.
-// No-text dla dziecka — same ikony + audio cue.
+// PauseOverlay — wspólny modal "Pauza" dla wszystkich modułów sesyjnych.
+// No-text dla dziecka: same ikony (▶ / 🏠) + audio cue z sesji (nav-pause /
+// nav-resume). Tap-targety ≥ 60×60. Wyciszenie kolejki robi hook sesji —
+// overlay sam nic nie gra.
 
 import { colors, radii } from '@/app/theme'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
@@ -8,6 +9,12 @@ import { useTapHandler } from '@/shared/ui/useTapHandler'
 export type PauseOverlayProps = {
   onResume: () => void
   onQuit: () => void
+  /**
+   * `absolute` gdy overlay ma zostać w kontenerze sesji (Cyferki mają własny
+   * stacking context), `fixed` gdy ma przykryć cały ekran.
+   */
+  position?: 'fixed' | 'absolute'
+  zIndex?: number
 }
 
 const tapStyleExtras = {
@@ -17,18 +24,24 @@ const tapStyleExtras = {
   WebkitTapHighlightColor: 'transparent',
 }
 
-export function PauseOverlay({ onResume, onQuit }: PauseOverlayProps) {
+export function PauseOverlay({
+  onResume,
+  onQuit,
+  position = 'fixed',
+  zIndex = 40,
+}: PauseOverlayProps) {
   const resumeTap = useTapHandler({ onTap: onResume })
   const quitTap = useTapHandler({ onTap: onQuit })
+
   return (
     <div
       data-testid="pause-overlay"
       role="dialog"
       aria-label="Pauza"
       style={{
-        position: 'fixed',
+        position,
         inset: 0,
-        zIndex: 40,
+        zIndex,
         background: '#2d2d33dd',
         display: 'flex',
         alignItems: 'center',
@@ -37,11 +50,13 @@ export function PauseOverlay({ onResume, onQuit }: PauseOverlayProps) {
         gap: 24,
       }}
     >
-      <div aria-hidden="true" style={{ fontSize: 96, color: '#ffffff' }}>⏸</div>
+      <div aria-hidden="true" style={{ fontSize: 96, color: '#ffffff' }}>
+        ⏸
+      </div>
       <button
         type="button"
         aria-label="Wznów"
-        data-testid="resume-button"
+        data-testid="pause-resume"
         {...resumeTap}
         style={{
           width: 140,
@@ -61,7 +76,7 @@ export function PauseOverlay({ onResume, onQuit }: PauseOverlayProps) {
       <button
         type="button"
         aria-label="Wyjdź"
-        data-testid="quit-button"
+        data-testid="pause-exit"
         {...quitTap}
         style={{
           width: 80,

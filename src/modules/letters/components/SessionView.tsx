@@ -24,7 +24,7 @@ import type {
 import { useSession } from '@/modules/letters/hooks/useSession'
 import type { LetterTileState } from './LetterTile'
 import { FeedbackOverlay } from './FeedbackOverlay'
-import { PauseOverlay } from './PauseOverlay'
+import { PauseOverlay } from '@/shared/ui/PauseOverlay'
 import { QuizCard } from './QuizCard'
 import { SessionEnd } from './SessionEnd'
 import type {

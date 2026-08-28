@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors, radii } from '@/app/theme'
 import type { AnswerOutcome } from '../../types'
+import { shuffled } from '@/shared/srs/distractors'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -206,11 +207,11 @@ function buildEquations(a: number, b: number, whole: number): Equation[] {
     { id: 'false-wsum', text: `${whole} + ${a} = ${b}`, isTrue: false },
   ].filter((eq) => !isAccidentallyTrue(eq.text))
 
-  const shuffled = falseCandidates.sort(() => Math.random() - 0.5)
-  const falseCount = Math.min(3, shuffled.length)
-  const falseEquations = shuffled.slice(0, falseCount)
+  const shuffledFalse = shuffled(falseCandidates, Math.random)
+  const falseCount = Math.min(3, shuffledFalse.length)
+  const falseEquations = shuffledFalse.slice(0, falseCount)
 
-  return [...trueEquations, ...falseEquations].sort(() => Math.random() - 0.5)
+  return shuffled([...trueEquations, ...falseEquations], Math.random)
 }
 
 function isAccidentallyTrue(text: string): boolean {

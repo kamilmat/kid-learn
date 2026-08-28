@@ -7,7 +7,7 @@ const SCENES: readonly Scene[] = [
   { stage: 3, offsetMs: 3000 },
 ]
 
-function OgnikMake10({ stage }: { stage: number }) {
+export function OgnikMake10({ stage }: { stage: number }) {
   const count = stage === 1 ? 8 : stage === 2 ? 10 : stage >= 3 ? 13 : 0
   const highlightAfter = stage === 2 ? 8 : stage >= 3 ? 10 : undefined
   return (
@@ -25,4 +25,3 @@ function OgnikMake10({ stage }: { stage: number }) {
   )
 }
 OgnikMake10.SCENES = SCENES
-export default OgnikMake10

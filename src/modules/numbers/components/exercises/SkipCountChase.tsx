@@ -5,6 +5,7 @@ import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors } from '@/app/theme'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices } from '../../utils/buildChoices'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -36,7 +37,11 @@ export function SkipCountChase({ audioBus, payload, onAnswer }: Props) {
   }, [step, currentIdx])
 
   const choices = useMemo(
-    () => buildChoices(nextValue, step, 1, 100),
+    () => buildChoices(nextValue, {
+      min: 1,
+      max: 100,
+      offsets: [-step, step, -1, 1, -2, 2],
+    }),
     [nextValue, step],
   )
 
@@ -138,14 +143,4 @@ function DropTarget({ children }: { children: ReactNode }) {
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.floor(n)))
-}
-
-function buildChoices(correct: number, step: number, min: number, max: number): number[] {
-  const offsets = [-step, step, -1, 1, -2, 2]
-  const candidates = offsets
-    .map((d) => correct + d)
-    .filter((v) => v >= min && v <= max && v !== correct)
-  const unique = Array.from(new Set(candidates))
-  const distractors = unique.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

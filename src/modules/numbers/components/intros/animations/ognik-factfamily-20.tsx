@@ -11,7 +11,7 @@ const SCENES: readonly Scene[] = [
 
 const EQUATIONS = ['', '8 + 7 = 15', '7 + 8 = 15', '15 − 8 = 7', '15 − 7 = 8']
 
-function OgnikFactfamily20({ stage }: { stage: number }) {
+export function OgnikFactfamily20({ stage }: { stage: number }) {
   return (
     <div data-testid="anim-ognik-factfamily-20" style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
       <NumberBondShape whole={15} partA={8} partB={7} />
@@ -26,4 +26,3 @@ function OgnikFactfamily20({ stage }: { stage: number }) {
   )
 }
 OgnikFactfamily20.SCENES = SCENES
-export default OgnikFactfamily20

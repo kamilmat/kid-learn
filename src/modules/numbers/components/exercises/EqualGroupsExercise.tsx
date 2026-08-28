@@ -7,6 +7,7 @@ import { ConcreteIcons } from '../representations/ConcreteIcons'
 import { DigitTile } from '../representations/DigitTile'
 import { pickIconSet } from '../../data/concreteSets'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices, NEAR_MISS_OFFSETS } from '../../utils/buildChoices'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -27,7 +28,11 @@ export function EqualGroupsExercise({ audioBus, payload, onAnswer }: Props) {
     void audioBus.play('ask-howmany-total')
   }, [audioBus])
 
-  const choices = useMemo(() => buildChoices(total, 1, 30), [total])
+  const choices = useMemo(
+    () =>
+      buildChoices(total, { min: 1, max: 30, offsets: NEAR_MISS_OFFSETS }),
+    [total],
+  )
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
@@ -133,12 +138,4 @@ function DropTarget({ children }: { children: ReactNode }) {
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.floor(n)))
-}
-
-function buildChoices(correct: number, min: number, max: number): number[] {
-  const candidates = [-3, -2, -1, 1, 2, 3]
-    .map((d) => correct + d)
-    .filter((v) => v >= min && v <= max && v !== correct)
-  const distractors = candidates.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

@@ -12,7 +12,7 @@ import { extractCorrectValue } from '../data/correctValue'
 import type { AnswerOutcome, ExerciseType, Question } from '../types'
 import { ConceptIntro } from './intros/ConceptIntro'
 import { SessionEnd } from './SessionEnd'
-import { PauseOverlay } from './PauseOverlay'
+import { PauseOverlay } from '@/shared/ui/PauseOverlay'
 import { SubitizeFlashExercise } from './exercises/SubitizeFlashExercise'
 import { MatchDigitDotsExercise } from './exercises/MatchDigitDotsExercise'
 import { NumberRhythmExercise } from './exercises/NumberRhythmExercise'
@@ -185,7 +185,12 @@ export function SessionView({ level, audioBus, settings, onExit, onTree }: Props
         />
       )}
       {session.status === 'paused' && (
-        <PauseOverlay onResume={session.resume} onExit={handleQuit} />
+        <PauseOverlay
+          onResume={session.resume}
+          onQuit={handleQuit}
+          position="absolute"
+          zIndex={100}
+        />
       )}
     </div>
   )

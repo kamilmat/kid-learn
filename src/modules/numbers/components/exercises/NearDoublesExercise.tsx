@@ -6,6 +6,7 @@ import { colors } from '@/app/theme'
 import { TenFrame } from '../representations/TenFrame'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
+import { buildChoices, NEAR_MISS_OFFSETS } from '../../utils/buildChoices'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
@@ -27,7 +28,11 @@ export function NearDoublesExercise({ audioBus, payload, onAnswer }: Props) {
     void audioBus.play('ask-howmany-total')
   }, [audioBus])
 
-  const choices = useMemo(() => buildChoices(correct, 1, 20), [correct])
+  const choices = useMemo(
+    () =>
+      buildChoices(correct, { min: 1, max: 20, offsets: NEAR_MISS_OFFSETS }),
+    [correct],
+  )
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
@@ -124,12 +129,4 @@ function DropTarget({ children }: { children: ReactNode }) {
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.floor(n)))
-}
-
-function buildChoices(correct: number, min: number, max: number): number[] {
-  const candidates = [-3, -2, -1, 1, 2, 3]
-    .map((d) => correct + d)
-    .filter((v) => v >= min && v <= max && v !== correct)
-  const distractors = candidates.sort(() => Math.random() - 0.5).slice(0, 3)
-  return [correct, ...distractors].sort(() => Math.random() - 0.5)
 }

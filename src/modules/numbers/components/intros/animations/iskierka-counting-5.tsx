@@ -9,7 +9,7 @@ const SCENES: readonly Scene[] = [
   { stage: 5, offsetMs: 3000 },
 ]
 
-function IskierkaCounting5({ stage }: { stage: number }) {
+export function IskierkaCounting5({ stage }: { stage: number }) {
   return (
     <div data-testid="anim-iskierka-counting-5" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
       <TenFrame count={Math.min(stage, 5)} size={56} />
@@ -20,4 +20,3 @@ function IskierkaCounting5({ stage }: { stage: number }) {
   )
 }
 IskierkaCounting5.SCENES = SCENES
-export default IskierkaCounting5
