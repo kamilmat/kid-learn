@@ -49,11 +49,12 @@ export function DotPattern({
   dotColor = '#dc2626',
   seed = 1,
 }: Props) {
-  const safeCount = Math.max(1, Math.min(6, Math.floor(count)))
-  const positions =
-    pattern === 'dice'
-      ? DICE_POSITIONS[safeCount] ?? []
-      : scatteredPositions(safeCount, seed)
+  // Do 10 — subitizing „ile kropek" obsługuje też liczenie 7-10. Układ kostki
+  // istnieje wyłącznie do 6, więc powyżej (i przy brakującym układzie) spadamy
+  // na rozsypane kropki zamiast rysować pustą ramkę.
+  const safeCount = Math.max(1, Math.min(10, Math.floor(count)))
+  const dicePositions = pattern === 'dice' ? DICE_POSITIONS[safeCount] : undefined
+  const positions = dicePositions ?? scatteredPositions(safeCount, seed)
   const dotSize = Math.max(20, Math.floor(size * 0.16))
 
   return (
