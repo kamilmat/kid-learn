@@ -5,6 +5,9 @@ import { persist } from 'zustand/middleware'
 // myli się w kafelku) to nadal JEDNO czytanie — dopiero po minucie liczymy kolejne.
 export const RECOUNT_GUARD_MS = 60_000
 
+/** Trafienie za 1. razem / za 2. / nietrafione (druga próba też była pudłem). */
+export type ComprehensionResult = 'first' | 'second' | 'miss'
+
 export type CzytankiState = {
   openedIds: string[]
   lastOpenedId: string | null
@@ -17,11 +20,15 @@ export type CzytankiState = {
   readCounts: Record<string, number>
   /** id czytanki → timestamp ostatniego zaliczonego przeczytania (guard 60 s). */
   lastCountedAt: Record<string, number>
-  /** id czytanek, w których dziecko odpowiedziało na pytanie o rozumienie. */
+  /** id czytanek, w których dziecko trafiło odpowiedź (badge ✔ na ekranie czytanki). */
   answeredQuestionIds: string[]
-  markOpened: (id: string, nowMs?: number) => void
+  /** id czytanki → czy trafiło za pierwszym, za drugim razem, czy wcale. */
+  comprehensionResults: Record<string, ComprehensionResult>
+  markOpened: (id: string) => void
+  /** Zaliczenie czytania — wołane dopiero po dowodzie przejścia tekstu (nie na mount). */
+  markRead: (id: string, nowMs?: number) => void
   recordVisit: (id: string, taps: Record<string, number>, ms: number) => void
-  markQuestionAnswered: (id: string) => void
+  recordComprehension: (id: string, result: ComprehensionResult) => void
   markIntroSeen: (key: string) => void
   hasSeenIntro: (key: string) => boolean
   resetAllProgress: () => void
@@ -36,6 +43,7 @@ const initialState = {
   readCounts: {} as Record<string, number>,
   lastCountedAt: {} as Record<string, number>,
   answeredQuestionIds: [] as string[],
+  comprehensionResults: {} as Record<string, ComprehensionResult>,
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -73,6 +81,11 @@ export function mergeCzytankiState(persisted: unknown, current: CzytankiState): 
     readCounts: isPlainObject(p.readCounts) ? (p.readCounts as Record<string, number>) : {},
     lastCountedAt: isPlainObject(p.lastCountedAt) ? (p.lastCountedAt as Record<string, number>) : {},
     answeredQuestionIds: Array.isArray(p.answeredQuestionIds) ? p.answeredQuestionIds : [],
+    // Dołożone bez bumpu wersji — `merge` biegnie przy KAŻDEJ rehydracji, więc
+    // stary persist (bez tego pola) i tak dostaje tu domyślne `{}`.
+    comprehensionResults: isPlainObject(p.comprehensionResults)
+      ? (p.comprehensionResults as Record<string, ComprehensionResult>)
+      : {},
   } as CzytankiState
 }
 
@@ -80,14 +93,20 @@ export const useCzytanki = create<CzytankiState>()(
   persist(
     (set, get) => ({
       ...initialState,
-      markOpened: (id, nowMs = Date.now()) =>
+      // Samo wejście na ekran to jeszcze nie przeczytanie — przeklikanie listy
+      // strzałką ▶ zaliczałoby wszystko. Licznik podbija dopiero `markRead`.
+      markOpened: (id) =>
+        set((s) => ({
+          lastOpenedId: id,
+          openedIds: s.openedIds.includes(id) ? s.openedIds : [...s.openedIds, id],
+        })),
+      markRead: (id, nowMs = Date.now()) =>
         set((s) => {
           const fresh = nowMs - (s.lastCountedAt[id] ?? 0) >= RECOUNT_GUARD_MS
+          if (!fresh) return s
           return {
-            lastOpenedId: id,
-            openedIds: s.openedIds.includes(id) ? s.openedIds : [...s.openedIds, id],
-            readCounts: fresh ? { ...s.readCounts, [id]: (s.readCounts[id] ?? 0) + 1 } : s.readCounts,
-            lastCountedAt: fresh ? { ...s.lastCountedAt, [id]: nowMs } : s.lastCountedAt,
+            readCounts: { ...s.readCounts, [id]: (s.readCounts[id] ?? 0) + 1 },
+            lastCountedAt: { ...s.lastCountedAt, [id]: nowMs },
           }
         }),
       /** Batch na wyjściu z ekranu — nie zapisujemy per tap (persist to zapis do localStorage). */
@@ -100,12 +119,16 @@ export const useCzytanki = create<CzytankiState>()(
             timeMs: { ...s.timeMs, [id]: (s.timeMs[id] ?? 0) + ms },
           }
         }),
-      markQuestionAnswered: (id) =>
-        set((s) =>
-          s.answeredQuestionIds.includes(id)
-            ? s
-            : { answeredQuestionIds: [...s.answeredQuestionIds, id] },
-        ),
+      // Badge ✔ należy się tylko za trafienie; 'miss' zostaje w statystyce,
+      // ale dziecko dostaje pytanie ❓ ponownie przy kolejnym czytaniu.
+      recordComprehension: (id, result) =>
+        set((s) => ({
+          comprehensionResults: { ...s.comprehensionResults, [id]: result },
+          answeredQuestionIds:
+            result !== 'miss' && !s.answeredQuestionIds.includes(id)
+              ? [...s.answeredQuestionIds, id]
+              : s.answeredQuestionIds,
+        })),
       markIntroSeen: (key) =>
         set((s) => (s.seenIntros.includes(key) ? s : { seenIntros: [...s.seenIntros, key] })),
       hasSeenIntro: (key) => get().seenIntros.includes(key),

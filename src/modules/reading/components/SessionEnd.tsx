@@ -193,9 +193,12 @@ export function SessionEnd({ results, level, onExit, onAlbum, audioBus }: Sessio
   // wpis pasujący do poziomu to właśnie ta sesja, nie poprzednia.
   const levelSessions = sessions.filter((log) => log.level === level)
   const previousRatios = levelSessions.slice(0, -1).map((log) => {
-    const total = log.events.length
+    // Zdarzenia drugiej próby (`attempt: 2`) nie są osobnymi pytaniami — liczone
+    // podwoiłyby mianownik sesji z poprawkami. Ta sama reguła co w `aggregate.ts`.
+    const firstAttempts = log.events.filter((e) => e.attempt !== 2)
+    const total = firstAttempts.length
     if (total === 0) return 0
-    const correct = log.events.filter((e) => e.outcome === 'correct').length
+    const correct = firstAttempts.filter((e) => e.outcome === 'correct').length
     return correct / total
   })
   const levelSuggestion = suggestLevel({ correctRatio, avgBox, previousRatios })

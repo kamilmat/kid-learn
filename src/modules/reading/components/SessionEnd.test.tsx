@@ -91,4 +91,46 @@ describe('SessionEnd — ceremonia → podsumowanie', () => {
     expect(screen.queryByTestId('ceremony-view')).not.toBeInTheDocument()
     expect(play).toHaveBeenCalledWith('session-stop-enough')
   })
+
+  it('previousRatios pomija poprawki (attempt: 2) — inaczej sesja z hiperkorekcją wygląda lepiej niż była', () => {
+    const answer = (outcome: 'correct' | 'wrong', attempt?: 2) => ({
+      type: 'answer' as const,
+      ts: 0,
+      outcome,
+      responseMs: 1000,
+      ...(attempt !== undefined ? { attempt } : {}),
+    })
+    // Poprzednia sesja: 1/3 za pierwszym podejściem (0.33 ≤ 0.4 → sygnał „w dół"),
+    // ale z retry-correct policzonymi jako pytania byłoby 3/5 = 0.6 i sugestia
+    // by nie padła.
+    const prevLog = {
+      id: 'prev',
+      startedAt: 0,
+      endedAt: 1,
+      level: 'iskierka' as const,
+      events: [
+        answer('wrong'),
+        answer('correct', 2),
+        answer('wrong'),
+        answer('correct', 2),
+        answer('correct'),
+      ],
+    }
+    const currentLog = { ...prevLog, id: 'current', events: [] }
+    useReading.setState({ sessions: [prevLog, currentLog] })
+    const play = vi.fn().mockResolvedValue(true)
+
+    render(
+      <SessionEnd
+        results={{ outcomes: { correct: 1, wrong: 2, dontKnow: 0 }, iskierkiEarned: 1, newAlbumWords: [], durationMs: 10_000 }}
+        level="iskierka"
+        onExit={vi.fn()}
+        onAlbum={vi.fn()}
+        audioBus={{ play, stop: vi.fn() }}
+      />,
+    )
+
+    expect(play).toHaveBeenCalledWith('reading-level-down')
+    useReading.setState({ sessions: [] })
+  })
 })

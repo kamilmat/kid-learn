@@ -26,21 +26,26 @@ type Props = {
 type OptionTileProps = {
   emoji: string
   index: number
+  /** Podświetlenie poprawnej odpowiedzi po nietrafieniu — kafelki nie reagują wtedy na tap. */
+  reveal: 'answer' | 'dim' | null
   onPick: (index: number) => void
 }
 
-function OptionTile({ emoji, index, onPick }: OptionTileProps) {
-  const tap = useTapHandler({ onTap: () => onPick(index) })
+function OptionTile({ emoji, index, reveal, onPick }: OptionTileProps) {
+  const tap = useTapHandler({ onTap: () => onPick(index), disabled: reveal !== null })
   return (
     <button
       type="button"
       data-testid="comprehension-option"
       data-option-index={index}
+      {...(reveal === 'answer' ? { 'data-revealed': 'true' } : {})}
       aria-label={`Odpowiedź ${index + 1}`}
       {...tap}
       style={{
         width: TILE_PX, height: TILE_PX, borderRadius: radii.kid,
-        border: `4px solid ${colors.accentBlue}`, background: '#fff', fontSize: 64,
+        border: `4px solid ${reveal === 'answer' ? '#16a34a' : colors.accentBlue}`,
+        background: reveal === 'answer' ? '#bbf7d0' : '#fff', fontSize: 64,
+        opacity: reveal === 'dim' ? 0.35 : 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer', touchAction: 'manipulation', userSelect: 'none',
         WebkitUserSelect: 'none', WebkitTapHighlightColor: 'transparent',
@@ -52,10 +57,12 @@ function OptionTile({ emoji, index, onPick }: OptionTileProps) {
 }
 
 export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onClose }: Props) {
-  const markQuestionAnswered = useCzytanki((s) => s.markQuestionAnswered)
+  const recordComprehension = useCzytanki((s) => s.recordComprehension)
   // Indeks kafelka, który odpadł po pierwszej pomyłce (null = wszystkie trzy widoczne).
   const [rejected, setRejected] = useState<number | null>(null)
   const [praising, setPraising] = useState(false)
+  // Druga pomyłka: bez 👏, ale i bez porażki — pokazujemy poprawny kafelek.
+  const [missing, setMissing] = useState(false)
   const timersRef = useRef<number[]>([])
   const closedRef = useRef(false)
   // Zamknięcie tapem ✋ samo startuje cue pożegnalne — unmount nie może go uciąć.
@@ -88,25 +95,37 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
     onClose()
   }, [onClose])
 
-  const praise = useCallback(() => {
-    setPraising(true)
-    audioBus.stop()
-    markQuestionAnswered(czytankaId)
-    const startedAt = Date.now()
-    timersRef.current.push(window.setTimeout(close, PRAISE_MAX_MS))
-    void audioBus.play('czytanki-q-praise').then(() => {
-      if (closedRef.current) return
-      const rest = Math.max(0, PRAISE_MIN_MS - (Date.now() - startedAt))
-      timersRef.current.push(window.setTimeout(close, rest))
-    })
-  }, [audioBus, close, czytankaId, markQuestionAnswered])
+  // Wspólne domknięcie dla 👏 i „nie szkodzi": klip ma wybrzmieć (MIN), ale brak
+  // pliku/zablokowany autoplay nie może zatrzasnąć dziecka w overlayu (MAX).
+  const playThenClose = useCallback(
+    (key: string) => {
+      audioBus.stop()
+      const startedAt = Date.now()
+      timersRef.current.push(window.setTimeout(close, PRAISE_MAX_MS))
+      void audioBus.play(key).then(() => {
+        if (closedRef.current) return
+        const rest = Math.max(0, PRAISE_MIN_MS - (Date.now() - startedAt))
+        timersRef.current.push(window.setTimeout(close, rest))
+      })
+    },
+    [audioBus, close],
+  )
 
   const onPick = useCallback(
     (index: number) => {
-      if (praising) return
-      // Druga próba zawsze kończy się 👏 — dziecko ma wyjść z pytania z sukcesem.
-      if (index === comprehension.answer || rejected !== null) {
-        praise()
+      if (praising || missing) return
+      if (index === comprehension.answer) {
+        setPraising(true)
+        recordComprehension(czytankaId, rejected === null ? 'first' : 'second')
+        playThenClose('czytanki-q-praise')
+        return
+      }
+      if (rejected !== null) {
+        // Druga pomyłka nie może kończyć się 👏 — to nagradzałoby zgadywanie.
+        // Zamiast tego łagodne „nie szkodzi" i pokazanie właściwego kafelka.
+        setMissing(true)
+        recordComprehension(czytankaId, 'miss')
+        playThenClose('czytanki-q-miss')
         return
       }
       setRejected(index)
@@ -115,12 +134,12 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
       // „Posłuchaj jeszcze raz" musi mieć czego słuchać — pytanie leci zaraz po.
       void audioBus.play(questionAudioKey(czytankaId))
     },
-    [audioBus, comprehension.answer, czytankaId, praising, praise, rejected],
+    [audioBus, comprehension.answer, czytankaId, missing, praising, playThenClose, recordComprehension, rejected],
   )
 
   const repeatTap = useTapHandler({
     onTap: () => {
-      if (praising) return
+      if (praising || missing) return
       audioBus.stop()
       void audioBus.play(questionAudioKey(czytankaId))
     },
@@ -128,13 +147,18 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
 
   const closeTap = useTapHandler({
     onTap: () => {
-      if (praising) return
       audioBus.stop()
-      dismissingRef.current = true
-      void audioBus.play('czytanki-ui-open')
+      // W trakcie 👏 / „nie szkodzi" ✋ ma być wyjściem awaryjnym: ucina audio
+      // i zamyka, bez doklejania kolejnego klipu na koniec przerwanego.
+      if (!praising && !missing) {
+        dismissingRef.current = true
+        void audioBus.play('czytanki-q-close')
+      }
       close()
     },
   })
+
+  const revealing = missing
 
   return (
     <div
@@ -147,24 +171,22 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
         background: 'rgba(254, 249, 242, 0.96)',
       }}
     >
-      {!praising && (
-        <button
-          type="button"
-          data-testid="comprehension-close"
-          aria-label="Zamknij"
-          {...closeTap}
-          style={{
-            position: 'absolute', top: 16, left: 16,
-            width: CLOSE_PX, height: CLOSE_PX, borderRadius: CLOSE_PX / 2,
-            border: `3px solid ${colors.accentBlue}`, background: '#fff', fontSize: 28,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', touchAction: 'manipulation', userSelect: 'none',
-            WebkitUserSelect: 'none', WebkitTapHighlightColor: 'transparent',
-          }}
-        >
-          <span aria-hidden="true">✋</span>
-        </button>
-      )}
+      <button
+        type="button"
+        data-testid="comprehension-close"
+        aria-label="Zamknij"
+        {...closeTap}
+        style={{
+          position: 'absolute', top: 16, left: 16,
+          width: CLOSE_PX, height: CLOSE_PX, borderRadius: CLOSE_PX / 2,
+          border: `3px solid ${colors.accentBlue}`, background: '#fff', fontSize: 28,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', touchAction: 'manipulation', userSelect: 'none',
+          WebkitUserSelect: 'none', WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        <span aria-hidden="true">✋</span>
+      </button>
       {praising ? (
         <span data-testid="comprehension-praise" aria-hidden="true" style={{ fontSize: 160, lineHeight: 1 }}>
           👏
@@ -173,23 +195,33 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
         <>
           <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center' }}>
             {comprehension.options.map((emoji, i) =>
-              i === rejected ? null : <OptionTile key={i} emoji={emoji} index={i} onPick={onPick} />,
+              i === rejected && !revealing ? null : (
+                <OptionTile
+                  key={i}
+                  emoji={emoji}
+                  index={i}
+                  reveal={revealing ? (i === comprehension.answer ? 'answer' : 'dim') : null}
+                  onPick={onPick}
+                />
+              ),
             )}
           </div>
-          <button
-            type="button"
-            data-testid="comprehension-repeat"
-            aria-label="Powtórz pytanie"
-            {...repeatTap}
-            style={{
-              width: 60, height: 60, borderRadius: 30, border: `3px solid ${colors.accentBlue}`,
-              background: '#fff', fontSize: 28, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', cursor: 'pointer', touchAction: 'manipulation',
-              userSelect: 'none', WebkitUserSelect: 'none', WebkitTapHighlightColor: 'transparent',
-            }}
-          >
-            <span aria-hidden="true">🔊</span>
-          </button>
+          {!revealing && (
+            <button
+              type="button"
+              data-testid="comprehension-repeat"
+              aria-label="Powtórz pytanie"
+              {...repeatTap}
+              style={{
+                width: 60, height: 60, borderRadius: 30, border: `3px solid ${colors.accentBlue}`,
+                background: '#fff', fontSize: 28, display: 'flex', alignItems: 'center',
+                justifyContent: 'center', cursor: 'pointer', touchAction: 'manipulation',
+                userSelect: 'none', WebkitUserSelect: 'none', WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <span aria-hidden="true">🔊</span>
+            </button>
+          )}
         </>
       )}
     </div>
