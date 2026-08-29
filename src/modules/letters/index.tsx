@@ -395,8 +395,10 @@ function LettersDailyRoute({ audioBus, showNav }: LettersSessionProps) {
   )
 
   const handleDone = useCallback(
-    (doneDayKey: string) => {
-      markDailyDone(doneDayKey)
+    (doneDayKey: string | null) => {
+      // `null` = mikrosesja przerwana (pauza) albo pusta pula — wychodzimy,
+      // ale doba zostaje niezaliczona, żeby literka dnia dalej czekała.
+      if (doneDayKey !== null) markDailyDone(doneDayKey)
       navigate('/')
     },
     [markDailyDone, navigate],

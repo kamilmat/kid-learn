@@ -23,7 +23,12 @@ export function completedSessionsToday(
   d.setHours(0, 0, 0, 0)
   const from = d.getTime()
   return sessions.filter(
-    (s) => s.startedAt >= from && s.questions >= MIN_QUESTIONS_FOR_COMPLETED_SESSION,
+    (s) =>
+      s.startedAt >= from &&
+      // „Literka dnia" to 60-90 s mikrosesja-przywitanie, nie porcja nauki —
+      // nie może zbliżać dziecka do „na dziś wystarczy".
+      s.level !== 'daily' &&
+      s.questions >= MIN_QUESTIONS_FOR_COMPLETED_SESSION,
   ).length
 }
 

@@ -101,7 +101,7 @@ describe('DailyLetterSession', () => {
     expect(starts.every((e) => e.targetLetter === HARD_LETTER)).toBe(true)
   })
 
-  it('po pytaniach pokazuje kotwicę słowną i wychodzi z kluczem doby', () => {
+  it('po pytaniach pokazuje kotwicę słowną i wychodzi z kluczem doby', async () => {
     const now = new Date(2026, 7, 29, 10, 0, 0).getTime()
     const onDone = vi.fn()
     const letters = lettersMap(now)
@@ -124,10 +124,45 @@ describe('DailyLetterSession', () => {
     expect(screen.getByTestId('daily-letter-word')).toBeInTheDocument()
     expect(onDone).not.toHaveBeenCalled()
 
-    act(() => {
-      vi.advanceTimersByTime(2600)
+    // Wyjście dopiero gdy wyraz I pożegnanie wybrzmią (audioBus w teście
+    // rozstrzyga natychmiast) — minimum trzyma kotwicę na ekranie.
+    await act(async () => {
+      vi.advanceTimersByTime(1600)
     })
     expect(onDone).toHaveBeenCalledWith('2026-08-29')
+  })
+
+  it('przerwanie mikrosesji (pauza) nie zalicza doby', async () => {
+    const now = new Date(2026, 7, 29, 10, 0, 0).getTime()
+    const onDone = vi.fn()
+    const letters = lettersMap(now)
+    const quitRef = { current: null } as { current: (() => void) | null }
+
+    render(
+      <DailyLetterSession
+        settings={settingsForTest()}
+        letters={letters}
+        sessions={[]}
+        dailyLetter={null}
+        initialStates={letters}
+        onPickLetter={vi.fn()}
+        onDone={onDone}
+        audioBus={makeAudioBus()}
+        quitRef={quitRef}
+        now={() => now}
+      />,
+    )
+
+    answerAll(HARD_LETTER, 1)
+    // ⏸ → 🚪 kończy sesję po 1 ekspozycji: SRS się zapisuje, doba NIE.
+    act(() => {
+      screen.getByRole('button', { name: 'Pauza' }).click()
+    })
+    act(() => {
+      screen.getByRole('button', { name: 'Wyjdź' }).click()
+    })
+    expect(screen.queryByTestId('daily-letter-word')).not.toBeInTheDocument()
+    expect(onDone).toHaveBeenCalledWith(null)
   })
 
   it('nie przelosowuje litery w tej samej dobie, losuje nową po północy', () => {
