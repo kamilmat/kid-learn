@@ -6,5 +6,11 @@
   "czytanki-intro": "Dotknij sylabę, a ja ją przeczytam. Ty powtórz! Przytrzymaj dłużej, a przeczytam całe słowo.",
   "czytanki-ui-next": "Następna czytanka.",
   "czytanki-ui-prev": "Poprzednia czytanka.",
-  "czytanki-ui-open": "Czytamy!"
+  "czytanki-ui-open": "Czytamy!",
+
+  "czytanki-echo-intro": "Posłuchaj, a potem powtórz.",
+  "czytanki-ui-echo-on": "Będę czekać, aż powtórzysz.",
+  "czytanki-ui-echo-off": "Czytam bez przerw.",
+  "czytanki-ui-slow": "Czytam wolniej.",
+  "czytanki-ui-normal": "Czytam normalnie."
 }

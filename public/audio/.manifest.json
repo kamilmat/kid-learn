@@ -4915,6 +4915,12 @@
     "source": "tts",
     "engine": "azure"
   },
+  "czytanki-echo-intro": {
+    "hash": "32ea5a73ca6eea8e467f80513eabe86578122418e719842e12e8876f9a8a5116",
+    "updatedAt": 1788018737758,
+    "source": "tts",
+    "engine": "azure"
+  },
   "czytanki-intro": {
     "hash": "07085fc5a5ad8c6f43aa4952c494360679f8b9bc782028f306ae322109e7538b",
     "updatedAt": 1787865656521,
@@ -4927,9 +4933,27 @@
     "source": "tts",
     "engine": "azure"
   },
+  "czytanki-ui-echo-off": {
+    "hash": "f260a4bf2fc3548b4470a18e36c3e1ae852a6f7664b948e6351bf07f23734344",
+    "updatedAt": 1788018743261,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "czytanki-ui-echo-on": {
+    "hash": "057e799e7778e8772ffdced9df275cbbacfb6f504329bb7f500d0bc64e6b4d0c",
+    "updatedAt": 1788018740293,
+    "source": "tts",
+    "engine": "azure"
+  },
   "czytanki-ui-next": {
     "hash": "bff2981915da0bb2ff81ab5b7254f3f757fc5ba9896bfa036b0752eb466482bb",
     "updatedAt": 1787865659505,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "czytanki-ui-normal": {
+    "hash": "2319bb8a3e0e90e63b98a14930870ff54d55e2a8c46cbbb49e73f56976d3d8e4",
+    "updatedAt": 1788018749531,
     "source": "tts",
     "engine": "azure"
   },
@@ -4942,6 +4966,12 @@
   "czytanki-ui-prev": {
     "hash": "d370ccd7b68c6bfb8c7c65376b2cea08ca729845a7921aaa4b1f2c4b4c4980ef",
     "updatedAt": 1787865662611,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "czytanki-ui-slow": {
+    "hash": "ba77d8f714c992d57dab2d7fb47b888bae33b01b00734680d8df39a8b3860cd0",
+    "updatedAt": 1788018746378,
     "source": "tts",
     "engine": "azure"
   },
@@ -5203,193 +5233,385 @@
   },
   "letter-a": {
     "hash": "fb69ea8e637560ba4984134c44fb5d8f3bff8c474004a18d394b18fdbb0f10fc",
-    "updatedAt": 1787947637684,
+    "updatedAt": 1788018947852,
     "source": "override",
     "engine": "edge"
   },
   "letter-b": {
     "hash": "5220db829be69c2f0c9b81cc302c54d31158d10d619e790ec61816cacec5b97e",
-    "updatedAt": 1787947637684,
+    "updatedAt": 1788018947854,
     "source": "override",
     "engine": "edge"
   },
   "letter-c": {
     "hash": "b6e1b6c1dbe361df0b14c63ce0e3f6f02ca42d3c5095d7c663a1eee504b9232a",
-    "updatedAt": 1787947637684,
+    "updatedAt": 1788018947854,
     "source": "override",
     "engine": "edge"
   },
   "letter-d": {
     "hash": "70353bedc02a4ab6f55456ee2981e38231c6719da77a082275cc00ec1a2d026e",
-    "updatedAt": 1787947637685,
+    "updatedAt": 1788018947855,
     "source": "override",
     "engine": "edge"
   },
   "letter-e": {
     "hash": "accda38ac9eafd5b426c5d36ad553dd628b452dfb2629aa09fc09c9023b6a71d",
-    "updatedAt": 1787947637685,
+    "updatedAt": 1788018947855,
     "source": "override",
     "engine": "edge"
   },
   "letter-f": {
     "hash": "e97f6029e0fd8f93d8821d37d31a8c7cd8fb6703e49fe766107b189adcd12ec1",
-    "updatedAt": 1787947637686,
+    "updatedAt": 1788018947856,
     "source": "override",
     "engine": "edge"
   },
   "letter-g": {
     "hash": "2dbe40023f6b4c133e8e95734f0593b733ac44aad81d6511258ac3b17f5dfe5c",
-    "updatedAt": 1787947637686,
+    "updatedAt": 1788018947856,
     "source": "override",
     "engine": "edge"
   },
   "letter-h": {
     "hash": "bdcdff6ebbe3df91fadd95d8d1f359b5b6e4f867efdb5f95ed8fc5536e9a6019",
-    "updatedAt": 1787947637686,
+    "updatedAt": 1788018947857,
     "source": "override",
     "engine": "edge"
   },
   "letter-i": {
     "hash": "92741134d35787e90570061dcf0b369f980dd4d959bae0a63709e9d8f806e029",
-    "updatedAt": 1787947637686,
+    "updatedAt": 1788018947857,
     "source": "override",
     "engine": "edge"
   },
   "letter-j": {
     "hash": "57a9e94704a8a8198601e1e92dbd14a1bfd3a02500ac505bdde129258a9ddb0d",
-    "updatedAt": 1787947637686,
+    "updatedAt": 1788018947857,
     "source": "override",
     "engine": "edge"
   },
   "letter-k": {
     "hash": "817c50de94658db78398fa45d5fd220c2985fc7b2b5f8c1396824b03d6417096",
-    "updatedAt": 1787947637686,
+    "updatedAt": 1788018947858,
     "source": "override",
     "engine": "edge"
   },
   "letter-l": {
     "hash": "2ecce3a4a53ec5960c290be7f67ee9aba8479b1c1e12a8d6a9da13fd883c33ae",
-    "updatedAt": 1787947637687,
+    "updatedAt": 1788018947858,
     "source": "override",
     "engine": "edge"
   },
   "letter-m": {
     "hash": "2d1a987920509fa68e188cdabe1361909c19faa6127d135ea752f0025021ebe7",
-    "updatedAt": 1787947637687,
+    "updatedAt": 1788018947859,
     "source": "override",
     "engine": "edge"
   },
   "letter-n": {
     "hash": "739eaa58a9bcef332a12052b80776a4814dfaa06a1391a585d1c4f25570721e7",
-    "updatedAt": 1787947637687,
+    "updatedAt": 1788018947859,
     "source": "override",
     "engine": "edge"
   },
+  "letter-name-a": {
+    "hash": "12440c8eefb47bb2d9325c3a21bc054f43f8b0efe3d1994ad6daa9e9b204c6fd",
+    "updatedAt": 1788018752386,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-a_": {
+    "hash": "8cd47b355a7bafe41a0236f50960dc8558f6dce984c9ac449e820be958a0b261",
+    "updatedAt": 1788018755564,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-b": {
+    "hash": "616ab7039132a27d47b1d5aaccef5a3680f3aa1992687281483f893845777cb2",
+    "updatedAt": 1788018758636,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-c": {
+    "hash": "6d1510c198c25e767fabf74a46515bbfe3f1680590462b053ce48eee074c46c5",
+    "updatedAt": 1788018761763,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-c_": {
+    "hash": "0e2ccd80f85013c6202e62128cd32bf1534c716c1c4b457b3df56c9f03760e7d",
+    "updatedAt": 1788018764952,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-d": {
+    "hash": "e01cde92b068524c90bde5bdfc299d8f33c0769aa9e93f49c43122e40002c4c0",
+    "updatedAt": 1788018767935,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-e": {
+    "hash": "8fc906c9d826b1d4341e5c3d14882ce02737987ccd44173c1c851c6142653bcb",
+    "updatedAt": 1788018771012,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-e_": {
+    "hash": "1795d495e10dc81a6c10448186791c21eca0d3e4f3eb28a430caecf7a6443cd5",
+    "updatedAt": 1788018774142,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-f": {
+    "hash": "e66aa49d21dda8b6c9a402c985b0535fe0931cf8d7f341a65c86741a8e3dd93e",
+    "updatedAt": 1788018777230,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-g": {
+    "hash": "3e34bb573727f8132ac505887b5640965e93057a9c80512c8733dbf7fde9f292",
+    "updatedAt": 1788018780365,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-h": {
+    "hash": "3b7096bbf2898a4a9d81481c2dabd06663194b144c84a1eb24a66df9e24e852d",
+    "updatedAt": 1788018783441,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-i": {
+    "hash": "ed00918996c938ff1c43f6de0ed5024463a4ed48c7f57f3dba013c7710113c3f",
+    "updatedAt": 1788018786542,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-j": {
+    "hash": "5fa2ac6cf4a6c58e05284741db3c4a70519549fa640d3786bee7e8c517b72165",
+    "updatedAt": 1788018789661,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-k": {
+    "hash": "97de34e11261ffb3253a3359c0f27f8b04df29223056b7ba6e7534ecb84dad72",
+    "updatedAt": 1788018792739,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-l": {
+    "hash": "4b0efd76e7953c37b655240dba1d68dc96c0d049c176f107e7f0695d5e7e907a",
+    "updatedAt": 1788018795872,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-l_": {
+    "hash": "196d2c76d8379898c3ff0f8fda44e12b2aaef8261dcbf2a02947fc43349cec9c",
+    "updatedAt": 1788018798935,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-m": {
+    "hash": "367731e1c2ce62644d42767f0a2063bf9fb6ab2ec1969d32f45bd9d5ee0d7a8b",
+    "updatedAt": 1788018802119,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-n": {
+    "hash": "485caa3ab251d733555967af7dd683afe566cf421315dffbd078c8593f42abfd",
+    "updatedAt": 1788018805177,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-n_": {
+    "hash": "95a7b018003c97b23ac5936517c578b13748947092bcdd13be80170691e9def4",
+    "updatedAt": 1788018808239,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-o": {
+    "hash": "d0fea641dd3926a25cd4ec7e2ac102e2a141f5b70c15a1987551f450bd76ec5e",
+    "updatedAt": 1788018811379,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-o_": {
+    "hash": "8975704681faa9bb2cdf7b64b283adca1ccd90aae0d1d5e4fecd9373f0712609",
+    "updatedAt": 1788018814476,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-p": {
+    "hash": "eb739eb6d428def79712dfc8cf361b4a3d92ac84a0f0f3f6c3fa40e789a3a9fb",
+    "updatedAt": 1788018817553,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-r": {
+    "hash": "825d85132bdfe023957758cbdd26697aeafaf55c2431f3c4b137845b6a465165",
+    "updatedAt": 1788018820662,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-s": {
+    "hash": "3ba16e9cfba1e9374443ab48e0be86f111143e52f3ef3b96ad9be159673719ea",
+    "updatedAt": 1788018823764,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-s_": {
+    "hash": "2f5f8e59ecd755309e368ad1e5b4bdc53c965847548db5d8b2b1d094d3a9679a",
+    "updatedAt": 1788018826905,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-t": {
+    "hash": "4cfff85329a1c65195f625bb43001acdd044a7e74b3ad2a9f828cfbfced98d59",
+    "updatedAt": 1788018829945,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-u": {
+    "hash": "2786b35698b0ad9c8c0d02dad023bdb817e42adac89788286544dbf9a28cb396",
+    "updatedAt": 1788018833076,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-w": {
+    "hash": "159654f9c31fa170dc7f5c51c022fef4dd50af0122da5b963bf05ec87b99c18a",
+    "updatedAt": 1788018836200,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-y": {
+    "hash": "65161dfc79d0e4d1e3299670b84564ec6fb6a4b8caf70cb5ec80aee5462d57ab",
+    "updatedAt": 1788018839269,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-z": {
+    "hash": "5c6041bf5de0b59028508dcd87cbf67442d9b9600aabf3f54a0677228a415c45",
+    "updatedAt": 1788018842434,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-z-": {
+    "hash": "7e2021fb68f17caeebd252e96f01c5b432c5999141d26a6f1518d530f2609f64",
+    "updatedAt": 1788018848548,
+    "source": "tts",
+    "engine": "azure"
+  },
+  "letter-name-z_": {
+    "hash": "d204f21657b1a571e50ca33679dc5d8eafd7e08609da1fe5fe469e2c032fbdd1",
+    "updatedAt": 1788018845459,
+    "source": "tts",
+    "engine": "azure"
+  },
   "letter-o": {
     "hash": "86c10a918ff03e5535aafacdff80b4545450e676db4d956f23e3cd609d87cf86",
-    "updatedAt": 1787947637687,
+    "updatedAt": 1788018947860,
     "source": "override",
     "engine": "edge"
   },
   "letter-p": {
     "hash": "d3b5b2065b4dac6a73ac67afafd5a8c9b2010c48a96ab3493f8eaec185acb19b",
-    "updatedAt": 1787947637688,
+    "updatedAt": 1788018947860,
     "source": "override",
     "engine": "edge"
   },
   "letter-r": {
     "hash": "f5b0aba7f01e075422f513202561340d66b6921c73ca1d7a0a0aa7d93a98af28",
-    "updatedAt": 1787947637688,
+    "updatedAt": 1788018947861,
     "source": "override",
     "engine": "edge"
   },
   "letter-s": {
     "hash": "1bb7a0384b5f55cf262839c21b8bfa579decccfc7ef054b5a364de95d8fa1ad2",
-    "updatedAt": 1787947637688,
+    "updatedAt": 1788018947861,
     "source": "override",
     "engine": "edge"
   },
   "letter-t": {
     "hash": "52ed58df616562bbc1f18744330cfdc2981801939e090440edbb070578b52e9c",
-    "updatedAt": 1787947637689,
+    "updatedAt": 1788018947862,
     "source": "override",
     "engine": "edge"
   },
   "letter-u": {
     "hash": "efee902eddb3c90d1332bbff628a94b37ebb69f544f34bbc8577c9cfb4f115a5",
-    "updatedAt": 1787947637689,
+    "updatedAt": 1788018947863,
     "source": "override",
     "engine": "edge"
   },
   "letter-w": {
     "hash": "ee21d785527c8b09309d888ef898cb8bc203646b6ca2606e493c8d7d3616b517",
-    "updatedAt": 1787947637689,
+    "updatedAt": 1788018947863,
     "source": "override",
     "engine": "edge"
   },
   "letter-y": {
     "hash": "d3f722c63c0725e99e5ab5075421a0693ed564dba8d3fb4969fadb76aeb7f374",
-    "updatedAt": 1787947637689,
+    "updatedAt": 1788018947863,
     "source": "override",
     "engine": "edge"
   },
   "letter-z": {
     "hash": "ed72a30d16e84cfbf46a98d23dea4ba39359ebb7ff1666db15cc5ffcd2272c46",
-    "updatedAt": 1787947637689,
+    "updatedAt": 1788018947864,
     "source": "override",
     "engine": "edge"
   },
   "letter-ó": {
     "hash": "8768c687e075c34cfcb1c2551cf14a37a29bba31294b045bac67925b01c18585",
-    "updatedAt": 1787947637688,
+    "updatedAt": 1788018947860,
     "source": "override",
     "engine": "edge"
   },
   "letter-ą": {
     "hash": "4e7f62fc418ce36fc36ece88ba9b67e13bae34ad30d6bb0c3c0d69d644fc90fe",
-    "updatedAt": 1787947637684,
+    "updatedAt": 1788018947853,
     "source": "override",
     "engine": "edge"
   },
   "letter-ć": {
     "hash": "d0a5cba23fc07e7c3d7b22653415e590e6875e8dfbd6145e30c84d9e595f8c64",
-    "updatedAt": 1787947637685,
+    "updatedAt": 1788018947854,
     "source": "override",
     "engine": "edge"
   },
   "letter-ę": {
     "hash": "3bf8827c2b71c00339452317a3be2a96f89966f03fd3f7a7f55fa74cc85aa75b",
-    "updatedAt": 1787947637685,
+    "updatedAt": 1788018947856,
     "source": "override",
     "engine": "edge"
   },
   "letter-ł": {
     "hash": "1a2531ef4d07474e665f1d560fdd0bff2e5267ba3f1ca922ebcb196eefc104ad",
-    "updatedAt": 1787947637687,
+    "updatedAt": 1788018947858,
     "source": "override",
     "engine": "edge"
   },
   "letter-ń": {
     "hash": "53e1ab538c3eff545a181b0630c91d189f45c64efbcbb950f1622b446841a4a1",
-    "updatedAt": 1787947637687,
+    "updatedAt": 1788018947859,
     "source": "override",
     "engine": "edge"
   },
   "letter-ś": {
     "hash": "d37f0d79960f4466b237a9bd33c9f5d4a5e0152d43d3407f9ed2f557da09c674",
-    "updatedAt": 1787947637688,
+    "updatedAt": 1788018947862,
     "source": "override",
     "engine": "edge"
   },
   "letter-ź": {
     "hash": "51b7c4d9bd7faed54cd6eba7e6a4dc012881349b7dadad8d57a5b4e49eb2686e",
-    "updatedAt": 1787947637689,
+    "updatedAt": 1788018947864,
     "source": "override",
     "engine": "edge"
   },
   "letter-ż": {
     "hash": "7b0b9b64cdf4b86f7434d56c114709942d850a28101b01a4d847e3f1014f2d19",
-    "updatedAt": 1787947637689,
+    "updatedAt": 1788018947864,
     "source": "override",
     "engine": "edge"
   },
@@ -5664,6 +5886,198 @@
     "updatedAt": 1777412420457,
     "source": "tts"
   },
+  "phon-a": {
+    "hash": "c3a304b9ac5ef190650648facccbd4fe800130555e287139ef00348d472cedc5",
+    "updatedAt": 1788018851658,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-a_": {
+    "hash": "be8369786f54725e2b329d0041259e989470817f464bfa090145c7ccda8c1255",
+    "updatedAt": 1788018854744,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-b": {
+    "hash": "c928a97e3c6d43784a6be0d109f9bbdea89397169234467e25efca9cdb569f13",
+    "updatedAt": 1788018857898,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-c": {
+    "hash": "7f789a8cdb0253cb17bad96f1bb0200863969cc2767e8f305771f67c16e7a8e2",
+    "updatedAt": 1788018860952,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-c_": {
+    "hash": "0c3771fe016a9e10e007d07209937f55b12699bf20863ce2ccf6c70c55d656fa",
+    "updatedAt": 1788018864086,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-d": {
+    "hash": "1b254bc72730570a421b12f125bcd0dbf475698f180cd34c5fcf2e8212733942",
+    "updatedAt": 1788018867163,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-e": {
+    "hash": "7672833ad89263412ae4e003969e1bfffbf955c59fde82054adba0fe7dc243b7",
+    "updatedAt": 1788018870268,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-e_": {
+    "hash": "507ab02a9f324b71ef891d31722d9c7f2d20c4c98d7a2c0f60655520e36c8a38",
+    "updatedAt": 1788018873437,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-f": {
+    "hash": "0e8ec4b22982b84d570942de2ed4f9b732ece749f106f6b2de516cbfbd0e5597",
+    "updatedAt": 1788018876471,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-g": {
+    "hash": "c77d4c709a2956160849fbad9551456db1de3fa608cc845fccf5c78813754c69",
+    "updatedAt": 1788018879538,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-h": {
+    "hash": "f803d7c3aac6b6e1e9e78eb848c6c4b0ad97377c697ba8f67d7ebee02c4d883b",
+    "updatedAt": 1788018882649,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-i": {
+    "hash": "07a7aaac46cfd5d2785285c5d5c56dd9b7f881f7c1d1f58a7f81f7623aadacad",
+    "updatedAt": 1788018885788,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-j": {
+    "hash": "70d6a63fc2d2648ddfa644fbf8201b9f2b64ee6708bb61c135a447815d652e5b",
+    "updatedAt": 1788018888932,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-k": {
+    "hash": "c347a370f889329b28effb69452199a9f9ee19e6fab896f36d152ce6aa3e247c",
+    "updatedAt": 1788018891991,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-l": {
+    "hash": "9b30aba4c1a82c442ac92fb078eb228f3be1c2ea46543e3ec3825e32624c5c93",
+    "updatedAt": 1788018895186,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-l_": {
+    "hash": "e99ae467aea9f795595935fe81ae96cfa9334921bc5e2c4108d2eaca58104001",
+    "updatedAt": 1788018898150,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-m": {
+    "hash": "261b31e0a198c796f3ab5b7a3c260396b882364258410c871315d3b48ab03518",
+    "updatedAt": 1788018901374,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-n": {
+    "hash": "71be66678fbf5bfd4a6e7a986c6f15765a97feb087f6f3fe36f2733ba0e15411",
+    "updatedAt": 1788018904390,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-n_": {
+    "hash": "31b774345e81f2c46bcde05956e02e693d0d3442429c65139c8578ab95b4c469",
+    "updatedAt": 1788018907481,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-o": {
+    "hash": "232765c41585395286ffa9b269a5f3f8ccefdb12dee049646fe49c431436c86d",
+    "updatedAt": 1788018910562,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-o_": {
+    "hash": "5b5c1d014fef28e2424110fe9a3cae74df29ea85cb0943331b45335fe2c9e3f2",
+    "updatedAt": 1788018913714,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-p": {
+    "hash": "38dccb207ae3c2dfefab9713d220b7a5e47db966140ab716768fcf06000e3fcb",
+    "updatedAt": 1788018916771,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-r": {
+    "hash": "7487b84ae42f791f6b72a746308f1d18079f56ca8bb605b6111f73c031037c44",
+    "updatedAt": 1788018919949,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-s": {
+    "hash": "399668da2b95a0daf5372944a152eab09556f246c5dafa1c4d89b4ce4b98a324",
+    "updatedAt": 1788018923082,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-s_": {
+    "hash": "6bdc1f4d4740ab3bc4908630ea44d1714e35649a6c2e287f316b21d2d0fb2954",
+    "updatedAt": 1788018926111,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-t": {
+    "hash": "3ff4009399ced7b1ebdaee628e42dda8c7040e14952f6cae9fa32c5e222dfa7e",
+    "updatedAt": 1788018929176,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-u": {
+    "hash": "dee5e46ded25f914a5599b872b9d652956ed045cd841f8bf7a8d3bae9714c25d",
+    "updatedAt": 1788018932295,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-w": {
+    "hash": "c837b074b7dc75ab64daf917ef69f94ce408c524eb164a30871bca758d1f89f7",
+    "updatedAt": 1788018935386,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-y": {
+    "hash": "f0d52b17c82187d38571143f29024ca7316037c904e791d6effcd9c33587540e",
+    "updatedAt": 1788018938555,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-z": {
+    "hash": "b4573d2c2ce0d4d15b4f7f16f14fae0c880dc0f0de562fba27280b9ebf3b428a",
+    "updatedAt": 1788018941574,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-z-": {
+    "hash": "5e1d438a9bdba192e88ecf28530565d281630e55b2183dbe507ace4fc3248f93",
+    "updatedAt": 1788018947851,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "phon-z_": {
+    "hash": "f11dffe04369aeb5e8a15fede95420c208d6dd91e984278131e9089b8f8f5c60",
+    "updatedAt": 1788018944748,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
   "praise-1": {
     "hash": "950b7f115b239debc7678b723b08de71d0cd7761ecedf2846a5420f919caf15b",
     "updatedAt": 1777360524441,
@@ -5744,6 +6158,102 @@
     "updatedAt": 1777412372021,
     "source": "tts"
   },
+  "praise-proc-1": {
+    "hash": "6c498b1a6dcc0a9f25dff15daf1e76fe0a69b11dfeb170aaf129b956acd496c8",
+    "updatedAt": 1788019169465,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-10": {
+    "hash": "2b97352966ab6357a046f03efa7dfb84e9e6756f0cf209e3435061fd480d9d80",
+    "updatedAt": 1788019177209,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-2": {
+    "hash": "1d92d01e5457d59598ea5ffebe9dad006c4cb6e81f82e36107e21626181039f1",
+    "updatedAt": 1788019170471,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-3": {
+    "hash": "270ea42ad71d33735e8f75597e667023600296ceec3d63aba6aa5f2e48d0430e",
+    "updatedAt": 1788019171206,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-4": {
+    "hash": "61d4183f401c496cd82cda26e33250736964c6fc20ac16660b649a3eb2356acf",
+    "updatedAt": 1788019172267,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-5": {
+    "hash": "05aa9301bbf45fa97921f5a4c689c58785f5e8061fbca8a58640eceb22b2a27c",
+    "updatedAt": 1788019173132,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-6": {
+    "hash": "d331f6d7eb81e22a8711073ae532a9854813b076df7fde5bd995e2a6c19b7ae7",
+    "updatedAt": 1788019174158,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-7": {
+    "hash": "32d5c64d01337bdd2475730a34c3ef2c3d343fa99feb8242243808cf11056666",
+    "updatedAt": 1788019174853,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-8": {
+    "hash": "6d935764bcc7ec05511c6ac59a67c28ace7e3eccf88fa31d40956e5b31e0b535",
+    "updatedAt": 1788019175622,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-9": {
+    "hash": "0f1f33d2879138effa0d9b17145f4fc08ecf7c026259b1bd02a6e93145b4a7a4",
+    "updatedAt": 1788019176484,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-num-1": {
+    "hash": "3d339f72a59e427a18337b6bbe59d5bbe9a57e7ea516c6717f904fa2fc67eaca",
+    "updatedAt": 1788018953486,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-num-2": {
+    "hash": "aebcf94632adb4df46ed630546a76ea64ddd1bf9ad77acd5d5f9495608e4ce0d",
+    "updatedAt": 1788018954240,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-num-3": {
+    "hash": "681e39f8f83444d243a4ec3aba60fbdbd4ecd09e9fbb5ef20c93f1b1a98b8144",
+    "updatedAt": 1788018955013,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-num-4": {
+    "hash": "885fe132e9f2f566222471b534593ee66ac5af52a73b057b3214b55d9779f087",
+    "updatedAt": 1788018955732,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-num-5": {
+    "hash": "ad1edaa0e9934a652c30d23e984b1dcf8cca3a124a25382926c8065e78626544",
+    "updatedAt": 1788018956955,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "praise-proc-num-6": {
+    "hash": "d426a842a3566665d45c0f9acf4e7f77afa5004181844e916d3bf229d867a99f",
+    "updatedAt": 1788018957774,
+    "source": "tts",
+    "engine": "edge"
+  },
   "praise-strategy": {
     "hash": "bbc2e4400028cb878cbf7a8f75ffa544b102c6497f30bbbb17421f274ec3083a",
     "updatedAt": 1777412371354,
@@ -5778,6 +6288,12 @@
     "hash": "4fa8e8de7517b3e663ed1ad5690b091071d726961cd3313064a7dcf4717733ba",
     "updatedAt": 1777360507190,
     "source": "tts"
+  },
+  "reading-blend-prefix": {
+    "hash": "a0d972163aa83fc1066aeddd7c06d51d6488016bda158b72c9a196fd9fc47767",
+    "updatedAt": 1788018963661,
+    "source": "tts",
+    "engine": "edge"
   },
   "reading-correct-prefix": {
     "hash": "25dd203aa9ac98555638e5a365469d8cff816b822482a330a4d9f6b3e4810468",
@@ -5850,10 +6366,52 @@
     "updatedAt": 1777360510719,
     "source": "tts"
   },
+  "reading-praise-proc-1": {
+    "hash": "0e0d85702cbc1c05b1d5a9160f885bce073e3f2736759e33b1dffdb7a3a549bb",
+    "updatedAt": 1788018958501,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "reading-praise-proc-2": {
+    "hash": "6f4ba74074a2aee35418943ec81ce2963ade03cb5c29e6765484476d7d6b386f",
+    "updatedAt": 1788018959591,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "reading-praise-proc-3": {
+    "hash": "eaf22d654208a89f8bd384df742b85eea54496e028661e50a53f49521d343d09",
+    "updatedAt": 1788018960350,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "reading-praise-proc-4": {
+    "hash": "6bdcc6472416136a6cb0348500da55fb95c27f8a001cca6f8cee1c15ddc41dc6",
+    "updatedAt": 1788018961148,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "reading-praise-proc-5": {
+    "hash": "b433334fc228788f5d7c0c0e45b3bfa13075f28aab7855d199a585dac4f5c248",
+    "updatedAt": 1788018961967,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "reading-praise-proc-6": {
+    "hash": "6eeae760aca1502fea25e7f70cb57873ac88ecc0ca9b2bb0706d3557dc6eb13b",
+    "updatedAt": 1788018962742,
+    "source": "tts",
+    "engine": "edge"
+  },
   "reading-wrong-prefix": {
     "hash": "67f797f14980e76cb46d70efc84bfb826b57f8a4cfd38c8eb3efec28a4d9f32d",
     "updatedAt": 1777360504879,
     "source": "tts"
+  },
+  "retry-correct": {
+    "hash": "09eeec7872047050d455efd25cae92876544386965a9f0c136e76acb168936e2",
+    "updatedAt": 1788019178582,
+    "source": "tts",
+    "engine": "edge"
   },
   "session-end": {
     "hash": "f9321604cf2b452b23bd37872a961e670fb6d2c670038ebc53127c0e75ff790d",
@@ -5890,15 +6448,21 @@
     "updatedAt": 1777412354841,
     "source": "tts"
   },
+  "session-stop-enough": {
+    "hash": "332753a0e3e86ef44d4a49da45bd90f9ebbfe7c557e636fa7ef86cceeb4852ab",
+    "updatedAt": 1788019179496,
+    "source": "tts",
+    "engine": "edge"
+  },
   "sfx-correct-ding": {
     "hash": "259e7d1db1c6ec76366bd1fa0e50b1e58f401f43386f38d58906844dd2af7fd7",
-    "updatedAt": 1787947639307,
+    "updatedAt": 1788019168596,
     "source": "override",
     "engine": "edge"
   },
   "sfx-mastery-fanfara": {
     "hash": "259e7d1db1c6ec76366bd1fa0e50b1e58f401f43386f38d58906844dd2af7fd7",
-    "updatedAt": 1787947639308,
+    "updatedAt": 1788019168596,
     "source": "override",
     "engine": "edge"
   },
@@ -5911,6 +6475,36 @@
     "hash": "ef3461ecc1efcccb25ae09e2f3dac03aac700b8356ecbc3fa80fb0ae099c9581",
     "updatedAt": 1777231136350,
     "source": "tts"
+  },
+  "strategy-count-back": {
+    "hash": "5e17f017f46b1730b609be7b1844da87d592f9c9c1af422398638cab50d28364",
+    "updatedAt": 1788018952730,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "strategy-count-on": {
+    "hash": "b5274b265736b90a230adfee1b5bed931608ac2370e046a39e648a872ef58777",
+    "updatedAt": 1788018948994,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "strategy-doubles": {
+    "hash": "296eca54336337e8862d10742e41ed0ec32ebd21345ca4ef3a8164e35a97d25a",
+    "updatedAt": 1788018951188,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "strategy-make10": {
+    "hash": "683e31967a1d34701137931892a604c62a2a5b5b4327e83d81fadb4081c242a7",
+    "updatedAt": 1788018949711,
+    "source": "tts",
+    "engine": "edge"
+  },
+  "strategy-near-doubles": {
+    "hash": "8d5719d352e1a7c6292402d9b48cd36afa849c0578b124082bb21bfe4324e08a",
+    "updatedAt": 1788018951997,
+    "source": "tts",
+    "engine": "edge"
   },
   "streak-3": {
     "hash": "57bbf46b3b03a5cd6be22e2c3367caabac56a94ad3451efb744b3f38953e24b2",
@@ -5932,9 +6526,87 @@
     "updatedAt": 1777231151964,
     "source": "tts"
   },
+  "syl-ar": {
+    "hash": "5ded08960afc80c0c0900ae38d0eac5b34a04703291485a6671e623093cd8e99",
+    "updatedAt": 1788018964091,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-au": {
+    "hash": "734b69a1afdd7b7461404310ac4999aef30e5d01b9c967c484271496652ab021",
+    "updatedAt": 1788018967030,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
   "syl-ba": {
     "hash": "7bd75c62cef7087b758bf5205b333657e071b7dd53d15fd205064380cfa3ba2d",
     "updatedAt": 1787866962125,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-baw": {
+    "hash": "b2e1e53d8bd94342542845d8317e538235d2a1c73b8784c513fb1d4f5f6e7b8f",
+    "updatedAt": 1788018970127,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-bu": {
+    "hash": "56a1371ee526a195e68203cc604b2f99e37fe1a72d26bf2b6bc69079b9867fcb",
+    "updatedAt": 1788018973204,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-buz": {
+    "hash": "38c0a8d6ca09a1a65efc260ee877442acd156a098e78e0ef52b04448377e880b",
+    "updatedAt": 1788018976290,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-ce": {
+    "hash": "1a89d19819abed73195f3d88048d03e2cb8b69a4e03e7fb4a125ce4d37e83dc7",
+    "updatedAt": 1788018979390,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-chew": {
+    "hash": "c0f973758effa8ff11ef6a6390c4091b289fd6b41e25176a67f02f1dca10fb00",
+    "updatedAt": 1788018982564,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-chl_o": {
+    "hash": "0b4a8af972be9e1d90496c9257c54f3871535ddf7a5546c7813aeed035cb59b5",
+    "updatedAt": 1788018985664,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-cho_d": {
+    "hash": "b350aa6c8cd1d7b1b8371ed7c30a069b3ccd52af18686d1bf41144e9b74f5a80",
+    "updatedAt": 1788018988691,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-ciast": {
+    "hash": "6fef8ed97aa0917768d213b83c07e599720fd4c88d228b3027ed8cb42a291daa",
+    "updatedAt": 1788018991800,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-czap": {
+    "hash": "294c51a5fd3d296f163b3f9132c522f30ad3fb6a7b3d2a18a2edb250b52c1c4a",
+    "updatedAt": 1788018994901,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-cze": {
+    "hash": "d7ea92703efaad9ddcfe2ca712e06333156ce6388feb6007ecf4fb7ea9a9a0fc",
+    "updatedAt": 1788018998071,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-czwar": {
+    "hash": "e9bea01b7a6f553d37ebc5af2702c509fadecc3b7be38d36c59c68f4506180e0",
+    "updatedAt": 1788019001077,
     "source": "tts",
     "engine": "azure-ipa"
   },
@@ -5950,9 +6622,51 @@
     "source": "tts",
     "engine": "azure-ipa"
   },
+  "syl-dor": {
+    "hash": "546bd54010b56975f9d8f49ff08ac86e85b35215a2cf558c55f539df85f3ed83",
+    "updatedAt": 1788019004241,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
   "syl-du": {
     "hash": "0e6d763465e57fa8822c1303397f68290b533c9cb00a43d0fcdb476d5de3f84f",
     "updatedAt": 1787866993175,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-dz_wiedz_": {
+    "hash": "8f184efe963309521159809a162a65c222027a4700ef76fc88f7c6b9a112bdfe",
+    "updatedAt": 1788019007322,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-dziec": {
+    "hash": "67cdb8a7099805c7b2048136c4651539144024b48c6ab99be4c23fa70233df9c",
+    "updatedAt": 1788019010405,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-fa": {
+    "hash": "86c6eda3ae629ef69f9ff09bacb7b4eeda9f252824802868e2bbc293f9804b1f",
+    "updatedAt": 1788019013475,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-fon": {
+    "hash": "f089a1aea3b3e28b02f00eeaa21bd8e8cebbfc6eb0b7841bb6abe8187ea8ba1b",
+    "updatedAt": 1788019016609,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-ge_s_": {
+    "hash": "9c571c2932cb1f5c435cd9e0fc5b8c96cd92523d26539a68eb4a089017cee378",
+    "updatedAt": 1788019019739,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-go_": {
+    "hash": "18787c198c29c592dab87341d603acacf00702c15914e4b4a6ddff6a20ff9a73",
+    "updatedAt": 1788019022807,
     "source": "tts",
     "engine": "azure-ipa"
   },
@@ -5968,9 +6682,33 @@
     "source": "tts",
     "engine": "azure-ipa"
   },
+  "syl-kom": {
+    "hash": "3b67ec58f2d52e8bbd6e29d54ab488f8d90d92cdc6e527fd2864dbde6cea3af6",
+    "updatedAt": 1788019025916,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-kon_": {
+    "hash": "c417d0012aa8dc5727049ea7aadfa4be6cbe25a57298200a820f6597f551722f",
+    "updatedAt": 1788019028991,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-ksie_": {
+    "hash": "a35b6f1dd1bee9cdbef86686912011abedf58c0e28eb5fed7fb1d4c7c364960a",
+    "updatedAt": 1788019032096,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
   "syl-ku": {
     "hash": "255d184d63b9d600297c83b5aa39f582e0f5a7dde5ea1316cfcca3be80ae95fa",
     "updatedAt": 1787866971425,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-l_a": {
+    "hash": "3050cf253cb369d19cdd2f8ae73f1a4e50e25bfd87d25355d052d732571d5d81",
+    "updatedAt": 1788019035236,
     "source": "tts",
     "engine": "azure-ipa"
   },
@@ -5980,9 +6718,45 @@
     "source": "tts",
     "engine": "azure-ipa"
   },
+  "syl-lam": {
+    "hash": "d9afd315b7a280d9eeaf5bba907120539c9388b248d8051fdbb7a80c4b0bf7e8",
+    "updatedAt": 1788019038421,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-le": {
+    "hash": "f01e01ed0e6d4b366ff7a0b2e58642e3e7dad255b2e818b2b1185b56a666169b",
+    "updatedAt": 1788019041403,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-li": {
+    "hash": "cc128dcff7706ed1c8a8d437b2d68459ff98f3a396060876476d083e4ff5e705",
+    "updatedAt": 1788019044516,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-lik": {
+    "hash": "968b7a657b7e37c02beb4e80ab6cf2569db45adda823b8293a959e37b3a9fd94",
+    "updatedAt": 1788019047662,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
   "syl-lo": {
     "hash": "3475a35baef2dd3eea7f99d25590951fa0571df0c711b2a5193da831fbf93b2c",
     "updatedAt": 1787866949746,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-lon": {
+    "hash": "cae647a152d17b5f70d661d7d32d4d27a7cbc2db7213fdbe68bbead435d2a1f3",
+    "updatedAt": 1788019050756,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-lusz": {
+    "hash": "deeba8a9afa79655e5e2323a85f187fab22de61bea4ee8b86d9fbaf6ad0d9bdb",
+    "updatedAt": 1788019053818,
     "source": "tts",
     "engine": "azure-ipa"
   },
@@ -5992,15 +6766,69 @@
     "source": "tts",
     "engine": "azure-ipa"
   },
+  "syl-mar": {
+    "hash": "40bb4ef59975b5de4016227c2c00eeace121feb81cf1f023c52486dc996e5a12",
+    "updatedAt": 1788019056901,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-me": {
+    "hash": "b7562de98bbdeef4c87115f59452f121d0eb94a29a36976de404bb64842bfc6f",
+    "updatedAt": 1788019060147,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-mi": {
+    "hash": "1209af7b17875caa3229ea08f8b46b56f7bb0917cfe0446facd9d114a1db6e6e",
+    "updatedAt": 1788019063109,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-mis_": {
+    "hash": "6be8adcc56674b48707ea5599fac8c70ee1a134e64a55595ef740a4c1756a3fc",
+    "updatedAt": 1788019066243,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
   "syl-mo": {
     "hash": "5aad48fd2075bc46cdacc34486a45866c39f28b2075827326ead21333ff98f75",
     "updatedAt": 1787866943516,
     "source": "tts",
     "engine": "azure-ipa"
   },
+  "syl-musz": {
+    "hash": "dfc314a91a98c28df7bac7aef62d2de736fa07198a89f146a277ccb83d783667",
+    "updatedAt": 1788019069311,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
   "syl-na": {
     "hash": "735736a0aac8321e458e3fcd20f55dae36c29a42ef21a3b59605e2a007ab521b",
     "updatedAt": 1787866974546,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-nan": {
+    "hash": "79b72e8a195eb916e3a30b847768d7160f398d08074a22c370613ad860ff9e98",
+    "updatedAt": 1788019072447,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-nia_dz": {
+    "hash": "3b6a9afd6cb301a74e8cc05bdc515daf1fa54c7e82685c4dcc0e0dc882ded6c8",
+    "updatedAt": 1788019075554,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-niak": {
+    "hash": "e4b83678c1d5ef0b33d5d575b1df8c29a8d02c2a6144702653b701b32c432fb7",
+    "updatedAt": 1788019078737,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-nie": {
+    "hash": "57898d093377d1e21b8420adfe5e1c0375c5b3be0366bca3134f98abdaf39b51",
+    "updatedAt": 1788019081700,
     "source": "tts",
     "engine": "azure-ipa"
   },
@@ -6016,15 +6844,63 @@
     "source": "tts",
     "engine": "azure-ipa"
   },
+  "syl-ny": {
+    "hash": "af7050d739b1bce1a00cdf57bb9b177bd00e4efb918ae14a3733b125dff166c3",
+    "updatedAt": 1788019084836,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-o": {
+    "hash": "232765c41585395286ffa9b269a5f3f8ccefdb12dee049646fe49c431436c86d",
+    "updatedAt": 1788019087892,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
   "syl-pa": {
     "hash": "ff2628edcaee25d73f87fb3df8291067531499f163a3123fb189d2a46fd589d2",
     "updatedAt": 1787866986961,
     "source": "tts",
     "engine": "azure-ipa"
   },
+  "syl-pe": {
+    "hash": "b525ae301a3c0d1f0b04e15714c891a062f719ca17056a815a9bd675cb92fef6",
+    "updatedAt": 1788019091038,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-pie": {
+    "hash": "10c780ab03cdc083deeff7bee6840a83cfe67d3549ae1697c2398998789a8cef",
+    "updatedAt": 1788019094115,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-piec": {
+    "hash": "5fc7a8021d5bc81e34b5ba4e64afc6c99137afef788048e8635f2c026e860508",
+    "updatedAt": 1788019097235,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-po": {
+    "hash": "b88c6c706813d21dc04e08da064fb19066e06b27592bff0306fdeda79918b3ce",
+    "updatedAt": 1788019100340,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-pu": {
+    "hash": "035e8b6d8f2efb047a589c79455abcfbf7b7d1f385b40eedb1261c1ca1198225",
+    "updatedAt": 1788019103548,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
   "syl-ra": {
     "hash": "b4dd17818fabce014b133c27e9bc23d515d68247abd5676385ecc81e4747415a",
     "updatedAt": 1787866952793,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-rek": {
+    "hash": "c88daff99dad4f7f6a83057a2ed9538a6f26ef4f003bb34f7b2cf6734a957aea",
+    "updatedAt": 1788019106548,
     "source": "tts",
     "engine": "azure-ipa"
   },
@@ -6040,9 +6916,33 @@
     "source": "tts",
     "engine": "azure-ipa"
   },
+  "syl-ryb": {
+    "hash": "42d4e6f82e5e1b9de778286ca793ba3ee55571e730973f0d0003a9f7de059a45",
+    "updatedAt": 1788019109641,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-rze": {
+    "hash": "41d725ebba4151ff3298cbc6d566a52cf01ea774fcb5418bf4932ee3eb829d81",
+    "updatedAt": 1788019112717,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-s_liw": {
+    "hash": "7fb855a563ead7d1a50ca73f8a416371ee3a8d6b6f2ac75ff2de5e297e066119",
+    "updatedAt": 1788019115908,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
   "syl-sa": {
     "hash": "01ab6a17bd334e51090cb53e2112bc719e2b689761dcdebcfdd267f6e28c8bd8",
     "updatedAt": 1787866980754,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-sia": {
+    "hash": "221879c663df2366fb4f549a3e93f61839e566c6a36ae63a55593e50499194d7",
+    "updatedAt": 1788019118925,
     "source": "tts",
     "engine": "azure-ipa"
   },
@@ -6052,9 +6952,63 @@
     "source": "tts",
     "engine": "azure-ipa"
   },
+  "syl-sol": {
+    "hash": "85020971aef58a3093ca6256957446a6468ab5623f6ba44eede693f37ebc76d1",
+    "updatedAt": 1788019122065,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-sta": {
+    "hash": "a0555a792c4e7cafdc7d3954644c486a2535b4f31f92a48d18189ed0293b883f",
+    "updatedAt": 1788019125221,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-sza": {
+    "hash": "95c9a7b5a12fbe0d03473af33f4b8def66e05800d5307bc199cc1e9b32b9dfdb",
+    "updatedAt": 1788019128262,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-szu": {
+    "hash": "0c51fb4543ef81b793b770513cc0275125ec4f56f55348a5caac516cdda76601",
+    "updatedAt": 1788019131365,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-szy": {
+    "hash": "59f657b917e3b185e438b4179a0cd35d58a4b2ff4baec5be0a3ccce2661fa7a4",
+    "updatedAt": 1788019134449,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
   "syl-ta": {
     "hash": "2e73c2b7e309c68a4edc1d12c861e9bcbbb6f0d89c8c0768a8973d573c7adc09",
     "updatedAt": 1787866934234,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-te": {
+    "hash": "5d1150d65ba337156991e3c4b8ef2608d260b78733240772eda1f2573b85afe2",
+    "updatedAt": 1788019137539,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-tek": {
+    "hash": "910b085b94e91dab5fed0c0a1aff62fae9a23c5639752bc87eec94b909ca1020",
+    "updatedAt": 1788019140718,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-tel": {
+    "hash": "6f075cf668c44f566e3e90eca633e9b582f8cc0883964577d5fcdaeefea92d98",
+    "updatedAt": 1788019143755,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-ter": {
+    "hash": "bd7a4a68b8abaff4386edceb217c4086d3cc8c6f97a9763e3c0a7e90b0c9dff9",
+    "updatedAt": 1788019146854,
     "source": "tts",
     "engine": "azure-ipa"
   },
@@ -6073,6 +7027,48 @@
   "syl-wa": {
     "hash": "911293686c980318ed3ca20cc3299b32f8c4331cbe9ef43d0f294313975e7415",
     "updatedAt": 1787866990058,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-wer": {
+    "hash": "02d379d2344e925ba8368c5d43800ebdbbab9851adb654773eac2d030f46f609",
+    "updatedAt": 1788019150016,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-z-a": {
+    "hash": "1e484824f39625c7d3f8df8bc383bfff31c44adf0fa4a293626967fa9d8daae6",
+    "updatedAt": 1788019153016,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-z-yc": {
+    "hash": "dd8be9edb2395be02e48adc0cab881d36a057a995c710dec74fa1d2c3d984134",
+    "updatedAt": 1788019156169,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-za": {
+    "hash": "90ed84bf1f35c1a5ed82b5f4b6eedd5db88f312ad235a39bedd05e29cabecf65",
+    "updatedAt": 1788019159248,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-zak": {
+    "hash": "951b627c45f69d97846fd432773cbb9bd2a621c2f301b72cb76e1f750e129e1c",
+    "updatedAt": 1788019162380,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-zie": {
+    "hash": "e9775b26265b3231ebd02bb824f2ae31ca4ce6f7ee38d364fe0d4a1c526f7208",
+    "updatedAt": 1788019165520,
+    "source": "tts",
+    "engine": "azure-ipa"
+  },
+  "syl-ziem": {
+    "hash": "42606952efa906931546f6fb97bf89fbfea1d7a92e814c986049337623d15da9",
+    "updatedAt": 1788019168594,
     "source": "tts",
     "engine": "azure-ipa"
   },
@@ -6108,7 +7104,7 @@
   },
   "word-arbuz": {
     "hash": "570ff78a6bb758cd58983464741a8388fd8f4909174b1a16417faca6fce683fa",
-    "updatedAt": 1787947639308,
+    "updatedAt": 1788019179496,
     "source": "override",
     "engine": "edge"
   },
@@ -6124,7 +7120,7 @@
   },
   "word-balon": {
     "hash": "27d3a2766ccb785ef0ea071b2720e7c91eeb8807469a093eba8b16f154e1f444",
-    "updatedAt": 1787947639308,
+    "updatedAt": 1788019179498,
     "source": "override",
     "engine": "edge"
   },
@@ -6145,7 +7141,7 @@
   },
   "word-cebula": {
     "hash": "fb71c651145b3e274e09c6fd70ef680368a17b247e8aad21a7c49b823d1a3cf3",
-    "updatedAt": 1787947639309,
+    "updatedAt": 1788019179498,
     "source": "override",
     "engine": "edge"
   },
@@ -6186,7 +7182,7 @@
   },
   "word-dym": {
     "hash": "b82844a326cb766a74194e6a653034353c247ebb162dbbc85d35e5c133b8df0f",
-    "updatedAt": 1787947639313,
+    "updatedAt": 1788019179506,
     "source": "override",
     "engine": "edge"
   },
@@ -6197,49 +7193,49 @@
   },
   "word-dąb": {
     "hash": "42b196c6086c178609d3069f50ce55d9b8349164adc7b33f7dd7913cd63f0b52",
-    "updatedAt": 1787947639308,
+    "updatedAt": 1788019179497,
     "source": "override",
     "engine": "edge"
   },
   "word-ekran": {
     "hash": "af6e275838fb759dae1c6d4f83a09684802ff193b7dfac9098794cefb8f6c35d",
-    "updatedAt": 1787947639309,
+    "updatedAt": 1788019179499,
     "source": "override",
     "engine": "edge"
   },
   "word-foka": {
     "hash": "630bdc2fc1ea14a76081d67f5a8d9cdeb95b48d3c10b9a48041cfebb9e508e8b",
-    "updatedAt": 1787947639309,
+    "updatedAt": 1788019179500,
     "source": "override",
     "engine": "edge"
   },
   "word-góra": {
     "hash": "9fbe85dd5f45ab3456753a629675812751a6749488f08839e128ab87f064b004",
-    "updatedAt": 1787947639309,
+    "updatedAt": 1788019179500,
     "source": "override",
     "engine": "edge"
   },
   "word-gęś": {
     "hash": "f4cb1756c774d3dbea76dda6f71462e5997b9cdf30ef8ff38d042a09e2829874",
-    "updatedAt": 1787947639309,
+    "updatedAt": 1788019179499,
     "source": "override",
     "engine": "edge"
   },
   "word-hak": {
     "hash": "d5a6b595363c4db00a4d57f7f3c99dfb7d3291c7dba9328dfa773847ca113b32",
-    "updatedAt": 1787947639309,
+    "updatedAt": 1788019179500,
     "source": "override",
     "engine": "edge"
   },
   "word-iskra": {
     "hash": "d786959265a9d9862ab995ee2fb717992d5fcfdeccad4667ad99186eb08f9d49",
-    "updatedAt": 1787947639310,
+    "updatedAt": 1788019179500,
     "source": "override",
     "engine": "edge"
   },
   "word-jabłko": {
     "hash": "ebd2a4ccc9009b4d031ace773fd1cf1ae8628e592a65526f9cd75213a9e74d9d",
-    "updatedAt": 1787947639310,
+    "updatedAt": 1788019179501,
     "source": "override",
     "engine": "edge"
   },
@@ -6285,7 +7281,7 @@
   },
   "word-kot": {
     "hash": "7e5d96fd70055dcd140d3f300eae1a7575b96e855b238632860db2bac6ea1ceb",
-    "updatedAt": 1787947639310,
+    "updatedAt": 1788019179501,
     "source": "override",
     "engine": "edge"
   },
@@ -6301,7 +7297,7 @@
   },
   "word-koń": {
     "hash": "45d0b8cd12ac181b59c908050aee1a4b8b82c5f7a00910b3cdd43a588dd046aa",
-    "updatedAt": 1787947639311,
+    "updatedAt": 1788019179503,
     "source": "override",
     "engine": "edge"
   },
@@ -6327,7 +7323,7 @@
   },
   "word-lampa": {
     "hash": "9de17fa8ab5c67815b5d24d7e91ae04aaea0328e03b192b9fa7534987e844827",
-    "updatedAt": 1787947639310,
+    "updatedAt": 1788019179501,
     "source": "override",
     "engine": "edge"
   },
@@ -6373,7 +7369,7 @@
   },
   "word-miś": {
     "hash": "a9273f979e50184e22292df03c0591c6433d9a9114a5341305550bf8abc10f74",
-    "updatedAt": 1787947639311,
+    "updatedAt": 1788019179502,
     "source": "override",
     "engine": "edge"
   },
@@ -6394,7 +7390,7 @@
   },
   "word-nos": {
     "hash": "6e092668baaa359f9bcd1b865eb52be77e2b98425da7a6fab25202976c9a87bc",
-    "updatedAt": 1787947639311,
+    "updatedAt": 1788019179502,
     "source": "override",
     "engine": "edge"
   },
@@ -6410,7 +7406,7 @@
   },
   "word-osa": {
     "hash": "d1ac7017035e1623633fcfa550dd2a43c32f44eb70d2c79e5cede186c8285f88",
-    "updatedAt": 1787947639311,
+    "updatedAt": 1788019179503,
     "source": "override",
     "engine": "edge"
   },
@@ -6426,7 +7422,7 @@
   },
   "word-piłka": {
     "hash": "ba2e0b50220e456171c7393903e3f40756b25ecaf0174274c85297cb75e5644f",
-    "updatedAt": 1787947639311,
+    "updatedAt": 1788019179504,
     "source": "override",
     "engine": "edge"
   },
@@ -6452,7 +7448,7 @@
   },
   "word-ryba": {
     "hash": "b72e39fbb92c27e522d38493794c3261faf58dee6145339d139c45e1a9815fbd",
-    "updatedAt": 1787947639312,
+    "updatedAt": 1788019179504,
     "source": "override",
     "engine": "edge"
   },
@@ -6498,7 +7494,7 @@
   },
   "word-słońce": {
     "hash": "6a56896c3040ec007cad8d07f7d865b38110c6330dbb25ce4a6a91e4005357b1",
-    "updatedAt": 1787947639312,
+    "updatedAt": 1788019179504,
     "source": "override",
     "engine": "edge"
   },
@@ -6519,19 +7515,19 @@
   },
   "word-tort": {
     "hash": "cd4e300207ecb3cde196f9d977dc1a04f5dce293f2f106c8ce68e4c421568f92",
-    "updatedAt": 1787947639312,
+    "updatedAt": 1788019179505,
     "source": "override",
     "engine": "edge"
   },
   "word-ucho": {
     "hash": "ca1719f04974d8fb3934140de076778092b11e66b6c8f79694e3d03eef9d3910",
-    "updatedAt": 1787947639312,
+    "updatedAt": 1788019179505,
     "source": "override",
     "engine": "edge"
   },
   "word-woda": {
     "hash": "110b0248e443552739cd3ed123942c2018ff90342284df06106b3238c379f67e",
-    "updatedAt": 1787947639313,
+    "updatedAt": 1788019179506,
     "source": "override",
     "engine": "edge"
   },
@@ -6542,7 +7538,7 @@
   },
   "word-zegar": {
     "hash": "32256f4917648fbe24e64d8c24792bd7eeddde1290bf02de93dc84d7462d66ac",
-    "updatedAt": 1787947639313,
+    "updatedAt": 1788019179506,
     "source": "override",
     "engine": "edge"
   },
@@ -6558,37 +7554,37 @@
   },
   "word-ósemka": {
     "hash": "2047a2f083a77d6beb189a74d1c56e4fdcabe1163112c5448d3e9de3ffcba9d5",
-    "updatedAt": 1787947639311,
+    "updatedAt": 1788019179503,
     "source": "override",
     "engine": "edge"
   },
   "word-ćma": {
     "hash": "39ef813c5cb14eb403c6512216d29c87d3563032098a2f022e1ccae7ff3747d9",
-    "updatedAt": 1787947639309,
+    "updatedAt": 1788019179499,
     "source": "override",
     "engine": "edge"
   },
   "word-łyżwa": {
     "hash": "023fecf6d1006c1182bf6daa97b63072c1687a7f3c481603161a747f1aa523f0",
-    "updatedAt": 1787947639311,
+    "updatedAt": 1788019179502,
     "source": "override",
     "engine": "edge"
   },
   "word-śliwka": {
     "hash": "62315d70c3eb2eb599e1581824d97aa6f69695aea9e233f3200028a02e22db9f",
-    "updatedAt": 1787947639312,
+    "updatedAt": 1788019179505,
     "source": "override",
     "engine": "edge"
   },
   "word-źrebak": {
     "hash": "701fe3bb056a5f0898425fa832d09212504b1f19d8a118a6524f913cf2bbb605",
-    "updatedAt": 1787947639313,
+    "updatedAt": 1788019179506,
     "source": "override",
     "engine": "edge"
   },
   "word-żaba": {
     "hash": "16767a53102e8ea3bd1daf5b14971ebb7802a7a28fdaeee2c1f20f3e1076fff8",
-    "updatedAt": 1787947639313,
+    "updatedAt": 1788019179507,
     "source": "override",
     "engine": "edge"
   }

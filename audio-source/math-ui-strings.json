@@ -102,5 +102,18 @@
   "correct-show-25": "Tu było dwadzieścia pięć!",
   "correct-show-30": "Tu było trzydzieści!",
   "correct-show-40": "Tu było czterdzieści!",
-  "correct-show-50": "Tu było pięćdziesiąt!"
+  "correct-show-50": "Tu było pięćdziesiąt!",
+
+  "strategy-count-on": "Policz od większej liczby: siedem… osiem, dziewięć.",
+  "strategy-make10": "Najpierw zrób dziesięć, potem dodaj resztę.",
+  "strategy-doubles": "To podwójna liczba — tyle samo i tyle samo.",
+  "strategy-near-doubles": "To prawie podwójka: podwójna i jeszcze jeden.",
+  "strategy-count-back": "Licz do tyłu od większej liczby.",
+
+  "praise-proc-num-1": "Policzyłeś po kolei!",
+  "praise-proc-num-2": "Sprawdziłeś zanim wybrałeś!",
+  "praise-proc-num-3": "Użyłeś dobrej strategii!",
+  "praise-proc-num-4": "Nie zgadywałeś!",
+  "praise-proc-num-5": "Pomyślałeś o dziesiątce!",
+  "praise-proc-num-6": "Liczyłeś od większej!"
 }
