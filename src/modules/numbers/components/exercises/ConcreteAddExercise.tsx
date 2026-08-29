@@ -13,13 +13,14 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
 const SECOND_GROUP_DELAY_MS = 1500
 const DROP_TARGET_ID = 'concrete-add-target'
 
-export function ConcreteAddExercise({ audioBus, payload, onAnswer }: Props) {
+export function ConcreteAddExercise({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const a = clamp(payload.args[0] ?? 1, 0, 10)
   const b = clamp(payload.args[1] ?? 1, 0, 10)
   const sum = a + b
@@ -27,10 +28,10 @@ export function ConcreteAddExercise({ audioBus, payload, onAnswer }: Props) {
   const [showSecond, setShowSecond] = useState(false)
 
   useEffect(() => {
-    void audioBus.play('ask-howmany-total')
+    for (const key of promptKeys) void audioBus.play(key)
     const t = setTimeout(() => setShowSecond(true), SECOND_GROUP_DELAY_MS)
     return () => clearTimeout(t)
-  }, [audioBus])
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(() => buildChoices(sum, { min: 1, max: 10 }), [sum])
 

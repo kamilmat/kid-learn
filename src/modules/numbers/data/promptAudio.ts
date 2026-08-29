@@ -60,3 +60,45 @@ export function thinkingAloudKey(exerciseType: Question['exerciseType']): string
       return null
   }
 }
+
+/** `number-0..20` istnieją w numbers.json; poza zakresem nie ma pliku. */
+function numberKey(n: number | undefined): string | null {
+  return n !== undefined && Number.isInteger(n) && n >= 0 && n <= 20 ? `number-${n}` : null
+}
+
+/**
+ * Pełna sekwencja polecenia: liczby zadania wypowiadane wprost, potem pytanie.
+ * WHY: klucze `number-*`/`op-*` były martwe, a dziecko słyszało samo „ile jest
+ * razem?" bez składników. Argument spoza 0–20 → cofamy się do klucza
+ * generycznego: lepiej krótszy prompt niż 404 w środku kolejki.
+ */
+export function promptAudioKeys(question: Question | null): string[] {
+  const generic = promptAudioKey(question)
+  if (!question || generic === null) return []
+  const args = (question.payload as { args?: number[] }).args ?? []
+  const a = numberKey(args[0])
+  const b = numberKey(args[1])
+  const withOp = (op: string): string[] =>
+    a !== null && b !== null ? [a, op, b, generic] : [generic]
+  switch (question.exerciseType) {
+    case 'concrete-add':
+    case 'doubles':
+    case 'near-doubles':
+    case 'make-10':
+      return withOp('op-plus')
+    case 'subtract-maintenance':
+      return withOp('op-minus')
+    case 'concrete-add-subtract':
+      return withOp((question.payload as { op?: '+' | '-' }).op === '-' ? 'op-minus' : 'op-plus')
+    case 'equal-groups':
+    case 'array-match':
+      return withOp('op-times')
+    case 'ten-frame-fill':
+    case 'number-bond-builder':
+      return a !== null ? [a, generic] : [generic]
+    default:
+      // subitize-flash, match-digit-dots, number-rhythm, skip-count-chase,
+      // fact-family-triangle — liczby SĄ celem pytania albo jest ich za dużo.
+      return [generic]
+  }
+}

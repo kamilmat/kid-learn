@@ -9,7 +9,7 @@ import { colors, radii, tapTargets } from '@/app/theme'
 import { useNumbersSession, type SessionStatus } from '../hooks/useNumbersSession'
 import { useNumbers } from '../store/numbersStore'
 import { extractCorrectValue } from '../data/correctValue'
-import { promptAudioKey, thinkingAloudKey } from '../data/promptAudio'
+import { promptAudioKeys, thinkingAloudKey } from '../data/promptAudio'
 import { NUMBERS_PRAISE_KEYS, type NumbersPraiseKey } from '../data/praise'
 import type { AnswerOutcome, ExerciseType, Question } from '../types'
 import { ConceptIntro } from './intros/ConceptIntro'
@@ -152,11 +152,12 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
   }, [thinkingAloudOn, showIntro, currentExerciseType, audioBus])
 
   const handleRepeatPrompt = useCallback(() => {
-    const key = promptAudioKey(session.currentQuestion)
-    if (key === null) return
+    const keys = promptAudioKeys(session.currentQuestion)
+    if (keys.length === 0) return
     // Stop przed play — powtórka ma restartować, nie kolejkować (jak w literach).
     audioBus.stop()
-    void audioBus.play(key)
+    // Kolejka jest FIFO — klucze lecą po sobie bez `await` i bez `stop()` w środku.
+    for (const key of keys) void audioBus.play(key)
   }, [audioBus, session.currentQuestion])
 
   const handleDontKnow = useCallback(() => {
@@ -247,6 +248,11 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
 type ExerciseProps = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  /**
+   * Pełna sekwencja polecenia (liczby + operator + pytanie). Liczy ją router,
+   * bo tylko on widzi całe `Question`; ćwiczenie zna jedynie `payload`.
+   */
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
@@ -259,9 +265,12 @@ function ExerciseRouter({
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   onAnswer: (outcome: AnswerOutcome) => void
 }) {
+  // Stabilna referencja — tablica trafia do deps `useEffect` ćwiczeń.
+  const promptKeys = useMemo(() => promptAudioKeys(question), [question])
   const props: ExerciseProps = {
     audioBus,
     payload: question.payload as { args: number[] },
+    promptKeys,
     onAnswer,
   }
   // Re-mount na zmianę question.factId — gwarantuje czysty stan ćwiczenia

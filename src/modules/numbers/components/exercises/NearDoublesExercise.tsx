@@ -13,6 +13,7 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
@@ -20,15 +21,15 @@ const DROP_TARGET_ID = 'answer-target'
 const DOT_COLOR = '#dc2626'
 const HIGHLIGHT_COLOR = '#16a34a'
 
-export function NearDoublesExercise({ audioBus, payload, onAnswer }: Props) {
+export function NearDoublesExercise({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const a = clamp(payload.args[0] ?? 1, 1, 9)
   // Wymuś b = a+1 (NearDoubles definicja)
   const b = clamp(payload.args[1] ?? a + 1, a + 1, 10)
   const correct = a + b
 
   useEffect(() => {
-    void audioBus.play('ask-howmany-total')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(
     () =>

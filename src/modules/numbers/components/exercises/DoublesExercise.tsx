@@ -13,19 +13,20 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
 const DROP_TARGET_ID = 'answer-target'
 const DOT_COLOR = '#dc2626'
 
-export function DoublesExercise({ audioBus, payload, onAnswer }: Props) {
+export function DoublesExercise({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const n = clamp(payload.args[0] ?? 1, 1, 10)
   const correct = n * 2
 
   useEffect(() => {
-    void audioBus.play('ask-howmany-total')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(
     () =>

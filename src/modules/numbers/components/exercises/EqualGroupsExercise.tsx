@@ -14,21 +14,22 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
 const DROP_TARGET_ID = 'answer-target'
 const GROUP_COLORS = ['#fee2e2', '#dbeafe', '#dcfce7', '#fef3c7', '#f3e8ff']
 
-export function EqualGroupsExercise({ audioBus, payload, onAnswer }: Props) {
+export function EqualGroupsExercise({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const n = clamp(payload.args[0] ?? 2, 1, 5)
   const m = clamp(payload.args[1] ?? 2, 1, 6)
   const total = n * m
   const iconSet = useMemo(() => pickIconSet(n * 10 + m), [n, m])
 
   useEffect(() => {
-    void audioBus.play('ask-howmany-total')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(
     () =>

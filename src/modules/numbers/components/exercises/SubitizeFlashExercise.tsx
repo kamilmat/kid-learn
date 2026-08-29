@@ -12,21 +12,22 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
 const FLASH_MS = 2000
 const DROP_TARGET_ID = 'subitize-target'
 
-export function SubitizeFlashExercise({ audioBus, payload, onAnswer }: Props) {
+export function SubitizeFlashExercise({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const correct = clamp(payload.args[0] ?? 1, 1, 6)
   const [phase, setPhase] = useState<'flash' | 'answer'>('flash')
 
   useEffect(() => {
-    void audioBus.play('ask-howmany')
+    for (const key of promptKeys) void audioBus.play(key)
     const t = setTimeout(() => setPhase('answer'), FLASH_MS)
     return () => clearTimeout(t)
-  }, [audioBus])
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(() => buildChoices(correct, { min: 1, max: 6 }), [correct])
 

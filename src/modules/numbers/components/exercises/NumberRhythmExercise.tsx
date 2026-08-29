@@ -12,18 +12,19 @@ import { DropTarget } from './shared/DropTarget'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
 const DROP_TARGET_ID = 'rhythm-target'
 
-export function NumberRhythmExercise({ audioBus, payload, onAnswer }: Props) {
+export function NumberRhythmExercise({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const pattern = payload.args.length > 0 ? payload.args : [1, 2]
   const expectedNext = pattern[0] ?? 1
 
   useEffect(() => {
-    void audioBus.play('ask-whats-next')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   // Sekwencja: pattern × 2 + slot na pytanie
   const sequence = useMemo(() => [...pattern, ...pattern], [pattern])
