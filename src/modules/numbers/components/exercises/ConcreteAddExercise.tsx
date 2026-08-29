@@ -6,7 +6,7 @@ import { ConcreteIcons } from '../representations/ConcreteIcons'
 import { DigitTile } from '../representations/DigitTile'
 import { pickIconSet } from '../../data/concreteSets'
 import type { AnswerOutcome } from '../../types'
-import { buildChoices } from '../../utils/buildChoices'
+import { buildChoices, NEAR_MISS_OFFSETS } from '../../utils/buildChoices'
 import { DropTarget } from './shared/DropTarget'
 import { clamp } from '../../utils/clamp'
 
@@ -35,7 +35,10 @@ export function ConcreteAddExercise({ audioBus, payload, promptKeys, onAnswer, r
     return () => clearTimeout(t)
   }, [audioBus, promptKeys])
 
-  const choices = useMemo(() => buildChoices(sum, { restrictChoicesTo, min: 1, max: 10 }), [sum, restrictChoicesTo])
+  const choices = useMemo(
+    () => buildChoices(sum, { restrictChoicesTo, min: 1, max: 10, offsets: NEAR_MISS_OFFSETS }),
+    [sum, restrictChoicesTo],
+  )
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return

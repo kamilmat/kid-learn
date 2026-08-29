@@ -5,7 +5,7 @@ import type { AudioBus } from '@/shared/audio/AudioBus'
 import { TenFrame } from '../representations/TenFrame'
 import { DigitTile } from '../representations/DigitTile'
 import type { AnswerOutcome } from '../../types'
-import { buildChoices } from '../../utils/buildChoices'
+import { buildChoices, NEAR_MISS_OFFSETS } from '../../utils/buildChoices'
 import { DropTarget } from './shared/DropTarget'
 import { clamp } from '../../utils/clamp'
 
@@ -28,7 +28,10 @@ export function TenFrameFill({ audioBus, payload, promptKeys, onAnswer, restrict
     for (const key of promptKeys) void audioBus.play(key)
   }, [audioBus, promptKeys])
 
-  const choices = useMemo(() => buildChoices(missing, { restrictChoicesTo, min: 1, max: 10 }), [missing, restrictChoicesTo])
+  const choices = useMemo(
+    () => buildChoices(missing, { restrictChoicesTo, min: 1, max: 10, offsets: NEAR_MISS_OFFSETS }),
+    [missing, restrictChoicesTo],
+  )
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
