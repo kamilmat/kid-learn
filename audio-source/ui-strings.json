@@ -60,5 +60,6 @@
   "letters-daily-intro": "Literka dnia! Posłuchaj i popatrz.",
   "letters-daily-end": "To była literka dnia. Do jutra!",
   "letters-daily-done": "Literkę dnia już znasz. Wróć jutro.",
-  "home-daily-letter": "Tu jest literka dnia — jedna literka, króciutko."
+  "home-daily-letter": "Tu jest literka dnia — jedna literka, króciutko.",
+  "letters-reverse-prompt": "Widzisz literkę. Posłuchaj i wybierz, jak brzmi."
 }

@@ -25,6 +25,10 @@ const DAILY_END_KEY = 'letters-daily-end'
 /** Ile razy litera pokazuje się w mikrosesji. */
 export const DAILY_EXPOSURES = 4
 
+// Mikrosesja ma 4 pytania, więc domyślne „co 5." nigdy by nie trafiło.
+// Drugie pytanie jest odwrotne: dziecko zdążyło już usłyszeć literę raz.
+const DAILY_REVERSE_INDICES = [1]
+
 /** Ile trwa ekran kotwicy słownej (emoji + wyraz) zanim wrócimy na Home. */
 const WORD_ANCHOR_MS = 2500
 
@@ -175,6 +179,7 @@ export function DailyLetterSession({
       mode="daily"
       targetPool={targetPool}
       sessionLength={DAILY_EXPOSURES}
+      forceReverseIndices={DAILY_REVERSE_INDICES}
       settings={settings}
       {...(initialStates !== undefined ? { initialStates } : {})}
       onExit={() => onDoneRef.current(today.dayKey)}

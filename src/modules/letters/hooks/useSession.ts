@@ -92,6 +92,16 @@ export type UseSessionConfig = {
    */
   secondAttempt?: boolean
   /**
+   * Co które pytanie ma być wariantem odwrotnym (`letter-to-sound`).
+   * Default 5 → indeksy 4, 9, 14… `0` wyłącza wariant odwrotny.
+   */
+  reverseEvery?: number
+  /**
+   * Indeksy pytań wymuszone jako odwrotne, niezależnie od `reverseEvery`
+   * (Literka dnia ma 4 pytania i chce dokładnie jedno odwrotne).
+   */
+  forceReverseIndices?: number[]
+  /**
    * Jak brzmi prompt litery: `phoneme` („b"), `name` („be"), `both` („be… b").
    * Default `both` — nazwa identyfikuje literę, fonem jest potrzebny do scalania.
    */
@@ -150,6 +160,13 @@ export type UseSessionApi = {
 }
 
 const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
+
+/** Co które pytanie jest wariantem odwrotnym „widzisz literę → wybierz dźwięk". */
+const REVERSE_EVERY_DEFAULT = 5
+/** Wariant odwrotny ma 3 kafelki — odsłuch kandydatów jest kosztowny czasowo. */
+const REVERSE_TILES = 3
+/** „Widzisz literkę. Posłuchaj i wybierz, jak brzmi." */
+export const REVERSE_PROMPT_KEY = 'letters-reverse-prompt'
 
 // Czas trzymania feedback overlay — pokrywa audio sequence + ~1s buffer "po-audio".
 // Wartości audio zmierzone afinfo na public/audio/*.mp3 (Edge TTS PL Zofia).
@@ -289,6 +306,8 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     celebrationTempo,
     tilesPerQuestion = 4,
     secondAttempt = true,
+    reverseEvery = REVERSE_EVERY_DEFAULT,
+    forceReverseIndices,
     promptMode = 'both',
     initialStates,
     onSessionEnd,
@@ -311,6 +330,8 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     celebrationTempo,
     tilesPerQuestion,
     secondAttempt,
+    reverseEvery,
+    forceReverseIndices,
     promptMode,
     rng,
     now,
@@ -329,6 +350,8 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     celebrationTempo,
     tilesPerQuestion,
     secondAttempt,
+    reverseEvery,
+    forceReverseIndices,
     promptMode,
     rng,
     now,
@@ -512,11 +535,18 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     if (!targetState) {
       throw new Error(`useSession: brak state dla litery "${target}"`)
     }
+    const reverseEvery = cfg.reverseEvery ?? REVERSE_EVERY_DEFAULT
+    const forced = cfg.forceReverseIndices ?? []
+    // Indeksy 4, 9, … — wariant trudniejszy nie zaczyna sesji.
+    const kind: Question['kind'] =
+      forced.includes(num) || (reverseEvery > 0 && (num + 1) % reverseEvery === 0)
+        ? 'letter-to-sound'
+        : 'sound-to-letter'
     // Clamp tilesPerQuestion do rozmiaru aktywnej puli — gdy user ma override
     // puli mniejszy niż wybrane tilesPerQuestion (np. pula = 4 a setting = 6),
     // używamy tylu kafelków ile pula pozwala (target + reszta jako dystraktory).
     const safeTilesPerQuestion = Math.min(
-      cfg.tilesPerQuestion,
+      kind === 'letter-to-sound' ? REVERSE_TILES : cfg.tilesPerQuestion,
       cfg.activeLetters.length,
     )
     const distractorCount = Math.max(1, safeTilesPerQuestion - 1)
@@ -542,6 +572,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
 
     const question: Question = {
       index: num,
+      kind,
       targetLetter: target,
       tiles,
       targetSlot,
@@ -568,8 +599,13 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     // Audio: prompt litery wg `promptMode` — kolejka AudioBus naturalnie
     // poczeka aż poprzedni feedback ("X jak Y") się skończy. NIE wołamy
     // stop() bo to obcięłoby końcówkę asocjacji.
-    for (const key of promptAudioKeys(target, cfg.promptMode)) {
-      void cfg.audioBus.play(key)
+    // Wariant odwrotny NIE zdradza dźwięku litery — to jest pytanie.
+    if (kind === 'letter-to-sound') {
+      void cfg.audioBus.play(REVERSE_PROMPT_KEY)
+    } else {
+      for (const key of promptAudioKeys(target, cfg.promptMode)) {
+        void cfg.audioBus.play(key)
+      }
     }
 
     // Timer

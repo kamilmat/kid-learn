@@ -29,6 +29,7 @@ import type { LetterTileState } from './LetterTile'
 import { FeedbackOverlay } from './FeedbackOverlay'
 import { PauseOverlay } from '@/shared/ui/PauseOverlay'
 import { QuizCard } from './QuizCard'
+import { ReverseQuizCard } from './ReverseQuizCard'
 import { SessionEnd } from './SessionEnd'
 import type { SessionMode } from '@/shared/stats/types'
 import type {
@@ -62,6 +63,10 @@ export type SessionViewProps = {
   audioBus?: Pick<AudioBus, 'play' | 'stop'>
   /** Jeśli `true`, sesja sama się startuje przy mounto. */
   autoStart?: boolean
+  /** Co które pytanie jest wariantem odwrotnym (`letter-to-sound`). Default 5. */
+  reverseEvery?: number
+  /** Indeksy pytań wymuszone jako odwrotne (mikrosesje o własnej długości). */
+  forceReverseIndices?: number[]
   /**
    * Ref, do którego sesja wpina „zapisz częściowy postęp". KidNav w routingu
    * modułu woła go zanim odejdzie z ekranu — ⬅️/🏠 nie mogą gubić SRS.
@@ -88,6 +93,8 @@ export function SessionView({
   onSessionComplete,
   audioBus = defaultAudioBus,
   autoStart = true,
+  reverseEvery,
+  forceReverseIndices,
   quitRef,
 }: SessionViewProps) {
   const activeLetters = useMemo(() => getActiveLetterPool(settings, level), [settings, level])
@@ -109,6 +116,8 @@ export function SessionView({
     celebrationTempo: settings.celebrationTempo,
     tilesPerQuestion: getEffectiveTilesPerQuestion(settings, level),
     secondAttempt: settings.secondAttempt,
+    ...(reverseEvery !== undefined ? { reverseEvery } : {}),
+    ...(forceReverseIndices !== undefined ? { forceReverseIndices } : {}),
     promptMode,
     ...(initialStates !== undefined ? { initialStates } : {}),
     ...(onSessionComplete !== undefined ? { onSessionEnd: onSessionComplete } : {}),
@@ -183,6 +192,23 @@ export function SessionView({
     return out
   }, [session.status, session.lastFeedback, session.currentQuestion])
 
+  // Wariant odwrotny: odsłuch kandydata NIE jest odpowiedzią, tylko podglądem
+  // dźwięku. `stop()` przed play — dziecko przeskakuje między kandydatami
+  // szybciej niż trwa klip, kolejkowanie dałoby kakofonię z opóźnieniem.
+  //
+  // Idle-timer: tap kafelka emituje natywne `pointerdown`, które bąbelkuje do
+  // `document` — tam słucha `useIdleDetector` i restartuje odliczanie. Dziecko
+  // słuchające trzech kandydatów przez pół minuty nie dostanie auto-pauzy.
+  const playCandidate = useCallback(
+    (letter: string) => {
+      audioBus.stop()
+      for (const key of promptAudioKeys(letter, promptMode)) {
+        void audioBus.play(key)
+      }
+    },
+    [audioBus, promptMode],
+  )
+
   if (session.status === 'finished') {
     return (
       <SessionEnd
@@ -197,9 +223,30 @@ export function SessionView({
     )
   }
 
+  const isReverse = session.currentQuestion?.kind === 'letter-to-sound'
+
   return (
     <div data-testid="session-view">
-      {session.currentQuestion !== null && (
+      {session.currentQuestion !== null && isReverse && (
+        <ReverseQuizCard
+          question={session.currentQuestion}
+          caseMode={caseMode}
+          styleMode={styleMode}
+          questionNumber={session.questionNumber}
+          totalQuestions={session.totalQuestions}
+          iskierki={session.iskierki}
+          wrongCount={session.wrongCount}
+          dontKnowCount={session.dontKnowCount + session.timeoutCount}
+          mascotIntensity={session.mascotIntensity}
+          interactive={session.status === 'playing' || session.status === 'retry'}
+          {...(tileState !== undefined ? { tileState } : {})}
+          onPlayCandidate={playCandidate}
+          onTileClick={(letter, slot) => session.answer(letter, slot)}
+          onDontKnow={() => session.dontKnow()}
+          onPause={() => session.pause('manual')}
+        />
+      )}
+      {session.currentQuestion !== null && !isReverse && (
         <QuizCard
           question={session.currentQuestion}
           caseMode={caseMode}
