@@ -1,6 +1,7 @@
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { KidNav } from '@/shared/ui/KidNav'
 import { Home } from '@/app/Home'
+import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { LettersModule } from '@/modules/letters'
 import { ReadingModule } from '@/modules/reading'
 import { NumbersModule } from '@/modules/numbers'
@@ -53,15 +54,17 @@ export function App() {
       <main
         className={`flex-1 min-h-0 ${isHome ? '' : 'p-4'} ${isLetters || isReading || isNumbers || isCzytanki ? 'overflow-hidden' : 'overflow-auto'}`}
       >
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/letters/*" element={<LettersModule />} />
-          <Route path="/reading/*" element={<ReadingModule />} />
-          <Route path="/numbers/*" element={<NumbersModule />} />
-          <Route path="/czytanki/*" element={<CzytankiModule />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/report" element={<ReportPage />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/letters/*" element={<LettersModule />} />
+            <Route path="/reading/*" element={<ReadingModule />} />
+            <Route path="/numbers/*" element={<NumbersModule />} />
+            <Route path="/czytanki/*" element={<CzytankiModule />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/report" element={<ReportPage />} />
+          </Routes>
+        </ErrorBoundary>
       </main>
     </div>
   )

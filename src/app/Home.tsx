@@ -10,7 +10,7 @@
  * Home jest specjalny — bez KidNav (to root, nie ma "wstecz").
  */
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { audioBus } from '@/shared/audio/AudioBus'
 import { playIntroOnce } from '@/shared/audio/playIntroOnce'
@@ -86,7 +86,22 @@ export function Home() {
   const handleNumbers = useCallback(() => goToModule('/numbers'), [goToModule])
   const handleCzytanki = useCallback(() => goToModule('/czytanki'), [goToModule])
 
-  const today = dayKey(Date.now())
+  // Home potrafi zostać otwarty przez całą dobę (PWA na iPadzie rzadko bywa
+  // zamykana), a `dayKey` policzony raz w renderze zamrażał pasek „literki dnia"
+  // na wczorajszej dacie. Odświeżamy co minutę i przy powrocie do zakładki.
+  const [today, setToday] = useState(() => dayKey(Date.now()))
+  useEffect(() => {
+    const refresh = () => setToday(dayKey(Date.now()))
+    const interval = setInterval(refresh, 60_000)
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('focus', refresh)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('focus', refresh)
+    }
+  }, [])
+
   const dailyDone = dailyDoneDayKey === today
   const todaysLetter = dailyLetter?.dayKey === today ? dailyLetter.letter : null
 

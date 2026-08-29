@@ -30,6 +30,8 @@ function makeConfig(overrides: Partial<UseSessionConfig> = {}): UseSessionConfig
   }
 }
 
+type ReverseHandle = { answerWrong: () => void; dontKnow: () => void }
+
 /** Przechodzi przez feedback i wchodzi w następne pytanie (secondAttempt: false). */
 function advanceToNextQuestion() {
   act(() => {
@@ -195,6 +197,43 @@ describe('useSession — wariant odwrotny „widzisz literę → wybierz dźwię
     // wystarczyłoby dopasować to, co przed chwilą zabrzmiało.
     expect(played).not.toContain(`letter-${reverse.targetLetter}`)
     expect(played.length).toBeGreaterThan(0)
+  })
+
+  // Przemilczenie dźwięku celu ma sens WYŁĄCZNIE gdy zaraz będzie druga próba.
+  // Bez retry dziecko wychodziło z pytania nie usłyszawszy poprawnej odpowiedzi.
+  it.each([
+    ['błąd bez drugiej próby', (r: ReverseHandle) => r.answerWrong()],
+    ['„nie wiem"', (r: ReverseHandle) => r.dontKnow()],
+  ])('wariant odwrotny — %s gra dźwięk celu', (_label, action) => {
+    const audioBus = makeAudioBus()
+    const { result } = renderHook(() =>
+      useSession(makeConfig({ audioBus, secondAttempt: false })),
+    )
+    act(() => {
+      result.current.start()
+    })
+
+    for (let i = 0; i < 4; i += 1) {
+      const q = result.current.currentQuestion!
+      act(() => {
+        result.current.answer(q.targetLetter, q.targetSlot)
+      })
+      advanceToNextQuestion()
+    }
+
+    const reverse = result.current.currentQuestion!
+    expect(reverse.kind).toBe('letter-to-sound')
+    audioBus.play.mockClear()
+    act(() => {
+      const wrongSlot = reverse.targetSlot === 0 ? 1 : 0
+      action({
+        answerWrong: () => result.current.answer(reverse.tiles[wrongSlot]!, wrongSlot),
+        dontKnow: () => result.current.dontKnow(),
+      })
+    })
+
+    const played = audioBus.play.mock.calls.map((c) => c[0])
+    expect(played).toContain(`letter-${reverse.targetLetter}`)
   })
 
   it('`reverseEvery: 0` wyłącza wariant odwrotny', () => {
