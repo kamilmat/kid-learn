@@ -13,7 +13,7 @@
 import { useCallback, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { playIntroOnce } from '@/shared/audio/playIntroOnce'
-import { pickNoRepeat } from '@/shared/audio/pickNoRepeat'
+import { pickPraiseMixed } from '@/shared/audio/pickPraiseMixed'
 import type { Level, Settings } from '@/shared/settings/types'
 import type {
   ReadingQuestion,
@@ -53,6 +53,19 @@ export const READING_PRAISE_KEYS = [
   'reading-praise-5',
   'reading-praise-6',
 ] as const
+
+export const READING_PRAISE_PROCESS_KEYS = [
+  'reading-praise-proc-1',
+  'reading-praise-proc-2',
+  'reading-praise-proc-3',
+  'reading-praise-proc-4',
+  'reading-praise-proc-5',
+  'reading-praise-proc-6',
+] as const
+
+export type ReadingPraiseKey =
+  | (typeof READING_PRAISE_KEYS)[number]
+  | (typeof READING_PRAISE_PROCESS_KEYS)[number]
 
 export type Status = 'idle' | 'asking' | 'feedback' | 'paused' | 'complete' | 'wild-celebration'
 export type FeedbackVariant = null | 'correct' | 'wrong' | 'dontKnow' | 'wild'
@@ -406,7 +419,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   const feedbackVariantRef = useRef<FeedbackVariant>(null)
 
   // Ostatnia zagrana pochwała — picker nie powtarza jej dwa razy pod rząd
-  const lastPraiseRef = useRef<string | null>(null)
+  const lastPraiseRef = useRef<ReadingPraiseKey | null>(null)
 
   const questionsPerSession =
     settings.reading.questionsPerSession[level] ?? DEFAULT_QUESTIONS_PER_SESSION
@@ -643,7 +656,12 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
           return
         }
         plays.push(audioBus.play('sfx-correct-ding'))
-        const praiseKey = pickNoRepeat(READING_PRAISE_KEYS, lastPraiseRef.current, rng)
+        const praiseKey = pickPraiseMixed(
+          READING_PRAISE_KEYS,
+          READING_PRAISE_PROCESS_KEYS,
+          lastPraiseRef.current,
+          rng,
+        )
         lastPraiseRef.current = praiseKey
         plays.push(audioBus.play(praiseKey))
       } else if (outcome === 'wrong') {
