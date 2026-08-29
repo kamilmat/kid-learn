@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { strategyAudioKey } from './strategyAudio'
+import { shouldChargeStrategyBudget, strategyAudioKey } from './strategyAudio'
 
 describe('strategyAudioKey', () => {
   it('count-on', () => {
@@ -19,5 +19,13 @@ describe('strategyAudioKey', () => {
   it('bez strategii → null', () => {
     expect(strategyAudioKey('iskierka-rhythm', '+')).toBeNull()
     expect(strategyAudioKey('pochodnia-arrays', '+')).toBeNull()
+  })
+})
+
+describe('shouldChargeStrategyBudget', () => {
+  it('błąd kosztuje budżet', () => expect(shouldChargeStrategyBudget('wrong')).toBe(true))
+  it('„nie wiem" i poprawna odpowiedź nie kosztują budżetu', () => {
+    expect(shouldChargeStrategyBudget('dontKnow')).toBe(false)
+    expect(shouldChargeStrategyBudget('correct')).toBe(false)
   })
 })

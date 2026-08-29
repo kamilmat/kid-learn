@@ -81,8 +81,10 @@ export function promptAudioKeys(question: Question | null): string[] {
   const withOp = (op: string): string[] =>
     a !== null && b !== null ? [a, op, b, generic] : [generic]
   switch (question.exerciseType) {
-    case 'concrete-add':
+    // `doubles` ma jeden argument (a+a) — powiel go zamiast oczekiwać `b`.
     case 'doubles':
+      return a !== null ? [a, 'op-plus', a, generic] : [generic]
+    case 'concrete-add':
     case 'near-doubles':
     case 'make-10':
       return withOp('op-plus')
@@ -94,6 +96,9 @@ export function promptAudioKeys(question: Question | null): string[] {
     case 'array-match':
       return withOp('op-times')
     case 'ten-frame-fill':
+      // fakt `tenframe-need-10` ma args[0] === 0 — „0 do dziesięciu" nie ma sensu
+      // wypowiedziane, więc pomijamy wiodącą liczbę i zostaje sam prompt generyczny.
+      return a !== null && args[0] !== 0 ? [a, generic] : [generic]
     case 'number-bond-builder':
       return a !== null ? [a, generic] : [generic]
     default:

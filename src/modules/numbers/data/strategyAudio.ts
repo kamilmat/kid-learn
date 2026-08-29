@@ -1,4 +1,4 @@
-import type { ConceptId } from '../types'
+import type { AnswerOutcome, ConceptId } from '../types'
 
 /**
  * Nazwanie strategii po błędzie — dziecko dostaje NARZĘDZIE, nie tylko
@@ -7,6 +7,15 @@ import type { ConceptId } from '../types'
  * 'plomyk-addsub-10' z op '-', więc trafiają w count-back poniżej.
  */
 export const MAX_STRATEGY_CUES_PER_SESSION = 2
+
+/**
+ * Budżet się zużywa tylko za błędy — „nie wiem" nadal odtwarza strategię
+ * (dziecko ma dostać narzędzie), ale nie powinno kosztować tyle co pomyłka:
+ * przyznanie się do niewiedzy jest już samo w sobie dobrą decyzją.
+ */
+export function shouldChargeStrategyBudget(outcome: AnswerOutcome): boolean {
+  return outcome === 'wrong'
+}
 
 export function strategyAudioKey(conceptId: ConceptId, op: '+' | '-'): string | null {
   switch (conceptId) {

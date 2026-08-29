@@ -11,7 +11,11 @@ import { useNumbers } from '../store/numbersStore'
 import { extractCorrectValue } from '../data/correctValue'
 import { promptAudioKeys, thinkingAloudKey } from '../data/promptAudio'
 import { NUMBERS_PRAISE_KEYS, type NumbersPraiseKey } from '../data/praise'
-import { MAX_STRATEGY_CUES_PER_SESSION, strategyAudioKey } from '../data/strategyAudio'
+import {
+  MAX_STRATEGY_CUES_PER_SESSION,
+  shouldChargeStrategyBudget,
+  strategyAudioKey,
+} from '../data/strategyAudio'
 import type { AnswerOutcome, ExerciseType, Question } from '../types'
 import { ConceptIntro } from './intros/ConceptIntro'
 import { SessionEnd } from './SessionEnd'
@@ -168,14 +172,18 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
 
   // Licznik rośnie w efekcie, nie w renderze. Klucz `questionIdx` sprawia, że
   // podwójne wywołanie efektu w StrictMode liczy jedną podpowiedź, nie dwie.
+  // Budżet płacimy tylko za `wrong` — `dontKnow` nadal usłyszy strategię
+  // (tworzy `strategyKey` powyżej), ale się nie liczy do limitu na sesję.
   const countedStrategyRef = useRef<string | null>(null)
   useEffect(() => {
     if (session.status !== 'feedback' || strategyKey === null) return
     const id = `${session.questionIdx}-${strategyKey}`
     if (countedStrategyRef.current === id) return
     countedStrategyRef.current = id
-    strategyCuesRef.current += 1
-  }, [session.status, session.questionIdx, strategyKey])
+    if (session.lastOutcome !== null && shouldChargeStrategyBudget(session.lastOutcome)) {
+      strategyCuesRef.current += 1
+    }
+  }, [session.status, session.questionIdx, strategyKey, session.lastOutcome])
 
   const handleRepeatPrompt = useCallback(() => {
     const keys = promptAudioKeys(session.currentQuestion)
