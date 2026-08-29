@@ -141,3 +141,74 @@ describe('useReadingSession — druga próba po błędzie', () => {
     expect(result.current.currentQuestionIndex).toBe(1)
   })
 })
+
+describe('useReadingSession — pauza w trakcie retry / hiperkorekcja', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useReading.getState().reset()
+    localStorage.clear()
+  })
+
+  it('pauza złapana z zaplanowanym retry (status feedback) → po wznowieniu nadal wchodzi w retry', async () => {
+    seedOgnikWordsAtBox3()
+    const audioBus = makeAudioBus()
+    const { result } = renderHook(() =>
+      useReadingSession({ level: 'ognik', audioBus, settings: makeSettings(true) }),
+    )
+
+    act(() => result.current.start())
+    const q = result.current.currentQuestion
+    if (q?.type !== 'word-choice') throw new Error('oczekiwano word-choice')
+    const target = q.targetWord
+    const wrong = q.choices.find((c) => c !== target)!
+
+    act(() => result.current.submitAnswer(wrong))
+    expect(result.current.status).toBe('feedback')
+
+    // Pauza łapie ekran ZANIM overlay feedbacku wybrzmiał (retry wciąż zaplanowane).
+    act(() => result.current.pause())
+    expect(result.current.status).toBe('paused')
+
+    await act(async () => {
+      result.current.resume()
+      // resume() powtarza korektę i doczepia finishFeedback() do jej Promise.all —
+      // odczekaj kilka mikrotasków, żeby ten łańcuch się rozstrzygnął.
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(result.current.status).toBe('retry')
+    const retryQ = result.current.currentQuestion
+    if (retryQ?.type !== 'word-choice') throw new Error('oczekiwano word-choice')
+    expect(retryQ.choices).toContain(target)
+    expect(retryQ.choices).toContain(wrong)
+  })
+
+  it('druga pomyłka w retry (hiperkorekcja) nie planuje trzeciej próby', () => {
+    seedOgnikWordsAtBox3()
+    const audioBus = makeAudioBus()
+    const { result } = renderHook(() =>
+      useReadingSession({ level: 'ognik', audioBus, settings: makeSettings(true) }),
+    )
+
+    act(() => result.current.start())
+    const q = result.current.currentQuestion
+    if (q?.type !== 'word-choice') throw new Error('oczekiwano word-choice')
+    const target = q.targetWord
+    const wrong = q.choices.find((c) => c !== target)!
+
+    act(() => result.current.submitAnswer(wrong))
+    act(() => result.current.skipFeedback(false))
+    expect(result.current.status).toBe('retry')
+
+    // Druga pomyłka: dziecko znów wybiera złą odpowiedź w retry.
+    act(() => result.current.submitAnswer(wrong))
+    expect(result.current.status).toBe('feedback')
+
+    // Overlay wybrzmiewa — brak trzeciej próby, sesja idzie dalej do kolejnego pytania.
+    act(() => result.current.skipFeedback(false))
+    expect(result.current.status).toBe('asking')
+    expect(result.current.currentQuestionIndex).toBe(1)
+  })
+})

@@ -285,7 +285,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
           audioBus={audioBus}
           onAdvance={session.advance}
           paused={session.status === 'paused'}
-          strategyKey={strategyKey}
+          strategyKey={session.lastAttempt === 2 ? null : strategyKey}
           attempt={session.lastAttempt}
           {...(session.praiseKey !== null ? { praiseKey: session.praiseKey } : {})}
         />
