@@ -27,7 +27,7 @@ import { getReadingPool } from '../data/levelPools'
 import { syllablesForWord } from './blendSequence'
 import { ALL_SYLLABLES, getSyllableAudioKey, getSyllableId } from '../data/syllables'
 import { CONTRASTIVE_SYLLABLES } from '../data/contrastiveSyllables'
-import { ALL_WORDS, getWordById, getWordsByLevel, getWordAudioKey } from '../data/words'
+import { ALL_WORDS, NO_MEANING_WORDS, getWordById, getWordsByLevel, getWordAudioKey } from '../data/words'
 import { pickNextItem } from '@/shared/srs/select'
 import { pickDistractors, pickRandom, shuffled } from '@/shared/srs/distractors'
 import { nextBox, nextRecentWrong } from '@/shared/srs/update'
@@ -267,6 +267,51 @@ function generateWordChoice(
   return { type: 'word-choice', targetWord: word.text, choices }
 }
 
+// Indeksy pytań (0-based) rezerwowane na sprawdzian rozumienia w Ogniku i Pochodni.
+// Dwa na sesję: jeden wcześnie, jeden po połowie — rozumienie przeplata dekodowanie,
+// zamiast siedzieć na końcu, gdy dziecko jest już zmęczone.
+export const MEANING_QUESTION_INDICES: readonly number[] = [2, 5]
+
+// Generuje pytanie word-meaning (obrazek → słowo) dla Ognika i Pochodni.
+// Rzuca, gdy pula dystraktorów jest za mała — `generateQuestion` wraca wtedy
+// po cichu do typu ćwiczenia poziomu.
+function generateWordMeaning(
+  statesMap: Record<string, WordState>,
+  activePool: string[],
+  lastTarget: string | null,
+  rng: () => number,
+  now: number,
+): Extract<ReadingQuestion, { type: 'word-meaning' }> {
+  const eligible = activePool.filter((id) => {
+    const w = getWordById(id)
+    return w !== undefined && !NO_MEANING_WORDS.includes(w.text)
+  })
+  if (eligible.length === 0) throw new Error('word-meaning: brak kandydatów na target')
+
+  const target = getWordById(pickNextItem(statesMap, eligible, lastTarget, now, rng))
+  if (!target) throw new Error('word-meaning: brak słowa dla wybranego id')
+
+  // Dystraktor musi być odróżnialny OBRAZKIEM (inne emoji) i NA OKO (inna
+  // pierwsza sylaba) — inaczej zadanie da się rozwiązać zgadując po kształcie.
+  const pool = ALL_WORDS.filter(
+    (w) =>
+      w.level === target.level &&
+      w.id !== target.id &&
+      w.albumEmoji !== target.albumEmoji &&
+      w.syllables[0] !== target.syllables[0],
+  )
+  if (pool.length < CHOICE_COUNT - 1) throw new Error('word-meaning: za mała pula')
+
+  return {
+    type: 'word-meaning',
+    targetWord: target.text,
+    choices: shuffled(
+      [target.text, ...shuffled(pool, rng).slice(0, CHOICE_COUNT - 1).map((w) => w.text)],
+      rng,
+    ),
+  }
+}
+
 // Pula unikalnych sylab ze wszystkich słów (wszystkie poziomy) — bogatsza niż ALL_SYLLABLES.
 // Obliczana raz przy załadowaniu modułu — używana do dopasowania długości dystraktorów.
 const ALL_WORD_SYLLABLES: string[] = (() => {
@@ -367,6 +412,15 @@ function generateSyllableFill(
   }
 }
 
+// Krok syntezy („Składamy: MA-MA") należy się pytaniom, w których celem jest
+// przeczytanie słowa. `syllable-match` nie ma słowa, a `word-meaning` sprawdza
+// rozumienie — tam składanie po fakcie tylko wydłuża feedback.
+function isBlendable(
+  question: ReadingQuestion,
+): question is Extract<ReadingQuestion, { targetWord: string }> {
+  return question.type !== 'syllable-match' && question.type !== 'word-meaning'
+}
+
 // Kolejkuje audio promptu. NIE woła `stop()` — kolejka AudioBus jest FIFO, więc
 // prompt gra po tym co już zakolejkowano (intro poziomu w `start()`, cue `nav-tap`
 // przy tapnięciu w feedback). Kto potrzebuje uciszyć poprzednie audio, woła
@@ -389,6 +443,11 @@ function playPromptAudio(
       break
     case 'syllable-fill':
       void audioBus.play(getWordAudioKey(question.targetWord))
+      break
+    case 'word-meaning':
+      // WYŁĄCZNIE prompt — wypowiedzenie targetu zamieniłoby sprawdzian
+      // rozumienia z powrotem w zadanie słuchowe.
+      void audioBus.play('reading-meaning-prompt')
       break
   }
 }
@@ -522,11 +581,33 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       const pool = getReadingPool(level)
       const exerciseType = LEVEL_TO_EXERCISE[level]
 
-      let question: ReadingQuestion
+      let question: ReadingQuestion | null = null
       const nowMs = now()
 
+      // Sprawdzian rozumienia wchodzi na miejsce zwykłego pytania poziomu.
+      if (
+        (level === 'ognik' || level === 'pochodnia') &&
+        MEANING_QUESTION_INDICES.includes(questionIndex) &&
+        questionIndex < questionsPerSession
+      ) {
+        try {
+          const q = generateWordMeaning(
+            wordStatesRef.current,
+            pool.itemIds,
+            lastTargetRef.current,
+            rng,
+            nowMs,
+          )
+          lastTargetRef.current = `word-${q.targetWord}`
+          question = q
+        } catch {
+          // Za mała pula — po cichu wracamy do ćwiczenia poziomu.
+          question = null
+        }
+      }
+
       try {
-        switch (exerciseType) {
+        if (question === null) switch (exerciseType) {
           case 'syllable-match': {
             const q = generateSyllableMatch(
               syllableStatesRef.current,
@@ -580,6 +661,9 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
         // Fallback — nie powinno się zdarzyć jeśli pule mają elementy
         throw new Error(`useReadingSession: nie można wygenerować pytania dla "${level}"`)
       }
+      if (question === null) {
+        throw new Error(`useReadingSession: nie można wygenerować pytania dla "${level}"`)
+      }
 
       // Nowe pytanie zamyka temat drugiej próby — zaległy ref przeniósłby
       // kafelki poprzedniego pytania na kolejny błąd.
@@ -597,7 +681,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       // Odgraj audio promptu dla nowego pytania
       playPromptAudio(question, audioBus)
     },
-    [level, audioBus, rng, now],
+    [level, audioBus, rng, now, questionsPerSession],
   )
 
   // Aktualizuje SRS state dla sylaby
@@ -771,7 +855,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
         // Druga próba domyka pytanie — synteza należy się tak samo jak przy
         // pierwszym podejściu (przy pierwszym była wtedy pominięta).
         feedbackAudioRef.current =
-          q.type === 'syllable-match' ? retryAudio : playBlend(q.targetWord, retryAudio)
+          isBlendable(q) ? playBlend(q.targetWord, retryAudio) : retryAudio
         setFeedbackVariant(isCorrect ? 'correct' : outcome === 'wrong' ? 'wrong' : 'dontKnow')
         setStatus('feedback')
         statusRef.current = 'feedback'
@@ -839,7 +923,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
         const correctChoice =
           q.type === 'syllable-match'
             ? q.targetSyllable
-            : q.type === 'word-choice'
+            : q.type === 'word-choice' || q.type === 'word-meaning'
               ? q.targetWord
               : q.missingSyllable
         plays.push(audioBus.play('try-again'))
@@ -856,7 +940,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       // gdy czeka druga próba: dziecko ma jeszcze raz wskazać kafelek, a nie
       // wysłuchać rozwiązania — synteza przyjdzie po tamtym podejściu.
       feedbackAudioRef.current =
-        q.type !== 'syllable-match' && !retryPendingRef.current
+        isBlendable(q) && !retryPendingRef.current
           ? playBlend(q.targetWord, queued)
           : queued
 
@@ -1010,6 +1094,9 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
           break
         case 'syllable-fill':
           isCorrect = answer === q.missingSyllable
+          break
+        case 'word-meaning':
+          isCorrect = answer === q.targetWord
           break
       }
 

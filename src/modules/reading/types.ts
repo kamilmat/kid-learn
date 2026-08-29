@@ -1,9 +1,13 @@
 import type { BaseItemState, Outcome } from '@/shared/srs/types'
 import type { Level } from '@/shared/settings/types'
 
-export type ExerciseType = 'syllable-match' | 'word-assembly' | 'word-choice' | 'syllable-fill'
+// 'word-meaning' nie jest typem ćwiczenia POZIOMU (brak wpisu w LEVEL_TO_EXERCISE) —
+// wchodzi punktowo na wybranych indeksach pytań w Ogniku i Pochodni.
+export type ExerciseType = 'syllable-match' | 'word-assembly' | 'word-choice' | 'syllable-fill' | 'word-meaning'
 
-export const LEVEL_TO_EXERCISE: Record<Level, ExerciseType> = {
+export type LevelExerciseType = Exclude<ExerciseType, 'word-meaning'>
+
+export const LEVEL_TO_EXERCISE: Record<Level, LevelExerciseType> = {
   iskierka: 'syllable-match',
   plomyk: 'word-assembly',
   ognik: 'word-choice',
@@ -33,6 +37,7 @@ export type ReadingQuestion =
   | { type: 'word-assembly'; targetWord: string; syllables: string[]; distractors: string[] }
   | { type: 'word-choice'; targetWord: string; choices: string[] }
   | { type: 'syllable-fill'; targetWord: string; missingPosition: SyllableFillVariant; missingSyllable: string; choices: string[]; visibleSyllables: string[] }
+  | { type: 'word-meaning'; targetWord: string; choices: string[] }
 
 export type ReadingSessionEvent = {
   questionIndex: number

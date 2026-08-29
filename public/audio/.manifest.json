@@ -6357,6 +6357,12 @@
     "source": "tts",
     "engine": "edge"
   },
+  "reading-meaning-prompt": {
+    "hash": "e2051f76be1f219704711b02f06c618632a8534cc22c70f9a683a683f996cdc3",
+    "updatedAt": 1788034053353,
+    "source": "tts",
+    "engine": "edge"
+  },
   "reading-ognik-intro": {
     "hash": "44a39a37ca1ec7e833560505310658628a2d3e54ba67a646887eac086d1e04ee",
     "updatedAt": 1777360502320,

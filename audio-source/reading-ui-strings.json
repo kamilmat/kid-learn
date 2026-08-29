@@ -2,38 +2,31 @@
   "_voice": "zofia",
   "home-letters-intro": "Dotknij Litery, aby uczyć się literek!",
   "home-reading-intro": "Dotknij Czytanie, aby nauczyć się czytać słowa!",
-
   "reading-level-select-intro": "Wybierz poziom. Zacznij od Iskierki!",
-
   "reading-iskierka-intro": "Cześć! Dzisiaj posłuchasz sylaby i wybierzesz tę samą sylabę pisaną.",
   "reading-plomyk-intro": "Cześć! Dzisiaj będziemy układać słowa z sylab. Weź sylabę palcem i przeciągnij ją w okienko.",
   "reading-ognik-intro": "Cześć! Posłuchaj słowa i wybierz to samo słowo pisane.",
   "reading-pochodnia-intro": "Cześć! Brakuje jednej sylaby w słowie. Wybierz właściwą.",
-
   "reading-correct-prefix": "Brawo! To było słowo",
   "reading-wrong-prefix": "Posłuchaj jeszcze raz. To było",
   "reading-dontknow-prefix": "Nie szkodzi! To słowo to",
   "reading-album-intro": "To Twój album. Stuknij w kartę, aby ją obejrzeć.",
   "reading-album-unlock": "Nowa karta w albumie!",
-
   "reading-praise-1": "Świetnie!",
   "reading-praise-2": "Brawo!",
   "reading-praise-3": "Czytasz coraz lepiej!",
   "reading-praise-4": "Wspaniale!",
   "reading-praise-5": "Tak trzymaj!",
   "reading-praise-6": "Pięknie!",
-
   "reading-dont-know": "Nie szkodzi, idziemy dalej.",
-
   "reading-praise-proc-1": "Ładnie poskładałeś sylaby!",
   "reading-praise-proc-2": "Słuchałeś uważnie!",
   "reading-praise-proc-3": "Czytałeś powoli i dobrze!",
   "reading-praise-proc-4": "Sam to rozłożyłeś!",
   "reading-praise-proc-5": "Nie poddałeś się!",
   "reading-praise-proc-6": "Dobrze wybrałeś!",
-
   "reading-blend-prefix": "Składamy:",
-
   "reading-level-up": "Umiesz już dużo! Spróbuj trudniejszego poziomu.",
-  "reading-level-down": "Wróćmy na chwilę do łatwiejszego poziomu."
+  "reading-level-down": "Wróćmy na chwilę do łatwiejszego poziomu.",
+  "reading-meaning-prompt": "Popatrz na obrazek. Które to słowo?"
 }
