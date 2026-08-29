@@ -18,7 +18,7 @@ import type {
 // Moduł 1: default `both` (nazwa → fonem). Sama nazwa nie wystarcza do scalania
 // głosek, sam fonem bywa nieidentyfikowalny — para uczy obu (Piasta & Wagner 2010).
 export const LETTERS_DEFAULTS: LettersSettings = {
-  promptMode: 'both',
+  promptMode: 'phoneme',
   promptModeByLevel: {},
 }
 

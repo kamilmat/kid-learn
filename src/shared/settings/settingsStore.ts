@@ -155,6 +155,16 @@ export const useSettings = create<SettingsStore>()(
             delete numbers.questionCount
           }
         }
+        if (version < 6) {
+          // v5 → v6: domyślny tryb promptu liter wraca do „jak się czyta"
+          // (nagrania rodzica). `both` z v5 nie było wyborem rodzica, tylko
+          // ówczesnym defaultem — nadpisujemy; inne wartości zostają.
+          const s = p.settings as unknown as Record<string, unknown> | undefined
+          const letters = s?.letters as Record<string, unknown> | undefined
+          if (letters && letters.promptMode === 'both') {
+            letters.promptMode = 'phoneme'
+          }
+        }
         return p
       },
       // Migration:
