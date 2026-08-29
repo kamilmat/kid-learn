@@ -4,6 +4,10 @@ import {
   AntiCheatSection,
   collectFlagsForRecentSessions,
 } from './AntiCheatSection'
+import {
+  antiCheatFlagText,
+  type AntiCheatFlagType,
+} from '@/shared/engagement/antiCheatFlags'
 import type { SessionEvent, SessionLog } from '@/shared/stats/types'
 
 function fastClickSession(startedAt: number): SessionLog {
@@ -106,5 +110,31 @@ describe('AntiCheatSection render', () => {
     render(<AntiCheatSection sessions={[fastClickSession(0)]} />)
     const flag = screen.getByTestId('anticheat-flag')
     expect(flag.getAttribute('data-severity')).toBe('warning')
+  })
+
+  it('pokazuje opis po ludzku (title + hint), nie żargon reguły', () => {
+    render(<AntiCheatSection sessions={[fastClickSession(0)]} />)
+    const { title, hint } = antiCheatFlagText('fast-click')
+    const flag = screen.getByTestId('anticheat-flag')
+    expect(flag).toHaveTextContent(title)
+    expect(flag).toHaveTextContent(hint)
+    expect(flag).not.toHaveTextContent('Szybkie klikanie')
+  })
+})
+
+describe('antiCheatFlagText', () => {
+  const ALL_TYPES: AntiCheatFlagType[] = [
+    'fast-click',
+    'same-position',
+    'no-answer',
+    'many-dont-know',
+    'visibility',
+    'long-inactivity',
+  ]
+
+  it.each(ALL_TYPES)('%s ma niepusty title i hint', (type) => {
+    const { title, hint } = antiCheatFlagText(type)
+    expect(title.length).toBeGreaterThan(0)
+    expect(hint.length).toBeGreaterThan(0)
   })
 })

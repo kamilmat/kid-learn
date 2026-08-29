@@ -6,6 +6,7 @@
 import { useMemo } from 'react'
 import {
   analyzeSession,
+  antiCheatFlagText,
   type AntiCheatFlag,
   type AntiCheatFlagType,
 } from '@/shared/engagement/antiCheatFlags'
@@ -106,12 +107,16 @@ export function AntiCheatSection({
               <span aria-hidden="true">
                 {fws.flag.severity === 'alert' ? '🚨' : '⚠'}
               </span>
-              <span>
-                <strong>{FLAG_LABEL[fws.flag.type]}</strong>
-                {' — '}
-                {fws.flag.severity === 'alert' ? 'alert' : 'ostrzeżenie'}
-                {' · sesja '}
-                {formatSessionTs(fws.sessionStartedAt)}
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 16, fontWeight: 600 }}>
+                  {antiCheatFlagText(fws.flag.type).title}
+                </span>
+                <span style={{ fontSize: 14, color: '#6b7280' }}>
+                  {antiCheatFlagText(fws.flag.type).hint}
+                </span>
+                <span style={{ fontSize: 13, color: '#9ca3af' }}>
+                  sesja {formatSessionTs(fws.sessionStartedAt)}
+                </span>
               </span>
             </li>
           ))}

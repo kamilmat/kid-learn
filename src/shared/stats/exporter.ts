@@ -21,10 +21,13 @@ import {
 } from './components/ActivitySection'
 import { generateSuggestions } from './components/SuggestionsSection'
 import { completedSessionsToday } from './todaySessions'
+import { collectFlagsForRecentSessions } from './components/AntiCheatSection'
+import { antiCheatFlagText } from '@/shared/engagement/antiCheatFlags'
 import {
-  collectFlagsForRecentSessions,
-  FLAG_LABEL,
-} from './components/AntiCheatSection'
+  FALLBACK_SUGGESTION,
+  generateSuggestions as generateNextSteps,
+  type SuggestionReadingSnapshot,
+} from './suggestions'
 import {
   STATS_MODULE_LABEL,
   type StatsModuleId,
@@ -133,6 +136,7 @@ export function exportReportToMarkdown(
   now: number,
   numbersSnapshot?: NumbersSnapshot,
   czytankiSnapshot?: CzytankiSnapshot,
+  readingSnapshot?: SuggestionReadingSnapshot,
 ): string {
   // Sugestie działają wyłącznie na SRS liter — filtrujemy sesje modułu 1,
   // reszta sekcji (Aktywność, Flagi) używa scalonej listy ze wszystkich modułów.
@@ -141,6 +145,31 @@ export function exportReportToMarkdown(
   lines.push('# Raport Iskierki')
   lines.push('')
   lines.push(`Wygenerowano: ${fmtDate(now)}`)
+  lines.push('')
+
+  // ---- Następny krok ----
+  // Ten sam silnik co karta w UI — kontrakt „treść UI ≡ markdown".
+  const nextSteps = generateNextSteps({
+    now,
+    letters,
+    allSessions,
+    ...(readingSnapshot ? { reading: readingSnapshot } : {}),
+    ...(numbersSnapshot ? { numbers: numbersSnapshot } : {}),
+    ...(czytankiSnapshot
+      ? {
+          czytanki: {
+            openedIds: czytankiSnapshot.openedIds,
+            readCounts: czytankiSnapshot.readCounts ?? {},
+          },
+        }
+      : {}),
+  })
+  const nextStep = nextSteps[0] ?? FALLBACK_SUGGESTION
+  lines.push('## Następny krok')
+  lines.push('')
+  lines.push(`**${nextStep.text}**`)
+  lines.push('')
+  lines.push(nextStep.why)
   lines.push('')
 
   // ---- Litery ----
@@ -264,6 +293,10 @@ export function exportReportToMarkdown(
   // ---- Sugestie ----
   lines.push('## Sugestie')
   lines.push('')
+  // Te same pozycje co „Więcej sugestii" w UI — karta (`[0]`) już wyżej.
+  for (const s of nextSteps.slice(1)) {
+    lines.push(`- ${s.text} — ${s.why}`)
+  }
   // Ta sama funkcja karmi UI i markdown — treść musi być identyczna, więc
   // nudge „druga sesja wieczorem" liczymy tu tak samo jak w `ReportScreen`.
   for (const s of generateSuggestions(
@@ -286,8 +319,9 @@ export function exportReportToMarkdown(
     for (const fws of flags) {
       const icon = fws.flag.severity === 'alert' ? '🚨' : '⚠'
       const moduleLabel = sessionById.get(fws.sessionId)?.moduleLabel ?? ''
+      const { title, hint } = antiCheatFlagText(fws.flag.type)
       lines.push(
-        `- ${icon} ${FLAG_LABEL[fws.flag.type]} — ${fws.flag.severity === 'alert' ? 'alert' : 'ostrzeżenie'} · ${moduleLabel} · sesja ${fmtDate(fws.sessionStartedAt)}`,
+        `- ${icon} ${title} ${hint} · ${moduleLabel} · sesja ${fmtDate(fws.sessionStartedAt)}`,
       )
     }
   }

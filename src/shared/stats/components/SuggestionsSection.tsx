@@ -6,6 +6,7 @@
 
 import type { LetterState } from '@/shared/srs/types'
 import type { SessionLog, SessionEvent } from '@/shared/stats/types'
+import type { Suggestion } from '@/shared/stats/suggestions'
 import { POLISH_ALPHABET, toUpper } from '@/modules/letters/data/alphabet'
 
 const SUGGESTIONS_COLOR_TEXT = '#2d2d33'
@@ -15,6 +16,11 @@ export type SuggestionsSectionProps = {
   sessions: SessionLog[]
   /** Sesje ukończone dziś we wszystkich modułach — patrz `completedSessionsToday`. */
   sessionsToday?: number
+  /**
+   * Dane do „Więcej sugestii" (silnik `stats/suggestions.ts`, wszystkie moduły).
+   * Bez nich sekcja pokazuje wyłącznie heurystyki liter — tak jak przed Falą 2.
+   */
+  nextSteps?: Suggestion[]
 }
 
 /**
@@ -134,8 +140,12 @@ export function SuggestionsSection({
   letters,
   sessions,
   sessionsToday,
+  nextSteps,
 }: SuggestionsSectionProps) {
   const suggestions = generateSuggestions(letters, sessions, sessionsToday)
+  // `nextSteps[0]` jest już na karcie „Następny krok" na górze raportu —
+  // powtarzanie go tutaj kazałoby rodzicowi czytać to samo dwa razy.
+  const more = (nextSteps ?? []).slice(1)
 
   return (
     <section
@@ -150,6 +160,19 @@ export function SuggestionsSection({
     >
       {/* Heurystyki są policzone wyłącznie ze stanu liter (moduł 1) — etykieta
           mówi to wprost, żeby rodzic nie czytał ich jako oceny całej apki. */}
+      {more.length > 0 && (
+        <div data-testid="more-suggestions" style={{ marginBottom: 16 }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: 18 }}>Więcej sugestii</h3>
+          <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.5 }}>
+            {more.map((s, i) => (
+              <li key={`${s.id}-${i}`} data-testid="next-step-item">
+                {s.text}
+                <span style={{ color: '#6b7280' }}> — {s.why}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <h2 style={{ margin: '0 0 12px', fontSize: 22 }}>Sugestie (Litery)</h2>
       <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.6 }}>
         {suggestions.map((s, i) => (

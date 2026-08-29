@@ -18,11 +18,20 @@ import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '@/modules/czytanki/da
 import { exportReportToMarkdown, topTappedWords } from '@/shared/stats/exporter'
 import { toUnifiedSessions } from '@/shared/stats/aggregate'
 import { completedSessionsToday } from '@/shared/stats/todaySessions'
+import {
+  FALLBACK_SUGGESTION,
+  generateSuggestions,
+} from '@/shared/stats/suggestions'
+import { POLISH_ALPHABET } from '@/modules/letters/data/alphabet'
+import { CONCEPTS } from '@/modules/numbers/data/concepts'
 import { LettersSection } from './LettersSection'
+import { CollapsibleSection } from './CollapsibleSection'
+import { NextStepCard } from './NextStepCard'
+import { streakDays } from './ActivitySection'
 import { ActivitySection } from './ActivitySection'
 import { LiveSessionSection } from './LiveSessionSection'
 import { SuggestionsSection } from './SuggestionsSection'
-import { AntiCheatSection } from './AntiCheatSection'
+import { AntiCheatSection, collectFlagsForRecentSessions } from './AntiCheatSection'
 import { NumbersStats } from './NumbersStats'
 
 const PHONEMES = [
@@ -296,6 +305,14 @@ export function ReportScreen({
   const sessions = useLetters((s) => s.sessions)
   const readingSessions = useReading((s) => s.sessions)
   const numbersSessions = useNumbers((s) => s.sessions)
+  // Snapshoty wszystkich modułów — karmią silnik „Następny krok" i podsumowania
+  // w nagłówkach zwiniętych sekcji.
+  const syllables = useReading((s) => s.syllables)
+  const readingWords = useReading((s) => s.words)
+  const numbersFacts = useNumbers((s) => s.facts)
+  const numbersConcepts = useNumbers((s) => s.concepts)
+  const czytankiOpenedIds = useCzytanki((s) => s.openedIds)
+  const czytankiReadCounts = useCzytanki((s) => s.readCounts)
 
   // Raport rodzica pokazuje całą aplikację, nie tylko moduł 1 — Aktywność,
   // Ostatnia sesja i Flagi zaangażowania jadą na scalonej liście sesji.
@@ -321,6 +338,33 @@ export function ReportScreen({
   // w sekcjach zależnych od `now`.
   const nowMs = Math.floor(now() / 60_000) * 60_000
 
+  // Jedno policzenie: `[0]` idzie na kartę, reszta do „Więcej sugestii".
+  const nextSteps = useMemo(
+    () =>
+      generateSuggestions({
+        now: nowMs,
+        letters,
+        allSessions,
+        reading: { syllables, words: readingWords },
+        numbers: { facts: numbersFacts, concepts: numbersConcepts },
+        czytanki: {
+          openedIds: czytankiOpenedIds,
+          readCounts: czytankiReadCounts,
+        },
+      }),
+    [
+      nowMs,
+      letters,
+      allSessions,
+      syllables,
+      readingWords,
+      numbersFacts,
+      numbersConcepts,
+      czytankiOpenedIds,
+      czytankiReadCounts,
+    ],
+  )
+
   const handleCopy = useCallback(async () => {
     const numbersSnapshot = {
       facts: useNumbers.getState().facts,
@@ -332,6 +376,10 @@ export function ReportScreen({
       timeMs: useCzytanki.getState().timeMs,
       readCounts: useCzytanki.getState().readCounts,
     }
+    const readingSnapshot = {
+      syllables: useReading.getState().syllables,
+      words: useReading.getState().words,
+    }
     const md = exportReportToMarkdown(
       letters,
       allSessions,
@@ -339,6 +387,7 @@ export function ReportScreen({
       now(),
       numbersSnapshot,
       czytankiSnapshot,
+      readingSnapshot,
     )
     try {
       await copyToClipboard(md)
@@ -368,6 +417,47 @@ export function ReportScreen({
       />
     )
   }
+
+  // Jednolinijkowe podsumowania nagłówków — rodzic ma zobaczyć stan każdej
+  // sekcji BEZ rozwijania jej.
+  const masteredLetters = Object.values(letters).filter((l) => l.box >= 5).length
+  const lettersSummary = `${masteredLetters}/${POLISH_ALPHABET.length} opanowanych`
+
+  const dayStart = new Date(nowMs)
+  dayStart.setHours(0, 0, 0, 0)
+  const todayQuestions = allSessions
+    .filter((s) => s.startedAt >= dayStart.getTime())
+    .reduce((n, s) => n + s.questions, 0)
+  const activitySummary = `Dziś ${todayQuestions} pytań · streak ${streakDays(allSessions, nowMs)} dni`
+
+  const lastSession = allSessions[allSessions.length - 1]
+  const lastSessionSummary = lastSession
+    ? `${lastSession.moduleLabel} — ${lastSession.correct}/${lastSession.questions} poprawnych`
+    : 'Brak sesji'
+
+  const suggestionsSummary =
+    nextSteps.length > 1
+      ? `${nextSteps.length - 1} dodatkowych wskazówek`
+      : 'Wskazówki dla rodzica'
+
+  const flagCount = collectFlagsForRecentSessions(allSessions, 5).length
+  const flagsSummary =
+    flagCount === 0
+      ? 'Brak flag w ostatnich sesjach'
+      : `${flagCount} flag w ostatnich 5 sesjach`
+
+  const masteredSyllables = Object.values(syllables).filter(
+    (s) => s.box >= 5,
+  ).length
+  const readingSummary = `${masteredSyllables}/${ALL_SYLLABLES.length} sylab opanowanych`
+
+  const allConcepts = Object.values(CONCEPTS)
+  const masteredConcepts = allConcepts.filter(
+    (c) => numbersConcepts[c.id]?.state === 'mastered',
+  ).length
+  const numbersSummary = `${masteredConcepts}/${allConcepts.length} konceptów opanowanych`
+
+  const czytankiSummary = `${czytankiOpenedIds.length}/${CZYTANKI.length} otwartych`
 
   return (
     <div
@@ -438,18 +528,76 @@ export function ReportScreen({
           paddingBottom: 24,
         }}
       >
-        <LettersSection letters={letters} sessions={sessions} />
-        <ActivitySection sessions={allSessions} now={nowMs} />
-        <LiveSessionSection sessions={allSessions} />
-        <SuggestionsSection
-          letters={letters}
-          sessions={sessions}
-          sessionsToday={completedSessionsToday(allSessions, nowMs)}
-        />
-        <AntiCheatSection sessions={allSessions} />
-        <ReadingStats />
-        <NumbersStats />
-        <CzytankiStats />
+        <NextStepCard suggestion={nextSteps[0] ?? FALLBACK_SUGGESTION} />
+
+        <CollapsibleSection
+          title="Litery"
+          summary={lettersSummary}
+          testId="collapsible-letters"
+        >
+          <LettersSection letters={letters} sessions={sessions} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Aktywność"
+          summary={activitySummary}
+          testId="collapsible-activity"
+        >
+          <ActivitySection sessions={allSessions} now={nowMs} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Ostatnia sesja"
+          summary={lastSessionSummary}
+          testId="collapsible-live"
+        >
+          <LiveSessionSection sessions={allSessions} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Sugestie"
+          summary={suggestionsSummary}
+          testId="collapsible-suggestions"
+        >
+          <SuggestionsSection
+            letters={letters}
+            sessions={sessions}
+            sessionsToday={completedSessionsToday(allSessions, nowMs)}
+            nextSteps={nextSteps}
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Flagi zaangażowania"
+          summary={flagsSummary}
+          testId="collapsible-anticheat"
+        >
+          <AntiCheatSection sessions={allSessions} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Czytanie"
+          summary={readingSummary}
+          testId="collapsible-reading"
+        >
+          <ReadingStats />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Cyferki"
+          summary={numbersSummary}
+          testId="collapsible-numbers"
+        >
+          <NumbersStats />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Czytanki"
+          summary={czytankiSummary}
+          testId="collapsible-czytanki"
+        >
+          <CzytankiStats />
+        </CollapsibleSection>
       </div>
 
     </div>

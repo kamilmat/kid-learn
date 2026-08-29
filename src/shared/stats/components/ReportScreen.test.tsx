@@ -77,18 +77,45 @@ describe('ReportScreen', () => {
     expect(screen.queryByTestId('report-screen')).not.toBeInTheDocument()
   })
 
-  it('po unlocku pokazuje wszystkie 5 sekcji', () => {
+  it('po unlocku pokazuje kartę „Następny krok" i zwinięte sekcje', () => {
     // Symulujemy unlock — bezpośrednio przesuwając parentGateUnlockedUntil
     useSettings.setState({ parentGateUnlockedUntil: fixedNow + 60_000 })
 
     render(<ReportScreen now={() => fixedNow} />)
 
     expect(screen.getByTestId('report-screen')).toBeInTheDocument()
+    expect(screen.getByTestId('next-step-card')).toBeInTheDocument()
+
+    for (const id of [
+      'collapsible-letters',
+      'collapsible-activity',
+      'collapsible-live',
+      'collapsible-suggestions',
+      'collapsible-anticheat',
+      'collapsible-reading',
+      'collapsible-numbers',
+      'collapsible-czytanki',
+    ]) {
+      expect(screen.getByTestId(`${id}-toggle`)).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      )
+    }
+    // Zwinięte = zawartość nie jest w DOM.
+    expect(screen.queryByTestId('letters-section')).not.toBeInTheDocument()
+  })
+
+  it('kliknięcie nagłówka rozwija sekcję', () => {
+    useSettings.setState({ parentGateUnlockedUntil: fixedNow + 60_000 })
+
+    render(<ReportScreen now={() => fixedNow} />)
+
+    fireEvent.click(screen.getByTestId('collapsible-letters-toggle'))
     expect(screen.getByTestId('letters-section')).toBeInTheDocument()
-    expect(screen.getByTestId('activity-section')).toBeInTheDocument()
-    expect(screen.getByTestId('live-session-section')).toBeInTheDocument()
-    expect(screen.getByTestId('suggestions-section')).toBeInTheDocument()
-    expect(screen.getByTestId('anticheat-section')).toBeInTheDocument()
+    expect(screen.getByTestId('collapsible-letters-toggle')).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
   })
 
   it('przycisk "Skopiuj raport" wywołuje copyToClipboard i pokazuje feedback', async () => {
@@ -104,6 +131,7 @@ describe('ReportScreen', () => {
     })
     const arg = copy.mock.calls[0]?.[0] as string
     expect(arg).toContain('# Raport Iskierki')
+    expect(arg).toContain('## Następny krok')
     expect(screen.getByTestId('copy-feedback-success')).toHaveTextContent(
       'Skopiowano!',
     )
