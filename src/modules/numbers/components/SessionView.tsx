@@ -295,6 +295,9 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
           {...(session.praiseKey !== null ? { praiseKey: session.praiseKey } : {})}
         />
       )}
+      {/* Pauza w trakcie drugiej próby NIE może zgubić `restrictChoicesTo`:
+          bez tego opcje przeliczają się na dystraktory, a efekt przeliczenia
+          w liczeniu 1:1 gra audio jeszcze raz po wznowieniu. */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <ExerciseRouter
           question={session.currentQuestion}
@@ -302,7 +305,9 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
           audioBus={audioBus}
           onAnswer={handleAnswer}
           revealValue={revealValue}
-          {...(session.status === 'retry' && session.retryChoices !== null
+          {...((session.status === 'retry' ||
+            (session.status === 'paused' && session.pausedFrom === 'retry')) &&
+          session.retryChoices !== null
             ? { restrictChoicesTo: session.retryChoices }
             : {})}
         />
