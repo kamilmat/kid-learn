@@ -16,7 +16,7 @@ Tablet-first (iPad 10"), RWD wszędzie. Bez backendu, postęp w `localStorage`.
 - **Status / co dalej:** `docs/STATUS.md` — czytaj na początku sesji
 - **Stack:** React 19 + Vite + TS strict + Tailwind 4 + Zustand + Vitest + vite-plugin-pwa + @dnd-kit/core + @dnd-kit/sortable
 - **Dev server:** `pnpm dev` (port 5173 lub kolejny wolny)
-- **Audio:** lektor (moduły 1-3) = Zofia via Edge TTS; Iskra = Marek via Edge TTS; czytanki (moduł 4) = Agnieszka via Azure (`azure` plain SSML dla słów/UI, `azure-ipa` dla sylab). Generowane do `public/audio/` przy `pnpm audio:build`. Czcionki: **Kalam** (pisana, Google Fonts OFL) + **Lexend** (early-reader, kafelki sylabowe)
+- **Audio:** lektor (moduły 1-3) = Zofia via Edge TTS (część kluczy od Fali 1 przez Azure — patrz niżej); Iskra = Marek via Edge TTS; czytanki (moduł 4) = Agnieszka via Azure (`azure` plain SSML dla słów/UI, `azure-ipa` dla sylab). Generowane do `public/audio/` przy `pnpm audio:build`. Czcionki: **Kalam** (pisana, Google Fonts OFL) + **Lexend** (early-reader, kafelki sylabowe)
 
 ## Struktura
 
@@ -25,55 +25,61 @@ src/
 ├── modules/letters/       # moduł 1 — kompletny, działa
 │   ├── components/        # QuizCard, LetterTile, FeedbackOverlay, PauseOverlay, SessionEnd, SessionView, LevelSelect
 │   ├── data/              # alphabet, levelPools, contrastivePairs, associations, visualGroups
+│   ├── audio/              # promptKeys.ts — promptAudioKeys(letter, mode): phon-*/letter-name-* wg promptMode
 │   ├── hooks/             # useSession (orkiestrator)
 │   ├── store/             # lettersStore (Zustand + persist)
 │   └── index.tsx          # entry: routes letters/ + letters/session/:level
 ├── modules/reading/       # moduł 2 — kompletny, działa
 │   ├── components/        # ReadingLevelSelect, ReadingSessionView, DragDropExercise, WordAlbum
 │   │                      # MiniScene, WildCelebration, IskraAnimated, StatusBar
-│   ├── data/              # syllables (24), words (67), levelPools, miniScenes (55), phonemeHeatmap
-│   ├── hooks/             # useReadingSession (orkiestrator), useDragSyllable
+│   ├── data/              # syllables (24 zdefiniowane + generowane resztą z words), words (67), levelPools, miniScenes (55), phonemeHeatmap
+│   ├── hooks/             # useReadingSession (orkiestrator), useDragSyllable, blendSequence.ts (sekwencja „MA + MA = MAMA")
 │   ├── store/             # readingStore (Zustand + persist) — persist key `iskierki-reading-v1`
 │   └── index.tsx          # entry: routes reading/ + reading/session/:level + reading/album
 ├── modules/numbers/       # moduł 3 — kompletny, działa (drzewko konceptów matematycznych)
+│   ├── data/               # concepts (z `prerequisites?`), facts, strategyAudio.ts (strategia po błędzie)
+│   ├── hooks/              # useNumbersSession (orkiestrator), pickConcept.ts (ważone losowanie konceptu + prereq gate)
 ├── modules/czytanki/      # moduł 4 — czytanki: tap sylaby → audio, long-press → słowo, ▶ czyta całość; 60 czytanek, 4 grupy
 │   ├── components/        # CzytankaList, CzytankaTile, CzytankaView, CzytankaScene, SyllableButton
 │   ├── data/               # czytanki (60), types, audioKeys (slugPl → cz-syl-*/cz-word-*)
-│   ├── hooks/              # useReadAloud, useSyllablePress (tap/long-press)
+│   ├── hooks/              # useReadAloud (+ echo/tempo), useSyllablePress (tap/long-press, liczy tapy per słowo)
 │   ├── audio/               # pendingCue — cue odtwarzane po zamontowaniu docelowego ekranu
-│   ├── store/              # czytankiStore (Zustand + persist) — persist key `iskierki-czytanki-v1`
+│   ├── store/              # czytankiStore (Zustand + persist) — persist key `iskierki-czytanki-v1`, version 2 (`wordTaps`, `timeMs`)
 │   └── index.tsx           # entry: routes czytanki/ + czytanki/:id
 ├── shared/
-│   ├── audio/             # AudioBus singleton — kolejka FIFO HTMLAudioElement
+│   ├── audio/             # AudioBus singleton — kolejka FIFO HTMLAudioElement; slugPl.ts (ASCII slug PL znaków dla kluczy audio); pickPraiseMixed.ts (50/50 procesowe/wynikowe)
 │   ├── srs/               # Leitner 5-box, scoring, distractors (generalized BaseItemState)
-│   ├── settings/          # store + math gate + UI; persist key `iskierki-state-v1` (persist version: 4)
-│   │                      # settings: humorMode + reading.wordAnimations + reading.wildCelebrationFreq
-│   ├── stats/             # SessionLog/SessionEvent types + raport rodzica UI
+│   ├── settings/          # store + math gate + UI; persist key `iskierki-state-v1` (persist version: 5)
+│   │                      # settings: humorMode + reading.wordAnimations + reading.wildCelebrationFreq + questionsPerSession + secondAttempt + letters.promptMode(+ByLevel) + czytanki.{echoMode,tempo}
+│   ├── stats/             # SessionLog/SessionEvent types + raport rodzica UI; todaySessions.ts (stopping cue: ≥2 sesje dziś)
 │   │                      # sekcje Aktywność/Live/Anti-cheat agregują wszystkie moduły (`shared/stats/aggregate.ts`)
 │   │                      # moduł 2: sylaby opanowane/trudne + heatmapa fonemów PL
 │   ├── engagement/        # idle, page-visibility, fast-click, anti-cheat flags
-│   └── ui/                # KidNav, Button, IskraMascot, HandwrittenLetter
+│   └── ui/                # KidNav, Button, IskraMascot, HandwrittenLetter, syllableColors.ts (getSyllableCue: paleta Okabe–Ito + underline)
 ├── app/                   # App.tsx (routes), Home (4 kafelki), theme tokens
 └── main.tsx
 
 audio-source/              # source teksty dla TTS
-├── letters.json           # litera → tekst (moduł 1)
+├── letters.json           # litera → tekst (moduł 1; martwe od Fali 1 — zastąpione phon-*/letter-name-*, pliki zostają na rollback)
+├── letters-phonemes.json  # 32 fonemy izolowane; głos Zofia, `_engine: azure-ipa` — klucze `phon-<slug>`
+├── letters-names.json     # 32 nazwy liter szkolne („be", „ce"…); głos Zofia, `_engine: azure` (plain) — klucze `letter-name-<slug>`
 ├── words.json             # słowa-asocjacje + frazy "X jak Y" (moduł 1)
-├── ui-strings.json        # pochwały, korekty, nawigacja, onboarding, koniec (moduł 1)
-├── syllables.json         # 24 sylaby + intros poziomów (moduł 2)
-├── reading-ui-strings.json # pochwały czytania, scenki, wild celebrations (moduł 2)
+├── ui-strings.json        # pochwały (w tym `praise-proc-1..10`), korekty, nawigacja, onboarding, koniec, `retry-correct`, `session-stop-enough` (moduł 1)
+├── syllables.json         # generowany (`pnpm audio:reading`) z sumy sylab modułu 2 + `words.ts`; głos Zofia, `_engine: azure-ipa`; klucze lowercase `syl-ma`, `syl-ge_s_`… (SRS id zostaje `syl-MA` — patrz „Gdzie ŁATWO się pomylić")
+├── reading-ui-strings.json # pochwały czytania (w tym `reading-praise-proc-1..6`), scenki, wild celebrations, `reading-blend-prefix` (moduł 2)
 ├── iskra-reactions.json   # reakcje Iskry: easter eggs, silly, fail (moduł 2; głos Marek)
-├── numbers.json / math-ui-strings.json # koncepty, fakty, UI (moduł 3)
+├── numbers.json / math-ui-strings.json # koncepty, fakty, UI, strategie po błędzie (`strategy-*`), `praise-proc-num-1..6` (moduł 3)
 ├── czytanki-syllables.json # generowany (`pnpm audio:czytanki`); głos Agnieszka, `_engine: azure-ipa` — sylaby cz-syl-*
 ├── czytanki-words.json     # generowany (`pnpm audio:czytanki`); głos Agnieszka, `_engine: azure` (plain SSML) — słowa cz-word-*
-├── czytanki-ui-strings.json # intro, nawigacja, cue (moduł 4); głos Agnieszka, `_engine: azure`
+├── czytanki-ui-strings.json # intro, nawigacja, cue, echo/tempo (`czytanki-ui-echo-on/-off/-slow/-normal`, `czytanki-echo-intro`); głos Agnieszka, `_engine: azure`
 └── manual-overrides/*.mp3 # wygrywa nad TTS (jeśli istnieje plik)
 
 scripts/generate-audio.ts  # idempotentny: hash text vs manifest, trzy silniki (edge | azure | azure-ipa)
 scripts/polishG2p.ts       # ortografia PL → IPA (toIpa) dla `_engine: azure-ipa`
 scripts/azureTts.ts        # REST Azure Speech: buildSsml (phoneme IPA) + buildPlainSsml (plain), backoff 429/5xx, loader .env.local
 scripts/czytanki-audio-source.ts # generuje czytanki-syllables.json (agnieszka/azure-ipa) + czytanki-words.json (agnieszka/azure)
-public/audio/              # build artifact: 1140 plików mp3 + .manifest.json
+scripts/reading-audio-source.ts  # generuje audio-source/syllables.json (moduł 2) z SYLLABLE_TEXTS ∪ sylab ALL_WORDS, klucze lowercase slugPl
+public/audio/              # build artifact: mp3 (`ls public/audio/*.mp3 | wc -l`) + .manifest.json — liczba rośnie z każdym audio:build, sprawdzaj na bieżąco
 ```
 
 ## Kluczowe decyzje (już zaakceptowane)
@@ -82,11 +88,13 @@ public/audio/              # build artifact: 1140 plików mp3 + .manifest.json
 - **Audio — Edge TTS przez Python wrapper** (`scripts/tts.py` + CLI) dla modułów 1-3 i Iskry. User edytuje `audio-source/*.json`, woła `pnpm audio:build`. Manual override przez `audio-source/manual-overrides/<klucz>.mp3` wygrywa nad TTS.
 - **Trzy silniki TTS** — plik `audio-source/*.json` deklaruje `_engine`: `edge` (domyślny, darmowy CLI, bez SSML), `azure` (Azure Speech REST, zwykłe SSML bez phoneme — plain text) albo `azure-ipa` (Azure Speech REST + SSML `<phoneme alphabet="ipa" ph="…">`, gdzie IPA liczy `scripts/polishG2p.ts` z ortografii). WHY osobny `azure-ipa`: Edge/Azure zgadują wymowę **izolowanych sylab** i mylą się ("lo" → "elo", "ka" → "ka a", "ry" → "ri"), a IPA omija ten zgadywacz. Głos `agnieszka` (pl-PL-AgnieszkaNeural, lektor czytanek — moduł 4) jest Azure-only: `_voice: agnieszka` + `_engine: edge` rzuca błąd przy wczytywaniu źródeł. `azure-ipa` używane przez `czytanki-syllables.json`; całe słowa i UI czytanek (`czytanki-words.json`, `czytanki-ui-strings.json`) idą przez `azure` (plain SSML). `synthesizeAzure` throttluje requesty (min. odstęp ~3.1s, tier F0 ≈20 req/min) i robi retry z exponential backoff na 429/5xx (do 6 prób: 2s/4s/8s/16s/32s/60s, honoruje `Retry-After`). Wymaga `.env.local` (gitignore) z `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION=westeurope` — darmowy tier F0 wystarcza; wzór w `.env.example`. Podgląd planu bez klucza: `pnpm audio:dry` (wypisuje engine, tekst, IPA i akcję dla każdego klucza).
 - **`audio-source/pronunciation-overrides.json`** — ręczne wyjątki wymowy wybrane przez odsłuch, per klucz `{ "ipa": "…" }` (wymuś `<phoneme>` tym IPA) albo `{ "text": "…" }` (wymuś zwykłe SSML tym tekstem); ma pierwszeństwo przed G2P/tekstem źródłowym dla wpisów `azure`/`azure-ipa` (nie `edge`). Klucze zaczynające się od `_` to komentarze. Nie jest to plik-źródło audio (wykluczony z `discoverSourceFiles`), tylko nakładka wczytywana osobno w `generate-audio.ts`.
-- **Brak fonemów IPA w Edge** — publiczny endpoint Edge TTS nie obsługuje SSML phoneme tags. Dla liter zostały polskie nazwy ("be", "pe", "em") albo manual recordings.
+- **Brak fonemów IPA w Edge** — publiczny endpoint Edge TTS nie obsługuje SSML phoneme tags. Od Fali 1 fonemy liter idą przez `azure-ipa` (`letters-phonemes.json`); Edge zostaje default dla reszty modułów 1-3.
 - **Theme: jeden tryb** — warm light (`#fef9f2` tło, `#2d2d33` tekst), ignoruje `prefers-color-scheme`. Brak dark mode.
-- **No-text UI dla dziecka** — tylko ikony + audio cues. Wszystkie tap-targety ≥60×60. Brak gestów (tylko tap); moduł 2 używa drag-drop (@dnd-kit) dla ćwiczenia Płomyk.
-- **Persist kilka storage**: `iskierki-state-v1` (settings + math gate + humorMode + reading.*; klucz `name` to `iskierki-state-v1`, `version: 4` — nie mylić jednego z drugim), `iskierki-letters-v1` (moduł 1 progres), `iskierki-reading-v1` (moduł 2 progres), `iskierki-numbers-v1` (moduł 3 progres) i `iskierki-czytanki-v1` (moduł 4 progres — openedIds, seenIntros). Reset jednego nie kasuje pozostałych.
+- **No-text UI dla dziecka** — tylko ikony + audio cues. Wszystkie tap-targety ≥60×60 (wyjątek świadomy: sylaby czytanek 56 px, patrz „Znane odstępstwa" w STATUS). Brak gestów (tylko tap); moduł 2 używa drag-drop (@dnd-kit) dla ćwiczenia Płomyk.
+- **Persist kilka storage**: `iskierki-state-v1` (settings + math gate + humorMode + reading.* + `questionsPerSession` + `secondAttempt` + `letters.promptMode(+ByLevel)` + `czytanki.{echoMode,tempo}`; klucz `name` to `iskierki-state-v1`, **`version: 5`** — nie mylić jednego z drugim; `migrate` v4→v5 mapuje `sessionLength`→`questionsPerSession`), `iskierki-letters-v1` (moduł 1 progres), `iskierki-reading-v1` (moduł 2 progres), `iskierki-numbers-v1` (moduł 3 progres) i `iskierki-czytanki-v1` (moduł 4 progres — openedIds, seenIntros, **`version: 2`**: `wordTaps`, `timeMs`). Reset jednego nie kasuje pozostałych.
 - **Ciągłość uczenia**: `BaseItemState` (generalized SRS) persistowany — w **kolejnej sesji** litery/sylaby/słowa z `recentWrong>0` lub niskim `box` mają wyższy score → częściej w pytaniach.
+- **Druga próba po błędzie** (Litery/Czytanie/Cyferki, `settings.secondAttempt`, default `true`) — pierwsza pomyłka aktualizuje SRS od razu i bez zmian (box −2 itd.); status `retry` pokazuje to samo pytanie z 2 opcjami (poprawna + wybrana); wynik idzie do logu jako `attempt: 2` i **nie dotyka SRS** (retry-correct bez boxa/iskierki/dinga; retry-wrong = hiperkorekcja). `word-assembly` (drag-drop) i `number-bond-builder`/`fact-family-triangle` retry nie mają — odpowiedź tam nie jest wyborem z listy.
+- **Koncepty ważone + `prerequisites`** (Cyferki) — `pickConcept.ts` losuje koncept ważony stanem (`0` zablokowany prerekwizytem, `2` learning+recentWrong, `1` learning, `0.4` mastered) przed `pickNextItem` na faktach tego konceptu; przy 0 dostępnych konceptów fallback na wszystkie bez prerekwizytów.
 
 ## Workflow rozwoju
 
@@ -101,11 +109,12 @@ public/audio/              # build artifact: 1140 plików mp3 + .manifest.json
 pnpm dev              # dev server z HMR
 pnpm build            # production build (lokalnie base='/'; CI ustawia VITE_BASE=/kid-learn/)
 pnpm tsc -b           # type check
-pnpm test --run       # testy (746/746 zielone: 628 src + 118 scripts)
+pnpm test --run       # testy (874/874 zielone: 755 src + 119 scripts, po Fali 1)
 pnpm audio:czytanki   # generuj czytanki-syllables.json + czytanki-words.json z data/czytanki.ts (moduł 4)
-pnpm audio:build      # audio:czytanki + generuj/aktualizuj mp3 (azure-ipa wymaga .env.local)
+pnpm audio:reading    # generuj syllables.json (moduł 2) z SYLLABLE_TEXTS ∪ sylab ALL_WORDS (91 kluczy)
+pnpm audio:build      # audio:czytanki + audio:reading + generuj/aktualizuj mp3 (azure-ipa wymaga .env.local)
 pnpm audio:dry        # plan buildu bez TTS: engine + tekst + IPA + akcja (nie wymaga klucza)
-pnpm audio:check      # sprawdź czy wszystkie klucze mają plik (1133 pliki; działa bez klucza Azure)
+pnpm audio:check      # audio:czytanki + audio:reading + sprawdź czy wszystkie klucze mają plik (1301 wymaganych; działa bez klucza Azure; `ls public/audio/*.mp3 | wc -l` = 1308 — 7 osierocone z przed Fali 1: `correction-prefix`, `feedback-correct-suffix`, `feedback-wrong-prefix`, `still-there`, `summary-intro`, `timeout-1`, `timeout-2`, nie w żadnym source, kandydaci do sprzątnięcia)
 
 # GitHub
 gh run list --repo kamilmat/kid-learn --limit 3      # status ostatnich deploy
@@ -136,8 +145,11 @@ git push                                              # auto-deploy ~40s przez G
 - **`.test.ts` excludowany z `tsconfig.app.json`** — testy mogą mieć type errors bez zatrzymywania `pnpm build`. Test errors trzeba sprawdzać przez `pnpm test --run`.
 - **@dnd-kit w moduł 2 (Płomyk)** — drag-drop z `useDraggable`/`useDroppable`. DndContext musi opakowywać cały ekran ćwiczenia; `over?.id` to null gdy upuścimy poza target. Nie używać `onDragEnd` do mutacji store — tylko do lokalnego state syllableSlots.
 - **wildCelebrationCounter i jitter** — licznik i ostatni stan w `readingStore`. Reset na nową sesję, nie per-pytanie. Jitter ±2 zapobiega przewidywalności.
-- **`audioBus.play()` resolves boolean, nigdy nie rzuca** — `true` = klip FAKTYCZNIE wystartował (choćby zaraz potem przerwany przez `stop()`), `false` = nigdy nie ruszył: zablokowany autoplay, brak/uszkodzony plik, albo `stop()` gdy klucz wciąż czekał w kolejce; `await` bez try/catch jest bezpieczny. `stop()` inkrementuje generation token — trwające `play()` z poprzedniej generacji settluje się cicho (wartością „czy zdążyło wystartować") zamiast dograć w tle ("zombie drain"). `playIntroOnce` (`src/shared/audio/playIntroOnce.ts`) oznacza intro jako widziane dopiero gdy `play()` rozstrzygnie się na `true` — inaczej zablokowany autoplay/brak pliku skasowałby onboarding na zawsze; intro przerwane tapem dziecka liczy się jako usłyszane.
-- **Zmiana reguł w `polishG2p.ts` = regeneracja 375 sylab** — hash `azure-ipa` zawiera IPA, więc każda poprawka G2P wymusza ponowny build tych kluczy (i zużycie limitu F0). Najpierw `pnpm audio:dry`, potem build.
+- **`audioBus.play()` resolves boolean, nigdy nie rzuca** — `true` = klip FAKTYCZNIE wystartował (choćby zaraz potem przerwany przez `stop()`), `false` = nigdy nie ruszył: zablokowany autoplay, brak/uszkodzony plik, albo `stop()` gdy klucz wciąż czekał w kolejce; `await` bez try/catch jest bezpieczny. `stop()` inkrementuje generation token — trwające `play()` z poprzedniej generacji settluje się cicho (wartością „czy zdążyło wystartować") zamiast dograć w tle ("zombie drain"). `playIntroOnce` (`src/shared/audio/playIntroOnce.ts`) oznacza intro jako widziane dopiero gdy `play()` rozstrzygnie się na `true` — inaczej zablokowany autoplay/brak pliku skasowałby onboarding na zawsze; intro przerwane tapem dziecka liczy się jako usłyszane. Od Fali 1: `AudioBus.setPlaybackRate(rate)` (czytanki żółw) musi być przypisywane w `playOne` przy KAŻDYM klipie — inaczej rate gubi się po zmianie `src`.
+- **Zmiana reguł w `polishG2p.ts` = regeneracja setek sylab** — hash `azure-ipa` zawiera IPA, więc każda poprawka G2P wymusza ponowny build tych kluczy (i zużycie limitu F0). Najpierw `pnpm audio:dry`, potem build.
+- **Klucz audio sylab modułu 2 ≠ id SRS** — `getSyllableAudioKey(syllable)` (lowercase `slugPl`, np. `syl-ge_s_`) dla audio, `getSyllableId(syllable)` (uppercase, np. `syl-GĘŚ`) dla SRS/persist (`syllables.ts`, moduł reading). Nie mylić przy dodawaniu nowej sylaby — brak migracji persist, bo id SRS się nie zmienił.
+- **`FEEDBACK_DURATION_BASE_MS.wrong`** (Litery) musi uwzględniać tryb promptu `both` (nazwa + fonem = dłuższa kolejka niż sam fonem) — inaczej audio korekty gra po pojawieniu się ekranu retry/następnego pytania.
+- **`promptAudioKeys`/`getSyllableAudioKey`/`slugPl`** — 404 na brakujący klucz nie wybucha (patrz kontrakt `play()` boolean wyżej), ale w trybie `phoneme`-only (bez `both`) dziecko usłyszy ciszę zamiast litery; `both` (default) jest bezpiecznikiem.
 
 ## Konwencje kodu
 
@@ -150,7 +162,6 @@ git push                                              # auto-deploy ~40s przez G
 
 ## Co JESZCZE nie działa / jest ograniczone
 
-- **Czyste fonemy IPA** — niemożliwe z darmowym Edge TTS. Workaround: nazwy liter lub manual recording.
 - **Tracing palcem** (haptyka) — w v3
 - **Piosenka alfabetu** — w v3
 - **Multi-profile** — jeden profil per urządzenie/przeglądarka (LocalStorage)
@@ -158,6 +169,8 @@ git push                                              # auto-deploy ~40s przez G
 - **SFX biblioteka (moduł 2)** — placeholder; używa SFX z modułu 1 gdzie potrzeba. Dedykowane SFX dla drag-drop i wild celebrations do nagrania/pobrania.
 - **Moduł 5+** — kolory, kształty — architektura gotowa (`src/modules/<nazwa>/`)
 - **Zdania / krótkie teksty w module 2** — moduł czytania (sylaby+słowa) nadal do poziomu słów; zdania obsługuje osobny moduł 4 (Czytanki)
+- **Fala 1 — świadome nie-cele** (Fala 2/3, patrz spec `docs/superpowers/specs/2026-08-29-fala-1-dydaktyka-design.md`): liczenie 1:1, pytania o rozumienie, tracing, „plan na dziś", jedna wspólna ekonomia nagród między modułami, multi-profil, kontrastywne dystraktory sylab, ten frame/mastery jako osobny widok, poziom CVC w czytankach. Żadnych timerów/punktów/streaków widocznych dla dziecka.
+- **Fala 1 — odłożone drobiazgi** (patrz „Znane odstępstwa" w `docs/STATUS.md`): migracja `word-*` (moduł 2, ~12-16 kluczy z diakrytykami) na `slugPl`; dev-only podwójne cue w StrictMode (jak `level-up-suggest`); nazwa stałej `SESSION_LENGTH_OPTIONS` nieaktualna po przejściu na `questionsPerSession`; tap-target sylab czytanek 56 px (nie 60 — auto-fit najdłuższych czytanek w portrait); odsłuch fonemów/trudnych zbitek Azure (`phon-*`, nowe `syl-*`) przez usera jeszcze nie zrobiony.
 
 ## Przy starcie nowej sesji
 
