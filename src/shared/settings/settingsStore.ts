@@ -19,7 +19,9 @@ import {
   isCooldown,
   validateAnswer,
 } from './mathGate'
-import type { Level, MathGateState, MathProblem, Settings } from './types'
+import type { Level, MathGateState, MathProblem, PromptMode, Settings } from './types'
+
+const VALID_PROMPT_MODES: ReadonlySet<PromptMode> = new Set(['phoneme', 'name', 'both'])
 
 export const STORAGE_KEY = 'iskierki-state-v1'
 export const UNLOCK_TTL_MS = 5 * 60_000 // 5 min — sekcja 13.1
@@ -164,10 +166,29 @@ export const useSettings = create<SettingsStore>()(
         // Deep-merge modułu 1 (`letters.promptMode`) — pole dodane po v4, stary
         // persist go nie ma; bez tego `promptMode` byłoby `undefined`.
         const persistedLetters = sanitizedSettings.letters as Record<string, unknown> | undefined
-        sanitizedSettings.letters = {
+        const mergedLetters: Record<string, unknown> = {
           ...defaultSettings.letters,
           ...(persistedLetters ?? {}),
         }
+        // Guard: `promptMode` uszkodzony/spoza unii w localStorage psułby
+        // `promptAudioKeys` switch — sanityzujemy do domyślnego `both`.
+        if (!VALID_PROMPT_MODES.has(mergedLetters.promptMode as PromptMode)) {
+          mergedLetters.promptMode = defaultSettings.letters.promptMode
+        }
+        const rawPromptModeByLevel = mergedLetters.promptModeByLevel as
+          | Record<string, unknown>
+          | undefined
+        const validPromptModeByLevel: Partial<Record<Level, PromptMode>> = {}
+        if (rawPromptModeByLevel && typeof rawPromptModeByLevel === 'object') {
+          for (const level of ALL_LEVELS) {
+            const value = rawPromptModeByLevel[level]
+            if (VALID_PROMPT_MODES.has(value as PromptMode)) {
+              validPromptModeByLevel[level] = value as PromptMode
+            }
+          }
+        }
+        mergedLetters.promptModeByLevel = validPromptModeByLevel
+        sanitizedSettings.letters = mergedLetters
         // Deep-merge: stary persist mógł zapisać `reading` bez pól dodanych później
         // (np. wildCelebrationFreq -> undefined -> NaN w useReadingSession).
         const persistedReading = sanitizedSettings.reading as Record<string, unknown> | undefined

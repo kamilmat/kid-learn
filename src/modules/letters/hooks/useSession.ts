@@ -156,9 +156,10 @@ const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
 // "wybrzmiewania" — czujemy że za szybko leci.
 //   - correct:  sfx-ding (1.8s) + praise (~1.5s) ≈ 3.3s → 4500
 //               (bez assoc "X jak Y" — dziecko zna literę; guzik "→" do skip)
-//   - wrong:    correction-prefix (~2.1s) + prompt litery ≈ 3.3-4.1s → 6300
-//               (prompt to 1-2 klipy zależnie od `promptMode`; `both` =
-//               nazwa + fonem, stąd +800 ms względem poprzednich 5500)
+//   - wrong:    correction-prefix-contrastive (najdłuższy z 4 wariantów, ~3.3s)
+//               + prompt litery (~1.5s dla `both` = nazwa + fonem) ⇒ worst
+//               ≈ 4.7s < 6300 (margines na jitter; prompt to 1-2 klipy
+//               zależnie od `promptMode`)
 //   - dontKnow: dont-know (~1.7s) + letter (~1.2s) + assoc "X jak Y" (~1.9s) ≈ 4.8s → 6500
 //   - timeout:  identyczne audio jak dontKnow ≈ 4.8s → 6500
 //   - mastery:  sfx-fanfara (2.1s) + mastery-celebration (3.3s) ≈ 5.4s → 7000

@@ -16,5 +16,7 @@ export function promptAudioKeys(letter: string, mode: PromptMode): string[] {
       return [`letter-name-${slug}`]
     case 'both':
       return [`letter-name-${slug}`, `phon-${slug}`]
+    default:
+      return [`phon-${slug}`]
   }
 }
