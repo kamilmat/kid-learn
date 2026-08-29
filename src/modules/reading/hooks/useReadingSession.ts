@@ -26,9 +26,10 @@ import { LEVEL_TO_EXERCISE } from '../types'
 import { getReadingPool } from '../data/levelPools'
 import { syllablesForWord } from './blendSequence'
 import { ALL_SYLLABLES, getSyllableAudioKey, getSyllableId } from '../data/syllables'
+import { CONTRASTIVE_SYLLABLES } from '../data/contrastiveSyllables'
 import { ALL_WORDS, getWordById, getWordsByLevel, getWordAudioKey } from '../data/words'
 import { pickNextItem } from '@/shared/srs/select'
-import { pickRandom, shuffled } from '@/shared/srs/distractors'
+import { pickDistractors, pickRandom, shuffled } from '@/shared/srs/distractors'
 import { nextBox, nextRecentWrong } from '@/shared/srs/update'
 import { useReading } from '../store/readingStore'
 import type { Outcome } from '@/shared/srs/types'
@@ -194,12 +195,27 @@ function generateSyllableMatch(
 ): Extract<ReadingQuestion, { type: 'syllable-match' }> {
   const targetId = pickNextItem(statesMap, activePool, lastTarget, now, rng)
   const targetSyllable = targetId.replace('syl-', '')
-  // 3 dystraktorów z puli sylab (różne od targetu)
-  const distractors = pickRandomDistinct(ALL_SYLLABLES, CHOICE_COUNT - 1, [targetId], rng)
-  const choices = shuffled(
-    [targetSyllable, ...distractors.map((d) => d.text)],
-    rng,
-  )
+  // Dystraktory kontrastywne (fonetycznie mylące) z fallbackiem na losowe, gdy
+  // pula za mała (możliwe przy override) albo stan targetu nie istnieje.
+  const targetState = statesMap[targetId]
+  const poolTexts = activePool.map((id) => id.replace('syl-', ''))
+  let distractorTexts: string[]
+  try {
+    if (!targetState) throw new Error('brak stanu sylaby')
+    distractorTexts = pickDistractors(
+      targetSyllable,
+      poolTexts,
+      targetState,
+      CONTRASTIVE_SYLLABLES,
+      rng,
+      CHOICE_COUNT - 1,
+      false,
+    )
+  } catch {
+    // Pula < 4 sylaby (możliwe przy override) — wracamy do losowania.
+    distractorTexts = pickRandomDistinct(ALL_SYLLABLES, CHOICE_COUNT - 1, [targetId], rng).map((d) => d.text)
+  }
+  const choices = shuffled([targetSyllable, ...distractorTexts], rng)
   return { type: 'syllable-match', targetSyllable, choices }
 }
 

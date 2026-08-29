@@ -1,4 +1,4 @@
-import type { LetterState } from './types'
+import type { BaseItemState } from './types'
 
 const SHAPE_GROUPS: Record<string, string> = {
   b: 'roundStem',
@@ -73,10 +73,11 @@ const DEFAULT_REQUIRED_DISTRACTORS = 3
 export function pickDistractors(
   target: string,
   activePool: string[],
-  targetState: LetterState,
+  targetState: BaseItemState & { totalSeen: number },
   contrastivePairs: Readonly<Record<string, readonly string[]>>,
   rng: () => number = Math.random,
   count: number = DEFAULT_REQUIRED_DISTRACTORS,
+  useShapeGroups: boolean = true,
 ): string[] {
   const requiredDistractors = count
   const minPoolSize = requiredDistractors + 1
@@ -100,7 +101,7 @@ export function pickDistractors(
 
   if (errorless) {
     const distantPool = candidates.filter(
-      (l) => !partners.has(l) && shapeOf(l) !== targetShape
+      (l) => !partners.has(l) && (!useShapeGroups || shapeOf(l) !== targetShape)
     )
     const shuffledDistant = shuffled(distantPool, rng)
     for (const l of shuffledDistant) {
