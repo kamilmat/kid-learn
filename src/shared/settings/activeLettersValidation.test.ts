@@ -99,7 +99,7 @@ describe('validateAndApplyOverride', () => {
         'o',
         't',
       ])
-      expect(result.sessionLength).toBe(defaultSettings.sessionLength)
+      expect(result.questionsPerSession).toBe(defaultSettings.questionsPerSession)
       // nie mutuje wejścia
       expect(defaultSettings.activeLettersOverride).toEqual({})
     }

@@ -97,7 +97,7 @@ describe('levelDefaults (sekcja 10.2)', () => {
 
 describe('defaultSettings (sekcja 13.2)', () => {
   it('matches the spec defaults', () => {
-    expect(defaultSettings.sessionLength).toBe(10)
+    expect(defaultSettings.questionsPerSession).toBe(8)
     expect(defaultSettings.timeLimit).toEqual({})
     expect(defaultSettings.showCountdownBar).toEqual({})
     expect(defaultSettings.celebrationTempo).toBe('medium')

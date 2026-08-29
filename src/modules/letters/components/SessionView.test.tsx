@@ -14,7 +14,7 @@ function makeAudioBus() {
 function settingsForTest(overrides: Partial<Settings> = {}): Settings {
   return {
     ...defaultSettings,
-    sessionLength: 5,
+    questionsPerSession: 5,
     timeLimit: { iskierka: 'off', plomyk: 'off', ognik: 'off', pochodnia: 'off' },
     ...overrides,
   }
@@ -106,7 +106,7 @@ describe('SessionView — integration', () => {
     render(
       <SessionView
         level="iskierka"
-        settings={settingsForTest({ sessionLength: 5 })}
+        settings={settingsForTest({ questionsPerSession: 5 })}
         onExit={vi.fn()}
         onSessionComplete={onSessionComplete}
         audioBus={audioBus}

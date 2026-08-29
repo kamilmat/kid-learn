@@ -12,7 +12,18 @@ export type StyleMode =
   | 'mieszane-per-pytanie'
   | 'oba-na-kafelku'
 
+/**
+ * Legacy: „Długość sesji" modułu 1 sprzed v5. Zostawiony WYŁĄCZNIE dla migracji
+ * persistu — nie używać w nowym kodzie, globalną długość trzyma
+ * `Settings.questionsPerSession`.
+ */
 export type SessionLength = 5 | 10 | 15
+
+/**
+ * Globalna długość sesji dla wszystkich modułów (v5). 8 to domyślne
+ * microlearning-owe okno; 5 dla dnia „na chwilę", 12 dla starszego dziecka.
+ */
+export type QuestionsPerSession = 5 | 8 | 12
 export type TimeLimit = 'off' | 10 | 15 | 20 | 25
 export type CelebrationTempo = 'short' | 'medium' | 'long'
 export type DefaultLevelSetting = Level | 'last-used'
@@ -49,8 +60,8 @@ export type LettersSettings = {
 export type NumbersSettings = {
   // Iskra "thinking aloud" — competent other (Wygotski). Default true.
   iskraThinkingAloud: boolean
-  // Liczba pytań w sesji (microlearning < 10 min). Default 8.
-  questionCount: 6 | 8 | 10
+  // Override globalnego `questionsPerSession` dla matematyki. Brak = globalna.
+  questionCount?: 6 | 8 | 10
   // Drzewko Mistrzostwa — głosowe celebracje przy mastery. Default true.
   treeCelebrationsOn: boolean
   // Pochodnia: po jakim kroku skip count (2/5/10) lub mieszane. Default 'mixed'.
@@ -64,7 +75,12 @@ export type Settings = {
   activeLettersOverride: Partial<Record<Level, string[]>>
   caseMode: Partial<Record<Level, CaseMode>>
   styleMode: Partial<Record<Level, StyleMode>>
-  sessionLength: SessionLength
+  /**
+   * Ile pytań ma sesja — JEDNA kontrolka dla wszystkich modułów. Per-moduł
+   * overrides (`reading.questionsPerSession[level]`, `numbers.questionCount`)
+   * są opcjonalne i wygrywają, gdy rodzic je ustawi.
+   */
+  questionsPerSession: QuestionsPerSession
   // override per poziom; brak klucza = używaj domyślnej wartości poziomu
   timeLimit: Partial<Record<Level, TimeLimit>>
   // override per poziom; brak klucza = używaj domyślnej wartości poziomu
@@ -84,7 +100,8 @@ export type Settings = {
   reading: {
     wordAnimations: WordAnimations
     wildCelebrationFreq: number                           // 3-15, default 8
-    questionsPerSession: Partial<Record<Level, number>>  // default 8 dla wszystkich poziomów
+    // Override globalnego `questionsPerSession` per poziom; brak klucza = globalna.
+    questionsPerSession: Partial<Record<Level, number>>
   }
   // Ustawienia modułu matematyki (moduł 3)
   numbers: NumbersSettings

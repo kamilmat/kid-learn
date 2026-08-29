@@ -17,6 +17,7 @@ import { ALL_SYLLABLES } from '@/modules/reading/data/syllables'
 import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '@/modules/czytanki/data/czytanki'
 import { exportReportToMarkdown, topTappedWords } from '@/shared/stats/exporter'
 import { toUnifiedSessions } from '@/shared/stats/aggregate'
+import { completedSessionsToday } from '@/shared/stats/todaySessions'
 import { LettersSection } from './LettersSection'
 import { ActivitySection } from './ActivitySection'
 import { LiveSessionSection } from './LiveSessionSection'
@@ -423,7 +424,11 @@ export function ReportScreen({
         <LettersSection letters={letters} sessions={sessions} />
         <ActivitySection sessions={allSessions} now={nowMs} />
         <LiveSessionSection sessions={allSessions} />
-        <SuggestionsSection letters={letters} sessions={sessions} />
+        <SuggestionsSection
+          letters={letters}
+          sessions={sessions}
+          sessionsToday={completedSessionsToday(allSessions, nowMs)}
+        />
         <AntiCheatSection sessions={allSessions} />
         <ReadingStats />
         <NumbersStats />

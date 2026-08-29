@@ -23,9 +23,10 @@ export const LETTERS_DEFAULTS: LettersSettings = {
 }
 
 // Sekcja 12 spec: defaulty modułu 3 (matematyka)
+// `questionCount` celowo NIEUSTAWIONE — od v5 to override globalnego
+// `questionsPerSession`, a brak klucza znaczy „bierz globalną".
 export const NUMBERS_DEFAULTS: NumbersSettings = {
   iskraThinkingAloud: true,
-  questionCount: 8,
   treeCelebrationsOn: true,
   skipCountStep: 'mixed',
   conceptIntros: true,
@@ -130,7 +131,7 @@ export const defaultSettings: Settings = {
   activeLettersOverride: {},
   caseMode: {},
   styleMode: {},
-  sessionLength: 10,
+  questionsPerSession: 8,
   timeLimit: {},
   showCountdownBar: {},
   celebrationTempo: 'medium',

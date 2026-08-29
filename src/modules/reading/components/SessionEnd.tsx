@@ -3,7 +3,7 @@
 // Phase 9: ceremonia odblokowywania albumu co 10 kart.
 
 import { useEffect, useMemo, useState } from 'react'
-import { colors, radii } from '@/app/theme'
+import { colors, radii, tapTargets } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
 import { IskraHero } from '@/shared/ui/IskraHero'
 import { useReading } from '../store/readingStore'
@@ -11,6 +11,7 @@ import { ALL_WORDS } from '../data/words'
 import { SyllableText } from './SyllableText'
 import type { SessionResult } from '../hooks/useReadingSession'
 import type { AudioBus } from '@/shared/audio/AudioBus'
+import { hasEnoughForToday } from '@/shared/stats/enoughForToday'
 
 export type SessionEndProps = {
   results: SessionResult
@@ -141,13 +142,27 @@ export function SessionEnd({ results, onExit, onAlbum, audioBus }: SessionEndPro
   const clearCeremony = useReading(s => s.clearPendingCeremony)
   const [ceremonyDismissed, setCeremonyDismissed] = useState(false)
 
+  const showCeremony = ceremony !== null && !ceremonyDismissed
+
+  // „Na dziś wystarczy" — liczone raz na mount, ze WSZYSTKICH modułów.
+  // WHY hook przed wczesnym returnem ceremonii: kolejność hooków musi być
+  // stała, a overlay ceremonii wraca z komponentu wcześniej.
+  const [enough] = useState(() => hasEnoughForToday(Date.now()))
+
+  useEffect(() => {
+    // Nie wchodzimy w paradę fanfarze ceremonii — cue poczeka, aż dziecko ją
+    // zamknie i zobaczy właściwe podsumowanie.
+    if (!enough || showCeremony || !audioBus) return
+    void audioBus.play('session-stop-enough')
+  }, [audioBus, enough, showCeremony])
+
   const handleCeremonyContinue = () => {
     clearCeremony()
     setCeremonyDismissed(true)
   }
 
   // Show ceremony overlay if milestone pending and not yet dismissed
-  if (ceremony !== null && !ceremonyDismissed) {
+  if (showCeremony && ceremony !== null) {
     return (
       <CeremonyView
         milestone={ceremony}
@@ -281,31 +296,81 @@ export function SessionEnd({ results, onExit, onAlbum, audioBus }: SessionEndPro
         </div>
       )}
 
-      {/* CTA */}
+      {/* CTA — koniec na dziś: 🏠 głównym przyciskiem, album schodzi na bok. */}
       <div
+        data-testid="session-end-actions"
         style={{
           display: 'flex',
           gap: 12,
           justifyContent: 'center',
+          alignItems: 'center',
           marginTop: 16,
           flexWrap: 'wrap',
+          flexDirection: enough ? 'column' : 'row',
         }}
       >
-        <Button
-          size="large"
-          data-testid="album-button"
-          onClick={onAlbum}
-        >
-          📚 Zobacz album
-        </Button>
-        <Button
-          size="large"
-          variant="secondary"
-          data-testid="exit-button"
-          onClick={onExit}
-        >
-          🏠 Wróć
-        </Button>
+        {enough ? (
+          <>
+            <button
+              type="button"
+              data-testid="exit-button"
+              aria-label="Wróć do domu"
+              onClick={onExit}
+              style={{
+                width: '100%',
+                minHeight: tapTargets.minSize,
+                borderRadius: radii.kid,
+                border: `3px solid ${colors.accentGreen}`,
+                background: colors.accentGreen,
+                color: '#ffffff',
+                fontSize: 30,
+                fontWeight: 800,
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              🏠
+            </button>
+            <button
+              type="button"
+              data-testid="album-button"
+              aria-label="Zobacz album"
+              onClick={onAlbum}
+              style={{
+                minWidth: tapTargets.minSize,
+                minHeight: tapTargets.minSize,
+                padding: '0 20px',
+                borderRadius: radii.kid,
+                border: '2px solid #d8d8de',
+                background: 'transparent',
+                color: '#7a7a82',
+                fontSize: 18,
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              📚 album
+            </button>
+          </>
+        ) : (
+          <>
+            <Button
+              size="large"
+              data-testid="album-button"
+              onClick={onAlbum}
+            >
+              📚 Zobacz album
+            </Button>
+            <Button
+              size="large"
+              variant="secondary"
+              data-testid="exit-button"
+              onClick={onExit}
+            >
+              🏠 Wróć
+            </Button>
+          </>
+        )}
       </div>
     </div>
   )

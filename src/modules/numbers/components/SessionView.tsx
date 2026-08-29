@@ -74,7 +74,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
   const session = useNumbersSession({
     level,
     audioBus,
-    questionCount: settings.numbers?.questionCount ?? 8,
+    questionCount: settings.numbers?.questionCount ?? settings.questionsPerSession,
     skipCountStep: settings.numbers?.skipCountStep ?? 'mixed',
     treeCelebrationsOn: settings.numbers?.treeCelebrationsOn ?? true,
     secondAttempt: settings.secondAttempt,

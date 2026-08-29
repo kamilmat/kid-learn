@@ -66,7 +66,7 @@ describe('useSettings store', () => {
   it('starts with default settings', () => {
     const { settings, mathGateState, parentGateUnlockedUntil } =
       useSettings.getState()
-    expect(settings.sessionLength).toBe(10)
+    expect(settings.questionsPerSession).toBe(8)
     expect(settings.timeLimit).toEqual({})
     expect(mathGateState).toEqual({ failedAttempts: 0, cooldownUntil: 0 })
     expect(parentGateUnlockedUntil).toBe(0)
@@ -74,8 +74,8 @@ describe('useSettings store', () => {
 
   describe('updateSetting', () => {
     it('updates a single setting and preserves others', () => {
-      useSettings.getState().updateSetting('sessionLength', 5)
-      expect(useSettings.getState().settings.sessionLength).toBe(5)
+      useSettings.getState().updateSetting('questionsPerSession', 5)
+      expect(useSettings.getState().settings.questionsPerSession).toBe(5)
       expect(useSettings.getState().settings.timeLimit).toEqual({})
     })
 
@@ -176,12 +176,12 @@ describe('useSettings store', () => {
 
   describe('persistence', () => {
     it('writes to localStorage under iskierki-state-v1', () => {
-      useSettings.getState().updateSetting('sessionLength', 15)
+      useSettings.getState().updateSetting('questionsPerSession', 12)
       const raw = localStorage.getItem(STORAGE_KEY)
       expect(raw).not.toBeNull()
       const parsed = JSON.parse(raw as string)
       // Zustand persist wraps as { state, version }
-      expect(parsed.state.settings.sessionLength).toBe(15)
+      expect(parsed.state.settings.questionsPerSession).toBe(12)
     })
 
     it('persists mathGateState and parentGateUnlockedUntil', () => {

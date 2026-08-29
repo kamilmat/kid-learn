@@ -84,7 +84,7 @@ export function SessionView({
   const session = useSession({
     level,
     activeLetters,
-    sessionLength: settings.sessionLength,
+    sessionLength: settings.questionsPerSession,
     timeLimit: getEffectiveTimeLimit(settings, level),
     showCountdownBar: getEffectiveShowCountdownBar(settings, level),
     caseMode,
@@ -171,7 +171,7 @@ export function SessionView({
       <SessionEnd
         iskierki={session.iskierki}
         totalQuestions={session.totalQuestions}
-        sessionLength={settings.sessionLength}
+        sessionLength={settings.questionsPerSession}
         events={session.sessionEvents}
         onRestart={session.start}
         onExit={onExit}
