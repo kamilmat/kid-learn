@@ -608,8 +608,12 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       }
     }
 
-    // Timer
-    startCountdown()
+    // Timer — wariant odwrotny go NIE dostaje (jak retry). ReverseQuizCard nie
+    // rysuje paska odliczania, a odsłuch kilku kandydatów po kolei trwa ~10s;
+    // ukryty timer zamieniałby normalne słuchanie w timeout bijący w SRS.
+    if (kind !== 'letter-to-sound') {
+      startCountdown()
+    }
   }, [pushEvent, startCountdown])
 
   const finishSession = useCallback(() => {
@@ -653,9 +657,22 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       chosenLetter: string | undefined,
       newStreak: number,
       attempt: 1 | 2 = 1,
+      isReverse = false,
     ): number => {
       const cfg = cfgRef.current
       let extraDurationMs = 0
+      // W wariancie odwrotnym dźwięk litery JEST odpowiedzią — zagranie go w
+      // korekcie rozwiązywałoby za dziecko drugą próbę (2 kafelki, wystarczy
+      // dopasować to, co przed chwilą zabrzmiało). Zostaje sama fraza korekty
+      // / wsparcia. `FEEDBACK_DURATION_BASE_MS` zostaje bez zmian — jest
+      // stałą per wariant, nie sumą kolejki, więc krótsza kolejka oznacza
+      // tylko odrobinę ciszy przed przejściem dalej (bezpieczny kierunek).
+      const playTargetPrompt = () => {
+        if (isReverse) return
+        for (const key of promptAudioKeys(target, cfg.promptMode)) {
+          void cfg.audioBus.play(key)
+        }
+      }
 
       switch (variant) {
         case 'correct': {
@@ -690,9 +707,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
             cfg.rng,
           )
           void cfg.audioBus.play(prefixKey)
-          for (const key of promptAudioKeys(target, cfg.promptMode)) {
-            void cfg.audioBus.play(key)
-          }
+          playTargetPrompt()
           break
         }
         case 'dontKnow':
@@ -704,9 +719,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
           // do błędu). Dziecko nie pomyliło się, świadomie/biernie nie
           // odpowiedziało.
           void cfg.audioBus.play(pickRandom(DONTKNOW_KEYS, cfg.rng))
-          for (const key of promptAudioKeys(target, cfg.promptMode)) {
-            void cfg.audioBus.play(key)
-          }
+          playTargetPrompt()
           try {
             const assoc = getAssociation(target)
             void cfg.audioBus.play(assoc.audioKey)
@@ -871,6 +884,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
         chosenLetter,
         newStreak,
         attempt,
+        q.kind === 'letter-to-sound',
       )
       const effectiveMs = durationMs + extraDurationMs
       lastFeedbackEffectiveMsRef.current = effectiveMs
@@ -1064,6 +1078,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
           fb.chosenLetter,
           currentStreakRef.current,
           lastFeedbackAttemptRef.current,
+          currentQuestionRef.current?.kind === 'letter-to-sound',
         )
         // Pauza złapana między błędem a drugą próbą — wznawiamy tę samą
         // ścieżkę, inaczej retry przepadłby i sesja przeskoczyłaby dalej.
@@ -1093,7 +1108,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     // restart timer dla bieżącego pytania od pełnej długości — uczciwie wobec dziecka
     if (currentQuestionRef.current) {
       questionStartedAtRef.current = cfgRef.current.now()
-      startCountdown()
+      if (currentQuestionRef.current.kind !== 'letter-to-sound') {
+        startCountdown()
+      }
     }
   }, [
     playFeedbackAudio,

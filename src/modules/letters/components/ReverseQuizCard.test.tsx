@@ -69,6 +69,16 @@ describe('ReverseQuizCard', () => {
     expect(screen.getByTestId('pause-button')).toBeInTheDocument()
   })
 
+  it('`oba-na-kafelku` pokazuje literę-cel w obu formach', () => {
+    renderCard({
+      styleMode: 'oba-na-kafelku',
+      question: { ...question, bothStyles: true },
+    })
+
+    expect(screen.getByTestId('reverse-target-print')).toHaveTextContent('m')
+    expect(screen.getByTestId('reverse-target-handwritten')).toHaveTextContent('m')
+  })
+
   it('blokuje odsłuch i odpowiedź gdy nieinteraktywne (feedback/pauza)', () => {
     const { onPlayCandidate, onTileClick } = renderCard({ interactive: false })
 
