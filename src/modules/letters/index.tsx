@@ -4,6 +4,7 @@
 //   - `/letters`              → ekran wyboru poziomu (LevelSelect)
 //   - `/letters/session/:level` → sesja nauki dla wybranego poziomu (SessionView)
 //   - `/letters/hard`         → „Trudne literki" (powtórka celowana z SRS)
+//   - `/letters/daily`        → „Literka dnia" (mikrosesja 60-90 s, wejście z Home)
 //
 // Onboarding głosowy (sekcja 5.2):
 //   - `letters-intro`     1× przy pierwszym wejściu na ekran wyboru
@@ -39,13 +40,13 @@ import {
   configLevelForHard,
   selectHardLetters,
 } from './data/hardLetters'
+import { DailyLetterSession } from './components/DailyLetterSession'
 import { HardLettersSession } from './components/HardLettersSession'
 import { LevelSelect } from './components/LevelSelect'
 import { SessionView } from './components/SessionView'
 import {
   selectLetterStateMap,
   useLetters,
-  type LettersState,
 } from './store/lettersStore'
 
 const VALID_LEVELS: ReadonlySet<Level> = new Set<Level>([
@@ -90,6 +91,10 @@ export function LettersModule({
         <Route
           path="hard"
           element={<LettersHardRoute audioBus={audioBus} showNav={showNav} />}
+        />
+        <Route
+          path="daily"
+          element={<LettersDailyRoute audioBus={audioBus} showNav={showNav} />}
         />
         <Route path="*" element={<Navigate to="." replace />} />
       </Routes>
@@ -209,7 +214,7 @@ function LettersSession({ audioBus, showNav }: LettersSessionProps) {
 
   // Lazy init aktywnej puli — gwarancja że każda aktywna litera ma initial state
   const initialStates = useMemo(() => {
-    const snapshot: LettersState = { letters, sessions, seenIntros, lastUsedLevel }
+    const snapshot = { letters, sessions, seenIntros, lastUsedLevel }
     return selectLetterStateMap(snapshot, isValidLevel ? level : 'iskierka', settings)
   }, [isValidLevel, lastUsedLevel, letters, level, seenIntros, sessions, settings])
 
@@ -297,7 +302,7 @@ function LettersHardRoute({ audioBus, showNav }: LettersSessionProps) {
 
   // Pełna pula poziomu — dystraktory muszą mieć swoje `LetterState`.
   const initialStates = useMemo(() => {
-    const snapshot: LettersState = { letters, sessions, seenIntros, lastUsedLevel }
+    const snapshot = { letters, sessions, seenIntros, lastUsedLevel }
     return selectLetterStateMap(snapshot, configLevel, settings)
   }, [configLevel, lastUsedLevel, letters, seenIntros, sessions, settings])
 
@@ -337,6 +342,79 @@ function LettersHardRoute({ audioBus, showNav }: LettersSessionProps) {
         initialStates={initialStates}
         onExit={handleExit}
         onSessionComplete={handleSessionComplete}
+        audioBus={audioBus}
+        quitRef={quitRef}
+      />
+    </Screen>
+  )
+}
+
+// ---------- Daily — „Literka dnia" (mikrosesja 60-90 s) ----------
+
+function LettersDailyRoute({ audioBus, showNav }: LettersSessionProps) {
+  const navigate = useNavigate()
+
+  const settings = useSettings((s) => s.settings)
+  const applySessionResults = useLetters((s) => s.applySessionResults)
+  const setDailyLetter = useLetters((s) => s.setDailyLetter)
+  const markDailyDone = useLetters((s) => s.markDailyDone)
+  const letters = useLetters((s) => s.letters)
+  const sessions = useLetters((s) => s.sessions)
+  const seenIntros = useLetters((s) => s.seenIntros)
+  const lastUsedLevel = useLetters((s) => s.lastUsedLevel)
+  const dailyLetter = useLetters((s) => s.dailyLetter)
+
+  // Config poziomu i literka mrożone na wejściu — patrz `LettersHardRoute`.
+  const configLevel = useMemo(
+    () => configLevelForHard(sessions),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+  const initialDailyLetter = useRef(dailyLetter).current
+
+  const initialStates = useMemo(() => {
+    const snapshot = { letters, sessions, seenIntros, lastUsedLevel }
+    return selectLetterStateMap(snapshot, configLevel, settings)
+  }, [configLevel, lastUsedLevel, letters, seenIntros, sessions, settings])
+
+  const quitRef = useRef<(() => void) | null>(null)
+  const handleNavBack = useCallback(() => {
+    quitRef.current?.()
+    navigate('..', { state: { fromExit: true }, replace: true })
+  }, [navigate])
+  const handleNavHome = useCallback(() => {
+    quitRef.current?.()
+    navigate('/')
+  }, [navigate])
+
+  const handleSessionComplete = useCallback(
+    (log: SessionLog, updatedStates: Record<string, LetterState>) => {
+      applySessionResults(updatedStates, log)
+    },
+    [applySessionResults],
+  )
+
+  const handleDone = useCallback(
+    (doneDayKey: string) => {
+      markDailyDone(doneDayKey)
+      navigate('/')
+    },
+    [markDailyDone, navigate],
+  )
+
+  return (
+    <Screen
+      nav={showNav ? <KidNav onBack={handleNavBack} onHome={handleNavHome} /> : null}
+    >
+      <DailyLetterSession
+        settings={settings}
+        letters={letters}
+        sessions={sessions}
+        dailyLetter={initialDailyLetter}
+        initialStates={initialStates}
+        onPickLetter={setDailyLetter}
+        onSessionComplete={handleSessionComplete}
+        onDone={handleDone}
         audioBus={audioBus}
         quitRef={quitRef}
       />

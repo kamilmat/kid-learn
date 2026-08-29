@@ -19,6 +19,7 @@ import { IskraHero } from '@/shared/ui/IskraHero'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { getSyllableCue } from '@/shared/ui/syllableColors'
 import { useLetters } from '@/modules/letters/store/lettersStore'
+import { dayKey } from '@/modules/letters/data/dailyLetter'
 import { useReading } from '@/modules/reading/store/readingStore'
 import { useNumbers } from '@/modules/numbers/store/numbersStore'
 import { useCzytanki } from '@/modules/czytanki/store/czytankiStore'
@@ -36,6 +37,9 @@ export function Home() {
   const readingIntroSeen = useReading((s) => s.hasSeenIntro('home-reading-intro'))
   const numbersIntroSeen = useNumbers((s) => s.hasSeenIntro('home-numbers-intro'))
   const czytankiIntroSeen = useCzytanki((s) => s.hasSeenIntro('home-czytanki-intro'))
+  const dailyIntroSeen = useLetters((s) => s.hasSeenIntro('home-daily-letter'))
+  const dailyLetter = useLetters((s) => s.dailyLetter)
+  const dailyDoneDayKey = useLetters((s) => s.dailyDoneDayKey)
   const markLettersIntro = useLetters((s) => s.markIntroSeen)
   const markReadingIntro = useReading((s) => s.markIntroSeen)
   const markNumbersIntro = useNumbers((s) => s.markIntroSeen)
@@ -58,6 +62,8 @@ export function Home() {
       playIntro('home-numbers-intro', numbersIntroSeen, markNumbersIntro)
     } else if (!czytankiIntroSeen) {
       playIntro('home-czytanki-intro', czytankiIntroSeen, markCzytankiIntro)
+    } else if (!dailyIntroSeen) {
+      playIntro('home-daily-letter', dailyIntroSeen, markLettersIntro)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -80,7 +86,22 @@ export function Home() {
   const handleNumbers = useCallback(() => goToModule('/numbers'), [goToModule])
   const handleCzytanki = useCallback(() => goToModule('/czytanki'), [goToModule])
 
+  const today = dayKey(Date.now())
+  const dailyDone = dailyDoneDayKey === today
+  const todaysLetter = dailyLetter?.dayKey === today ? dailyLetter.letter : null
+
+  const handleDailyLetter = useCallback(() => {
+    if (dailyDone) {
+      // Zrobione dziś — zamiast wpuszczać w drugą mikrosesję mówimy dlaczego.
+      audioBus.stop()
+      void audioBus.play('letters-daily-done')
+      return
+    }
+    goToModule('/letters/daily')
+  }, [dailyDone, goToModule])
+
   const lettersTap = useTapHandler({ onTap: handleLetters })
+  const dailyTap = useTapHandler({ onTap: handleDailyLetter })
   const readingTap = useTapHandler({ onTap: handleReading })
   const numbersTap = useTapHandler({ onTap: handleNumbers })
   const czytankiTap = useTapHandler({ onTap: handleCzytanki })
@@ -99,9 +120,10 @@ export function Home() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        // Siatka 2×2 kafelków musi zmieścić się bez scrolla na iPadzie
-        // w orientacji poziomej (820 px wysokości) — stąd ciasne odstępy.
-        gap: 24,
+        // Siatka 2×2 kafelków + pasek „Literka dnia" muszą zmieścić się bez
+        // scrolla na iPadzie w orientacji poziomej (820 px) — stąd ciasne
+        // odstępy i kafelki 188 zamiast 196 (pasek zjadł zapas).
+        gap: 20,
         background: colors.bg,
       }}
     >
@@ -110,10 +132,12 @@ export function Home() {
           display: 'flex',
           alignItems: 'center',
           gap: 16,
-          marginTop: 8,
+          marginTop: 4,
         }}
       >
-        <IskraHero size={180} state="idle" intensity="fire" idleVariant="wave" />
+        {/* 160, nie 180 — kafelki rosną z contentu (~239 px), więc zapas na
+            pasek „Literka dnia" trzeba było wziąć z nagłówka. */}
+        <IskraHero size={160} state="idle" intensity="fire" idleVariant="wave" />
         <h1
           style={{
             fontFamily: 'var(--font-handwritten)',
@@ -146,7 +170,7 @@ export function Home() {
           aria-label="Litery"
           {...lettersTap}
           style={{
-            minHeight: 196,
+            minHeight: 188,
             padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#fef3c7',
@@ -198,7 +222,7 @@ export function Home() {
           aria-label="Czytanie"
           {...readingTap}
           style={{
-            minHeight: 196,
+            minHeight: 188,
             padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#dbeafe',
@@ -248,7 +272,7 @@ export function Home() {
           aria-label="Cyferki"
           {...numbersTap}
           style={{
-            minHeight: 196,
+            minHeight: 188,
             padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#dcfce7',
@@ -300,7 +324,7 @@ export function Home() {
           aria-label="Czytanki"
           {...czytankiTap}
           style={{
-            minHeight: 196,
+            minHeight: 188,
             padding: 16,
             borderRadius: radii.kid * 1.5,
             background: '#f3e8ff',
@@ -352,6 +376,52 @@ export function Home() {
           </span>
         </button>
       </div>
+
+      {/* „Literka dnia" — wąski pasek pod siatką; jedna literka, króciutko.
+          Nie kafelek: to codzienna mikrosesja, nie piąty moduł. */}
+      <button
+        type="button"
+        data-testid="home-daily-letter"
+        aria-label="Literka dnia"
+        {...dailyTap}
+        style={{
+          width: '100%',
+          maxWidth: 820,
+          minHeight: 64,
+          marginTop: 4,
+          padding: '8px 16px',
+          borderRadius: radii.kid,
+          background: '#ecfdf5',
+          border: '4px solid #10b981',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 16,
+          color: '#065f46',
+          touchAction: 'manipulation',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        <span aria-hidden="true" style={{ fontSize: 32, lineHeight: 1 }}>
+          {dailyDone ? '✔' : '✨'}
+        </span>
+        {todaysLetter !== null && (
+          <span
+            aria-hidden="true"
+            style={{
+              fontFamily: 'var(--font-handwritten)',
+              fontSize: 32,
+              fontWeight: 700,
+              lineHeight: 1,
+            }}
+          >
+            {todaysLetter.toUpperCase()}
+          </span>
+        )}
+      </button>
 
       {/* "Rodzicowa strefa" — prawy dolny róg, drobna i przytłumiona. */}
       <div
