@@ -11,7 +11,8 @@ import { IskraMascot } from '@/shared/ui/IskraMascot'
 import type { IskraState } from '@/shared/ui/IskraMascot'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { MIN_FEEDBACK_MS } from '../hooks/useReadingSession'
-import type { FeedbackVariant } from '../hooks/useReadingSession'
+import type { BlendState, FeedbackVariant } from '../hooks/useReadingSession'
+import { BlendRow } from './BlendRow'
 
 export type FeedbackOverlayProps = {
   variant: NonNullable<FeedbackVariant>
@@ -22,12 +23,16 @@ export type FeedbackOverlayProps = {
   /** Wstrzymuje auto-advance (pauza) — po wznowieniu odliczanie startuje od nowa. */
   paused?: boolean
   minDurationMs?: number
+  /** Krok syntezy („Składamy: MA… MA… MAMA") — rząd sylab pod ikoną. */
+  blend?: BlendState | null
 }
 
 // Twardy limit czekania na kolejkę audio — overlay nigdy nie może zablokować
 // sesji, gdyby `play()` nie domknęło obietnicy (element bez `ended`/`error`).
-// Tak samo jak w module Cyferek.
-const MAX_FEEDBACK_MS = 12_000
+// 20 s zamiast 12 jak w Cyferkach: feedback niesie teraz krok syntezy, a
+// LOKOMOTYWA (5 sylab z pauzami, po pochwale i scence) potrafi zająć ~10 s —
+// przy 12 s zawór bezpieczeństwa ucinałby zdrową sekwencję.
+const MAX_FEEDBACK_MS = 20_000
 
 type VariantConfig = {
   background: string
@@ -59,6 +64,7 @@ export function FeedbackOverlay({
   waitForAudio,
   paused = false,
   minDurationMs = MIN_FEEDBACK_MS,
+  blend = null,
 }: FeedbackOverlayProps) {
   const cfg = configFor(variant)
   const tapHandlers = useTapHandler({ onTap: () => onSkip(true) })
@@ -124,6 +130,7 @@ export function FeedbackOverlay({
       <div aria-hidden="true" style={{ fontSize: 96, lineHeight: 1 }}>
         {cfg.icon}
       </div>
+      {blend !== null && <BlendRow blend={blend} />}
       <IskraMascot size={96} state={cfg.mascot} intensity={variant === 'wild' ? 'torch' : 'flame'} />
       {variant === 'correct' && (
         <div aria-hidden="true" style={{ fontSize: 48 }}>

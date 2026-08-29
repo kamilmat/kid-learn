@@ -348,6 +348,7 @@ export function SessionView({
             scene={activeScene}
             audioBus={audioBus}
             onComplete={handleSceneComplete}
+            blend={session.blend}
           />
         )}
 
@@ -358,6 +359,7 @@ export function SessionView({
             onSkip={session.skipFeedback}
             waitForAudio={session.waitForFeedbackAudio}
             paused={session.paused}
+            blend={session.blend}
           />
         )}
 

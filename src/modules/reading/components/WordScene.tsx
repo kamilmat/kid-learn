@@ -4,14 +4,18 @@
 import { useEffect, useRef } from 'react'
 import type { Scene } from '../data/scenes'
 import type { AudioBus } from '@/shared/audio/AudioBus'
+import type { BlendState } from '../hooks/useReadingSession'
+import { BlendRow } from './BlendRow'
 
 type Props = {
   scene: Scene
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   onComplete: () => void
+  /** Krok syntezy leci dalej, gdy scenka zasłania FeedbackOverlay. */
+  blend?: BlendState | null
 }
 
-export function WordScene({ scene, audioBus, onComplete }: Props) {
+export function WordScene({ scene, audioBus, onComplete, blend = null }: Props) {
   const completedRef = useRef(false)
 
   useEffect(() => {
@@ -70,6 +74,7 @@ export function WordScene({ scene, audioBus, onComplete }: Props) {
       <div style={{ fontSize: 200, ...animationStyle }}>
         {scene.emoji}
       </div>
+      {blend !== null && <BlendRow blend={blend} />}
       {scene.effects?.map((effect, i) => (
         <SceneEffect key={i} effect={effect} />
       ))}
