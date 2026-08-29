@@ -9,6 +9,8 @@ export function promptAudioKey(question: Question | null): string | null {
   if (!question) return null
   const args = (question.payload as { args?: number[] }).args ?? []
   switch (question.exerciseType) {
+    case 'count-objects':
+      return 'count-objects-prompt'
     case 'subitize-flash':
     case 'match-digit-dots':
       return 'ask-howmany'
@@ -102,8 +104,9 @@ export function promptAudioKeys(question: Question | null): string[] {
     case 'number-bond-builder':
       return a !== null ? [a, generic] : [generic]
     default:
-      // subitize-flash, match-digit-dots, number-rhythm, skip-count-chase,
-      // fact-family-triangle — liczby SĄ celem pytania albo jest ich za dużo.
+      // count-objects, subitize-flash, match-digit-dots, number-rhythm,
+      // skip-count-chase, fact-family-triangle — liczby SĄ celem pytania
+      // (wypowiedzenie ich zdradziłoby odpowiedź) albo jest ich za dużo.
       return [generic]
   }
 }

@@ -2,7 +2,17 @@ import type { Level } from '@/shared/settings/types'
 import type { ExerciseType } from '../types'
 import type { Fact } from '../data/facts'
 
-export function exerciseTypeForFact(fact: Fact, level: Level): ExerciseType {
+/**
+ * `questionIndex` przeplata liczenie 1:1 z rozpoznawaniem liczebności: co drugie
+ * pytanie konceptów liczenia to `count-objects` (akt liczenia), pozostałe
+ * zostają przy subitizingu / ten frame. Bez przeplotu dziecko ćwiczyłoby albo
+ * samo dotykanie, albo samo „zgadnij ile" — a to dwie różne umiejętności.
+ */
+export function exerciseTypeForFact(
+  fact: Fact,
+  level: Level,
+  questionIndex = 0,
+): ExerciseType {
   // Maintenance odejmowania w Pochodni — sub- fakty z plomyk-addsub-10 zaciągane
   // w Pochodni jako interleaving (Bjork): NIE używaj concrete-add-subtract,
   // tylko dedykowanego subtract-maintenance ćwiczenia.
@@ -11,12 +21,13 @@ export function exerciseTypeForFact(fact: Fact, level: Level): ExerciseType {
   }
   switch (fact.conceptId) {
     case 'iskierka-counting-5':
-    case 'iskierka-subitizing-6':
       // Subitizing 1-6: flash dice patterns (perceptual subitizing)
+      return questionIndex % 2 === 0 ? 'count-objects' : 'subitize-flash'
+    case 'iskierka-subitizing-6':
       return 'subitize-flash'
     case 'iskierka-counting-10':
       // Liczenie 7-10: ten frame statyczny (conceptual subitizing)
-      return 'match-digit-dots'
+      return questionIndex % 2 === 0 ? 'count-objects' : 'match-digit-dots'
     case 'iskierka-rhythm':
       return 'number-rhythm'
     case 'iskierka-adding-concrete':

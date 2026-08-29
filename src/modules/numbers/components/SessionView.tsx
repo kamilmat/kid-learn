@@ -9,6 +9,7 @@ import { colors, radii, tapTargets } from '@/app/theme'
 import { useNumbersSession, type SessionStatus } from '../hooks/useNumbersSession'
 import { useNumbers } from '../store/numbersStore'
 import { extractCorrectValue } from '../data/correctValue'
+import { pickIconSet } from '../data/concreteSets'
 import { promptAudioKeys, thinkingAloudKey } from '../data/promptAudio'
 import { NUMBERS_PRAISE_KEYS, type NumbersPraiseKey } from '../data/praise'
 import {
@@ -20,6 +21,7 @@ import type { AnswerOutcome, ExerciseType, Question } from '../types'
 import { ConceptIntro } from './intros/ConceptIntro'
 import { SessionEnd } from './SessionEnd'
 import { PauseOverlay } from '@/shared/ui/PauseOverlay'
+import { CountObjectsExercise } from './exercises/CountObjectsExercise'
 import { SubitizeFlashExercise } from './exercises/SubitizeFlashExercise'
 import { MatchDigitDotsExercise } from './exercises/MatchDigitDotsExercise'
 import { NumberRhythmExercise } from './exercises/NumberRhythmExercise'
@@ -278,6 +280,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <ExerciseRouter
           question={session.currentQuestion}
+          questionIdx={session.questionIdx}
           audioBus={audioBus}
           onAnswer={handleAnswer}
           revealValue={revealValue}
@@ -329,16 +332,33 @@ type ExerciseProps = {
    * `revealValue ?? count`; reszta prop ignoruje.
    */
   revealValue?: number | null
+  /**
+   * Tylko `count-objects` — pozostałe ćwiczenia czytają `payload.args`.
+   * Liczy to router, bo emoji i układ zależą od ziarna, którego ćwiczenie
+   * nie umie samo wyprowadzić z faktu.
+   */
+  countObjects: { n: number; emoji: string; seed: number }
+}
+
+/** Ziarno układu obiektów: stałe w obrębie pytania, różne między pytaniami. */
+function countSeed(factId: string, questionIdx: number): number {
+  let h = 2166136261
+  for (let i = 0; i < factId.length; i++) {
+    h = Math.imul(h ^ factId.charCodeAt(i), 16777619)
+  }
+  return ((h >>> 0) % 100000) + questionIdx * 7919
 }
 
 function ExerciseRouter({
   question,
+  questionIdx,
   audioBus,
   onAnswer,
   restrictChoicesTo,
   revealValue = null,
 }: {
   question: Question
+  questionIdx: number
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
   restrictChoicesTo?: number[]
@@ -346,12 +366,15 @@ function ExerciseRouter({
 }) {
   // Stabilna referencja — tablica trafia do deps `useEffect` ćwiczeń.
   const promptKeys = useMemo(() => promptAudioKeys(question), [question])
+  const args = (question.payload as { args: number[] }).args
+  const seed = countSeed(question.factId, questionIdx)
   const props: ExerciseProps = {
     audioBus,
     payload: question.payload as { args: number[] },
     promptKeys,
     onAnswer,
     revealValue,
+    countObjects: { n: args[0] ?? 1, emoji: pickIconSet(seed).emoji, seed },
     ...(restrictChoicesTo !== undefined ? { restrictChoicesTo } : {}),
   }
   // Re-mount na zmianę question.factId — gwarantuje czysty stan ćwiczenia
@@ -366,6 +389,17 @@ function ExerciseSwitch({
   props: ExerciseProps
 }) {
   switch (type) {
+    case 'count-objects':
+      return (
+        <CountObjectsExercise
+          audioBus={props.audioBus}
+          payload={props.countObjects}
+          onAnswer={props.onAnswer}
+          {...(props.restrictChoicesTo !== undefined
+            ? { restrictChoicesTo: props.restrictChoicesTo }
+            : {})}
+        />
+      )
     case 'subitize-flash':
       return <SubitizeFlashExercise {...props} />
     case 'match-digit-dots':

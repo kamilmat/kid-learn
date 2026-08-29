@@ -45,6 +45,10 @@
   "try-again-soft": "Prawie! Patrz jeszcze raz.",
   "correct-make10-prefix": "Najpierw do dziesięciu, potem reszta!",
 
+  "count-objects-prompt": "Stukaj w każdy przedmiot, a ja będę liczyć.",
+  "count-objects-howmany": "Ile jest razem?",
+  "count-objects-recount": "Policzmy jeszcze raz, powoli.",
+
   "ask-howmany": "Ile to jest?",
   "ask-howmany-total": "Ile razem?",
   "ask-howmany-left": "Ile zostało?",
