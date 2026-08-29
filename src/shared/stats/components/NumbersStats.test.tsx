@@ -59,10 +59,12 @@ describe('NumbersStats', () => {
         'iskierka-counting-5': {
           state: 'mastered',
           firstSeenAt: 1, lastSeenAt: 2, correctStreak: 10, factsTouched: ['add-1-1'],
+          recentOutcomes: [], factsCorrect: ['add-1-1'],
         },
         'plomyk-bonds-5': {
           state: 'learning',
           firstSeenAt: 1, lastSeenAt: 2, correctStreak: 3, factsTouched: ['bond-5-2-3'],
+          recentOutcomes: [], factsCorrect: ['bond-5-2-3'],
         },
       },
     })

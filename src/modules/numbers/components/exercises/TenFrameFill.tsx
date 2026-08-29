@@ -16,11 +16,20 @@ type Props = {
   onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
   /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
   restrictChoicesTo?: number[]
+  /** Feedback po pomyłce: dołóż brakujące kropki, żeby dziecko ZOBACZYŁO ile. */
+  revealValue?: number | null
 }
 
 const DROP_TARGET_ID = 'tenframe-fill-target'
 
-export function TenFrameFill({ audioBus, payload, promptKeys, onAnswer, restrictChoicesTo }: Props) {
+export function TenFrameFill({
+  audioBus,
+  payload,
+  promptKeys,
+  onAnswer,
+  restrictChoicesTo,
+  revealValue = null,
+}: Props) {
   const filled = clamp(payload.args[0] ?? 0, 0, 10)
   const missing = clamp(payload.args[1] ?? 10 - filled, 1, 10)
 
@@ -62,7 +71,16 @@ export function TenFrameFill({ audioBus, payload, promptKeys, onAnswer, restrict
             gap: 24,
           }}
         >
-          <TenFrame count={filled} size={48} />
+          {/* fiveStructure wyłączone: dziecko DOKŁADA kropki, a drugi odcień
+              czytałby się jako „te są już wypełnione". */}
+          <TenFrame
+            count={revealValue === null ? filled : filled + revealValue}
+            size={48}
+            fiveStructure={false}
+            {...(revealValue === null
+              ? {}
+              : { highlightColor: '#16a34a', highlightAfter: filled })}
+          />
           <DropTarget droppableId={DROP_TARGET_ID}>
             <span style={{ fontSize: 96, opacity: 0.3, fontFamily: 'var(--font-block)' }}>?</span>
           </DropTarget>

@@ -4,8 +4,15 @@ import { CONCEPTS } from '../data/concepts'
 import { getLevelFacts } from '../data/levelFacts'
 import type { ConceptId, ConceptMastery, MathFactState } from '../types'
 
-const m = (state: ConceptMastery['state'], correctStreak = 0): ConceptMastery =>
-  ({ state, firstSeenAt: 1, lastSeenAt: 1, correctStreak, factsTouched: [] })
+const m = (state: ConceptMastery['state'], correctStreak = 0): ConceptMastery => ({
+  state,
+  firstSeenAt: 1,
+  lastSeenAt: 1,
+  correctStreak,
+  factsTouched: [],
+  recentOutcomes: [],
+  factsCorrect: [],
+})
 function seeded(seed: number): () => number {
   let s = seed
   return () => ((s = (s * 1103515245 + 12345) % 2147483648) / 2147483648)

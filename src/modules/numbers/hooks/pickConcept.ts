@@ -98,10 +98,15 @@ function prereqSatisfied(
   const mastery = concepts[resolved]
   if (!mastery) return false
   if (mastery.state === 'mastered') return true
-  return (
-    mastery.state === 'learning' &&
-    mastery.correctStreak >= softUnlockStreak(CONCEPTS[resolved])
-  )
+  if (mastery.state !== 'learning') return false
+  const threshold = softUnlockStreak(CONCEPTS[resolved])
+  // Mastery liczy dziś okno ostatnich 10, nie serię z rzędu — miękkie
+  // odblokowanie musi honorować obie miary, inaczej dziecko z 6/10 poprawnych
+  // (ale bez serii) siedziałoby w nieskończoność na koncepcie wejściowym.
+  const correctInWindow = (mastery.recentOutcomes ?? []).filter(
+    (o) => o === 'correct',
+  ).length
+  return mastery.correctStreak >= threshold || correctInWindow >= threshold
 }
 
 /**

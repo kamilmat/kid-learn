@@ -247,6 +247,16 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
     )
   }
 
+  // Pas korekty zasłania tylko górę ekranu, więc zadanie pod nim musi pokazać
+  // POPRAWNĄ liczbę — dziecko widzi reprezentację tego, co słyszy („tu było N").
+  const revealValue =
+    (session.status === 'feedback' ||
+      (session.status === 'paused' && session.pausedFrom === 'feedback')) &&
+    session.lastOutcome !== null &&
+    session.lastOutcome !== 'correct'
+      ? extractCorrectValue(session.currentQuestion)
+      : null
+
   return (
     <div
       style={{
@@ -270,6 +280,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
           question={session.currentQuestion}
           audioBus={audioBus}
           onAnswer={handleAnswer}
+          revealValue={revealValue}
           {...(session.status === 'retry' && session.retryChoices !== null
             ? { restrictChoicesTo: session.retryChoices }
             : {})}
@@ -312,6 +323,12 @@ type ExerciseProps = {
   onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
   /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
   restrictChoicesTo?: number[]
+  /**
+   * Feedback po pomyłce: liczba do POKAZANIA zamiast schowanej/odpowiedzianej
+   * (`null` poza korektą). Ćwiczenia z reprezentacją liczby renderują
+   * `revealValue ?? count`; reszta prop ignoruje.
+   */
+  revealValue?: number | null
 }
 
 function ExerciseRouter({
@@ -319,11 +336,13 @@ function ExerciseRouter({
   audioBus,
   onAnswer,
   restrictChoicesTo,
+  revealValue = null,
 }: {
   question: Question
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
   restrictChoicesTo?: number[]
+  revealValue?: number | null
 }) {
   // Stabilna referencja — tablica trafia do deps `useEffect` ćwiczeń.
   const promptKeys = useMemo(() => promptAudioKeys(question), [question])
@@ -332,6 +351,7 @@ function ExerciseRouter({
     payload: question.payload as { args: number[] },
     promptKeys,
     onAnswer,
+    revealValue,
     ...(restrictChoicesTo !== undefined ? { restrictChoicesTo } : {}),
   }
   // Re-mount na zmianę question.factId — gwarantuje czysty stan ćwiczenia
@@ -620,36 +640,51 @@ export function FeedbackOverlay({
     }
   }, [outcome, correctValue, audioBus, praiseKey, paused, attempt])
 
-  const bg =
-    outcome === 'correct' ? 'rgba(22, 163, 74, 0.85)' : 'rgba(239, 68, 68, 0.85)'
   const emoji =
     outcome === 'correct' ? '✅' : outcome === 'wrong' ? '❌' : '🤷'
 
-  const overlayStyle: CSSProperties = {
+  // Korekta to PAS u góry, nie zasłona: dziecko musi widzieć zadanie z
+  // odsłoniętą poprawną liczbą, gdy lektor mówi „tu było N". Pochwała zostaje
+  // pełnoekranowa — to nagroda, nie moment nauki.
+  const isCorrection = outcome !== 'correct'
+  const commonStyle: CSSProperties = {
     position: 'absolute',
-    inset: 0,
-    background: bg,
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     color: '#fff',
     fontFamily: 'var(--font-handwritten)',
-    zIndex: 50,
     // 'auto' — overlay musi POCHŁANIAĆ tapy, inaczej dziecko odpowiada drugi raz
     // na to samo pytanie zanim feedback się skończy.
     pointerEvents: 'auto',
   }
+  const overlayStyle: CSSProperties = isCorrection
+    ? {
+        ...commonStyle,
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '28%',
+        background: 'rgba(239, 68, 68, 0.92)',
+        gap: 24,
+        // <2000 (PauseOverlay nad pasem), > StatusBar (pas zostaje widoczny).
+        zIndex: 900,
+      }
+    : {
+        ...commonStyle,
+        inset: 0,
+        flexDirection: 'column',
+        background: 'rgba(22, 163, 74, 0.85)',
+        zIndex: 50,
+      }
 
   return (
     <div data-testid="feedback-overlay" data-outcome={outcome} style={overlayStyle}>
-      <div style={{ fontSize: 160 }} aria-hidden="true">
+      <div style={{ fontSize: isCorrection ? 64 : 160 }} aria-hidden="true">
         {emoji}
       </div>
-      {outcome !== 'correct' && correctValue !== null && (
-        <div style={{ fontSize: 96, fontWeight: 800, marginTop: 16 }}>
-          {correctValue}
-        </div>
+      {isCorrection && correctValue !== null && (
+        <div style={{ fontSize: 56, fontWeight: 800 }}>{correctValue}</div>
       )}
     </div>
   )

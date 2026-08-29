@@ -156,7 +156,9 @@ export function useNumbersSession({
       factId,
       conceptId: fact.conceptId,
       exerciseType,
-      payload: { args: fact.args, op },
+      // `conceptId` także w payloadzie: ćwiczenie widzi tylko payload, a zakres
+      // liczb (np. subitizing do 6 vs liczenie do 10) zależy od konceptu.
+      payload: { args: fact.args, op, conceptId: fact.conceptId },
     })
     questionStartedAtRef.current = now()
   }, [levelFacts, mainPoolIds, level, now, rng])
@@ -396,7 +398,20 @@ function computeUpdatedFacts(
   return updated
 }
 
-function computeMasteryProgress(
+/** Ile ostatnich odpowiedzi konceptu bierzemy pod uwagę przy mastery. */
+export const RECENT_WINDOW = 10
+
+/**
+ * Ile poprawnych w oknie 10 wystarcza. `minStreakForMastery` przenosimy 1:1 ze
+ * znaczenia „tyle z rzędu" na „tyle z ostatnich dziesięciu" — dla domyślnych 8
+ * daje 8/10. WHY: seria z rzędu zerowała się przy jednej wpadce (zmęczenie,
+ * przypadkowy tap), więc dziecko potrafiące koncept nigdy nie domykało mastery.
+ */
+function requiredInWindow(minStreakForMastery: number): number {
+  return Math.min(RECENT_WINDOW, Math.max(1, minStreakForMastery))
+}
+
+export function computeMasteryProgress(
   currentConcepts: Partial<Record<ConceptId, ConceptMastery>>,
   events: NumbersSessionEvent[],
   endedAt: number,
@@ -420,26 +435,43 @@ function computeMasteryProgress(
       lastSeenAt: 0,
       correctStreak: 0,
       factsTouched: [],
+      recentOutcomes: [],
+      factsCorrect: [],
     }
     let streak = prev.correctStreak
-    const factsTouched = new Set(prev.factsTouched)
+    const factsTouched = new Set(prev.factsTouched ?? [])
+    const factsCorrect = new Set(prev.factsCorrect ?? [])
+    const recent = [...(prev.recentOutcomes ?? [])]
     for (const ev of evs) {
       factsTouched.add(ev.factId)
-      if (ev.outcome === 'correct') streak += 1
-      else streak = 0
+      const ok = ev.outcome === 'correct'
+      if (ok) {
+        streak += 1
+        factsCorrect.add(ev.factId)
+      } else {
+        streak = 0
+      }
+      // „Nie wiem" liczy się jak błąd — dziecko nie pokazało umiejętności.
+      recent.push(ok ? 'correct' : 'wrong')
     }
+    const window = recent.slice(-RECENT_WINDOW)
+    const correctInWindow = window.filter((o) => o === 'correct').length
     const firstSeenAt = prev.firstSeenAt === 0 ? endedAt : prev.firstSeenAt
     const ageMs = endedAt - firstSeenAt
     const meetsMastery =
-      streak >= def.minStreakForMastery &&
-      factsTouched.size >= def.minFacts &&
+      window.length >= RECENT_WINDOW &&
+      correctInWindow >= requiredInWindow(def.minStreakForMastery) &&
+      factsCorrect.size >= def.minFacts &&
       ageMs >= MIN_AGE_FOR_MASTERY_MS
     updated[conceptId] = {
-      state: meetsMastery ? 'mastered' : 'learning',
+      // Mastery raz zdobyte nie cofa się przez chwilowy dołek w oknie.
+      state: prev.state === 'mastered' || meetsMastery ? 'mastered' : 'learning',
       firstSeenAt,
       lastSeenAt: endedAt,
       correctStreak: streak,
       factsTouched: Array.from(factsTouched),
+      recentOutcomes: window,
+      factsCorrect: Array.from(factsCorrect),
     }
   }
   return updated
