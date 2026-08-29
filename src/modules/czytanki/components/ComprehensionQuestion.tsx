@@ -2,15 +2,19 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors, radii } from '@/app/theme'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
-import { useReducedMotion } from '@/shared/ui/useReducedMotion'
 import { useCzytanki } from '../store/czytankiStore'
 import { questionAudioKey } from '../data/audioKeys'
-import { takePendingCue } from '../audio/pendingCue'
 import type { Comprehension } from '../data/types'
 
-// Tyle 👏 zostaje na ekranie, zanim overlay zniknie — pochwała musi zdążyć wybrzmieć.
-const PRAISE_MS = 1500
+// 👏 znika dopiero, gdy pochwała wybrzmi: `play()` rozstrzyga się na `ended`,
+// więc czekamy na nią zamiast zgadywać długość klipu (2,9 s > stare 1,5 s
+// ucinało pochwałę w połowie słowa, bo unmount woła `audioBus.stop()`).
+const PRAISE_MIN_MS = 1500
+// Bezpiecznik: brak pliku, zablokowany autoplay albo nienaturalnie długi klip
+// nie mogą zatrzasnąć dziecka w overlayu.
+const PRAISE_MAX_MS = 5000
 const TILE_PX = 120
+const CLOSE_PX = 60
 
 type Props = {
   czytankaId: string
@@ -22,13 +26,11 @@ type Props = {
 type OptionTileProps = {
   emoji: string
   index: number
-  disabled: boolean
-  animate: boolean
   onPick: (index: number) => void
 }
 
-function OptionTile({ emoji, index, disabled, animate, onPick }: OptionTileProps) {
-  const tap = useTapHandler({ onTap: () => onPick(index), disabled })
+function OptionTile({ emoji, index, onPick }: OptionTileProps) {
+  const tap = useTapHandler({ onTap: () => onPick(index) })
   return (
     <button
       type="button"
@@ -42,7 +44,6 @@ function OptionTile({ emoji, index, disabled, animate, onPick }: OptionTileProps
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer', touchAction: 'manipulation', userSelect: 'none',
         WebkitUserSelect: 'none', WebkitTapHighlightColor: 'transparent',
-        transition: animate ? 'transform 220ms ease-out' : undefined,
       }}
     >
       <span aria-hidden="true">{emoji}</span>
@@ -52,11 +53,13 @@ function OptionTile({ emoji, index, disabled, animate, onPick }: OptionTileProps
 
 export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onClose }: Props) {
   const markQuestionAnswered = useCzytanki((s) => s.markQuestionAnswered)
-  const reducedMotion = useReducedMotion()
   // Indeks kafelka, który odpadł po pierwszej pomyłce (null = wszystkie trzy widoczne).
   const [rejected, setRejected] = useState<number | null>(null)
   const [praising, setPraising] = useState(false)
-  const closeTimerRef = useRef<number | null>(null)
+  const timersRef = useRef<number[]>([])
+  const closedRef = useRef(false)
+  // Zamknięcie tapem ✋ samo startuje cue pożegnalne — unmount nie może go uciąć.
+  const dismissingRef = useRef(false)
 
   useEffect(() => {
     audioBus.stop()
@@ -66,24 +69,37 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
   }, [czytankaId])
 
   // Wyjście w trakcie pytania (tap wstecz, nawigacja) nie może zostawić grającego
-  // audio ani cue odłożonego dla ekranu, który już nie zostanie zamontowany.
+  // audio ani timera, który zawoła `onClose()` po odmontowaniu.
+  // `pendingCue` NIE jest tu czyszczone: overlay sam nigdy go nie ustawia, więc
+  // zabranie go tylko połknęłoby cue odłożone przez ekran pod spodem.
   useEffect(() => () => {
-    audioBus.stop()
-    takePendingCue()
-    if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current)
+    closedRef.current = true
+    if (!dismissingRef.current) audioBus.stop()
+    for (const id of timersRef.current) window.clearTimeout(id)
+    timersRef.current = []
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const close = useCallback(() => {
+    if (closedRef.current) return
+    closedRef.current = true
+    for (const id of timersRef.current) window.clearTimeout(id)
+    timersRef.current = []
+    onClose()
+  }, [onClose])
 
   const praise = useCallback(() => {
     setPraising(true)
     audioBus.stop()
-    void audioBus.play('czytanki-q-praise')
     markQuestionAnswered(czytankaId)
-    closeTimerRef.current = window.setTimeout(() => {
-      closeTimerRef.current = null
-      onClose()
-    }, PRAISE_MS)
-  }, [audioBus, czytankaId, markQuestionAnswered, onClose])
+    const startedAt = Date.now()
+    timersRef.current.push(window.setTimeout(close, PRAISE_MAX_MS))
+    void audioBus.play('czytanki-q-praise').then(() => {
+      if (closedRef.current) return
+      const rest = Math.max(0, PRAISE_MIN_MS - (Date.now() - startedAt))
+      timersRef.current.push(window.setTimeout(close, rest))
+    })
+  }, [audioBus, close, czytankaId, markQuestionAnswered])
 
   const onPick = useCallback(
     (index: number) => {
@@ -96,8 +112,10 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
       setRejected(index)
       audioBus.stop()
       void audioBus.play('czytanki-q-again')
+      // „Posłuchaj jeszcze raz" musi mieć czego słuchać — pytanie leci zaraz po.
+      void audioBus.play(questionAudioKey(czytankaId))
     },
-    [audioBus, comprehension.answer, praising, praise, rejected],
+    [audioBus, comprehension.answer, czytankaId, praising, praise, rejected],
   )
 
   const repeatTap = useTapHandler({
@@ -105,6 +123,16 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
       if (praising) return
       audioBus.stop()
       void audioBus.play(questionAudioKey(czytankaId))
+    },
+  })
+
+  const closeTap = useTapHandler({
+    onTap: () => {
+      if (praising) return
+      audioBus.stop()
+      dismissingRef.current = true
+      void audioBus.play('czytanki-ui-open')
+      close()
     },
   })
 
@@ -119,6 +147,24 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
         background: 'rgba(254, 249, 242, 0.96)',
       }}
     >
+      {!praising && (
+        <button
+          type="button"
+          data-testid="comprehension-close"
+          aria-label="Zamknij"
+          {...closeTap}
+          style={{
+            position: 'absolute', top: 16, left: 16,
+            width: CLOSE_PX, height: CLOSE_PX, borderRadius: CLOSE_PX / 2,
+            border: `3px solid ${colors.accentBlue}`, background: '#fff', fontSize: 28,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', touchAction: 'manipulation', userSelect: 'none',
+            WebkitUserSelect: 'none', WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <span aria-hidden="true">✋</span>
+        </button>
+      )}
       {praising ? (
         <span data-testid="comprehension-praise" aria-hidden="true" style={{ fontSize: 160, lineHeight: 1 }}>
           👏
@@ -127,16 +173,7 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
         <>
           <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center' }}>
             {comprehension.options.map((emoji, i) =>
-              i === rejected ? null : (
-                <OptionTile
-                  key={i}
-                  emoji={emoji}
-                  index={i}
-                  disabled={praising}
-                  animate={rejected !== null && !reducedMotion}
-                  onPick={onPick}
-                />
-              ),
+              i === rejected ? null : <OptionTile key={i} emoji={emoji} index={i} onPick={onPick} />,
             )}
           </div>
           <button

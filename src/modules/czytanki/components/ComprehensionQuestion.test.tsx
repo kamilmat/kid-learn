@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Comprehension } from '../data/types'
 
 // Node 25's experimental built-in `localStorage` shadows jsdom's implementation
@@ -58,26 +58,62 @@ describe('ComprehensionQuestion', () => {
     expect(audioBus.play).toHaveBeenCalledWith('cz-q-01')
   })
 
-  it('po błędzie zostają 2 kafelki, w tym poprawny', () => {
+  it('po błędzie zostają 2 kafelki, w tym poprawny, i pytanie leci ponownie', () => {
     const { audioBus } = setup()
     expect(tiles()).toHaveLength(3)
+    audioBus.play.mockClear()
     fireEvent.click(tiles()[1]!)
-    expect(audioBus.play).toHaveBeenCalledWith('czytanki-q-again')
+    expect(audioBus.play.mock.calls.map((c) => c[0])).toEqual(['czytanki-q-again', 'cz-q-01'])
     const left = tiles()
     expect(left).toHaveLength(2)
     expect(left.map((t) => t.getAttribute('data-option-index'))).toContain('0')
   })
 
-  it('poprawna odpowiedź daje 👏, zapisuje id i zamyka overlay', () => {
+  it('poprawna odpowiedź daje 👏, zapisuje id i zamyka overlay po wybrzmieniu pochwały', async () => {
     vi.useFakeTimers()
     const { audioBus, onClose } = setup()
     fireEvent.click(tiles()[0]!)
     expect(audioBus.play).toHaveBeenCalledWith('czytanki-q-praise')
     expect(screen.getByTestId('comprehension-praise')).toBeDefined()
     expect(useCzytanki.getState().answeredQuestionIds).toContain('cz-01')
-    vi.advanceTimersByTime(1500)
+    // Zamknięcie czeka na rozstrzygnięcie play() (AudioBus settluje na `ended`).
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onClose).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1500)
     expect(onClose).toHaveBeenCalled()
     vi.useRealTimers()
+  })
+
+  it('gdy pochwała nie zagra, bezpiecznik zamyka overlay', async () => {
+    vi.useFakeTimers()
+    const audioBus = { play: vi.fn(() => new Promise<boolean>(() => {})), stop: vi.fn() }
+    const onClose = vi.fn()
+    render(
+      <ComprehensionQuestion
+        czytankaId="cz-01"
+        comprehension={comprehension}
+        audioBus={audioBus}
+        onClose={onClose}
+      />,
+    )
+    fireEvent.click(tiles()[0]!)
+    await vi.advanceTimersByTimeAsync(4999)
+    expect(onClose).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(2)
+    expect(onClose).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it('✋ zamyka overlay z cue i nie zabija go przy odmontowaniu', () => {
+    const { audioBus, onClose } = setup()
+    audioBus.play.mockClear()
+    audioBus.stop.mockClear()
+    fireEvent.click(screen.getByTestId('comprehension-close'))
+    expect(audioBus.play).toHaveBeenCalledWith('czytanki-ui-open')
+    expect(onClose).toHaveBeenCalled()
+    const stopsBefore = audioBus.stop.mock.calls.length
+    cleanup()
+    expect(audioBus.stop.mock.calls.length).toBe(stopsBefore)
   })
 
   it('druga próba zawsze kończy się pochwałą', () => {
