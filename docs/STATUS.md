@@ -3,33 +3,87 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
-## CR 2026-08-28 — poprawki po 3 przeglądach
+## Stan po CR (2026-08-28/29) — 6 przeglądów, ~60 poprawek, live
 
-Trzy rundy code review (`fix/cr-batch-p/r/n` → `fix/cr-2026-08-28`) + ten batch:
-- **Audio core** — `AudioBus` generation token (`stop()` bez zombie drain),
-  `play()` resolves boolean zamiast rzucać, unlock iOS, `playIntroOnce`
-  oznacza intro widziane dopiero po odtworzeniu.
-- **Moduł 3 (Cyferki)** — SRS folding, unikalne id faktów, anti-cheat,
-  feedback advance po audio, correct-show 25–50.
-- **Moduł 2 (Czytanie)** — intro w kolejce `start()`, feedback auto-advance,
-  eventy sesji, `questionsPerSession`.
-- **Nawigacja** `replace` przy wejściu do sesji; **persist `migrate`** we
-  wszystkich store'ach; **fonty offline**; **100dvh/overscroll/safe-area**.
-- **Raport rodzica** — `exportReportToMarkdown` przyjmuje scalone sesje
-  (`shared/stats/aggregate.ts`); Aktywność i Anti-cheat agregują wszystkie
-  moduły z etykietami zamiast tylko litery.
+**main `9111e00`**, deploy zielony, live https://kamilmat.github.io/kid-learn/.
+Testy: **659 (`src`) + 119 (`scripts`)** zielone, `pnpm tsc -b` czysto, `pnpm build` OK,
+`pnpm audio:check` 1135/1135.
 
-Testy: 746/746 zielone (628 `src` + 118 `scripts`), `pnpm tsc -b` czysto.
+Przebieg: 3 niezależne przeglądy całej aplikacji (poprawność `/code-review`,
+UX dziecka + audio + PWA, dane/SRS/persist/wydajność) → poprawki w 10 batchach
+(A–J, równoległe worktree'y) → smoke test w Chrome (19/19) → 3 przeglądy końcowe
+(diff, regresje po scaleniu, świeże spojrzenie) → poprawki → scoped re-review
+(werdykt: mergeable) → merge → push w kawałkach.
 
-### Znane odstępstwa
+### Nowe kontrakty (nie wracać do starych założeń)
 
-- Czytanki: tap-target sylaby ma 56 px (auto-fit) — poniżej deklarowanego
-  minimum 60×60. Sprawdzić na realnym iPadzie, czy to problem.
-- Back z `/numbers/tree` i `/reading/album` trafia na Home (nawigacja robi
-  `replace` w historii zamiast wracać do ekranu wyboru poziomu) — do
-  rozważenia w kolejnej sesji.
-- Home ma ~70 px zapasu w 820 px wysokości (iPad 10" w orientacji pionowej) —
-  nie jest to zapchane, ale warto zweryfikować na docelowym urządzeniu.
+- **AudioBus**: `play()` → `Promise<boolean>`, nigdy nie rzuca; resolve przy
+  końcu lub anulowaniu; `true` = audio faktycznie wystartowało (nawet jeśli
+  potem przerwane), `false` = nigdy nie wystartowało (autoplay/404/anulowane
+  w kolejce). `stop()` anuluje przez token generacji — bez zombie drain,
+  wszystkie promisy się settlują. `audioBus.unlock()` w pierwszym geście
+  (Home, level-selecty, KidNav). Flagi intro przez `playIntroOnce`
+  (seen = wystartowało; retry gdy anulowane przed startem).
+- **Nawigacja**: wejście do sesji `navigate(..., { replace: true })`; KidNav
+  renderowany w komponentach route'ów; ⬅️/🏠 w sesji = `quit()` z flush
+  (idempotentny `finishedRef`; unmount-safety flush). KidNav back z guardem
+  `history.state.idx` i ręcznym `..`. Cue `nav-back`/`nav-home` grają.
+- **PauseOverlay** wspólny (`shared/ui/PauseOverlay.tsx`, ikony, zIndex 2000);
+  overlaye feedbacku/scenki/celebracji ukryte przy pauzie; `pause()` zatrzymuje
+  audio; resume ponawia audio korekty (Litery/Czytanie/Cyferki), bez podwójnego
+  advance.
+- **Feedback**: Czytanie i Cyferki advance po zakończeniu audio (`await play()`)
+  z `MIN_FEEDBACK_MS` i bezpiecznikiem `MAX_FEEDBACK_MS = 12 s`; ćwiczenia
+  Cyferek nie wołają `audioBus.stop()` na mount (FIFO serializuje powitanie →
+  prompt).
+- **Persist**: `migrate` we wszystkich store'ach (bez tego bump wersji kasował
+  stan); `numbersStore` v2 mapuje `count-N` → `count5-N`/`count10-N`;
+  override puli liter walidowany w edytorze (min = max(4, tilesPerQuestion)),
+  filtrowany w merge, fallback do domyślnej puli tylko na odczycie;
+  `settings.reading` deep-merge; sesje reading/numbers cap 50.
+- **PWA**: fonty Kalam/Lexend self-hosted (`public/fonts`, OFL); `registerType:
+  'prompt'` + `updateSW()` tylko na Home (poller bez wycieku); `100dvh`,
+  `overscroll-behavior: none`, safe-area na strefie rodzica.
+- **Raport rodzica**: `shared/stats/aggregate.ts` scala sesje wszystkich
+  modułów (Aktywność/Live/Anti-cheat), `dontKnow` liczony osobno; eksport MD
+  też; `formatFactId` zna `count5-`/`count10-` i legacy `count-`.
+
+### Poprawki per moduł (skrót)
+
+- **Litery**: indeks pytania (`generateNextQuestion(nextNum)`), pauza w
+  „breath" bez martwego timera, selektory store'a, `Slot` = number, jedno
+  źródło pul liter, `LevelSelect` timer cleanup, `recentWrong` clamp ≤3 w SRS.
+- **Czytanie**: intro poziomu w kolejce `start()`, feedback auto-advance z
+  ikoną + pochwały `reading-praise-*`, `reading-album-unlock`, eventy sesji,
+  `questionsPerSession` (ustawienie per poziom w SettingsScreen), reset
+  `wildCelebrationCounter` na start, shuffle Fisher–Yates, sylaba `SO`
+  (SOWA), `WordAlbum` przez `playIntroOnce`, 🏠 w albumie ≥60 px, timeLimit
+  usunięty.
+- **Cyferki**: fold SRS sekwencyjny, unikalne id faktów (counting-10 = 1..10),
+  bulk init faktów (1 zapis), guard `answer()` + overlay `pointerEvents:auto`,
+  anti-cheat (idle 20 s poza ConceptIntro, visibility), 🔊/🤷 w StatusBar,
+  `correct-show-25/30/40/50`, ustawienia `skipCountStep`/`treeCelebrationsOn`
+  (`tree-grow`)/`iskraThinkingAloud` działają, maintenance Pochodni bez
+  podwójnego liczenia, wspólne `buildChoices`/`DropTarget`, pauza ikonowa,
+  ciche a11y dnd-kit, animacje intro z named exports.
+- **Czytanki**: obwolutka wyrazów, auto-fit jednoprzebiegowy + scena oddaje
+  miejsce, klawiatura/`onClick` w sylabach, `pendingCue` czyszczony przy
+  wyjściu, aktorzy w zakresie 12–86 %.
+- **Skrypty**: `audio:build` wymaga klucza Azure tylko gdy trzeba syntezować;
+  `override-removed` regeneruje TTS po usunięciu nagrania (tylko gdy katalog
+  overrides istnieje); `mathGate` bez rekurencji; scoring bez ujemnych wag.
+
+### Znane odstępstwa / do sprawdzenia na iPadzie
+
+- Tap-target sylab czytanek **56 px** (auto-fit; przy 60 nie mieszczą się
+  najdłuższe czytanki w portrait) — zweryfikować palcem.
+- Back z `/numbers/tree` i `/reading/album` trafia na Home (replace w historii).
+- StatusBar Cyferek ma 3 przyciski 60 px — sprawdzić w portrait.
+- Wznowienie po pauzie w trakcie feedbacku (wszystkie moduły) — przetestowane
+  tylko na poziomie hooków.
+- Long-press sylaby w Safari (WebkitTouchCallout: none) — do sprawdzenia.
+- `DEFAULT_QUESTIONS_PER_SESSION` w `reading/constants.ts` (używane też przez hook).
+- Klucz Azure w `.env.local` **do zregenerowania** w portalu (przeszedł przez czat).
 
 ## Aktualny stan (2026-08-26 — moduł 4 Czytanki)
 
