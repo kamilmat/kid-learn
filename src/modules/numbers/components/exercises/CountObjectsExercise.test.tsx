@@ -54,17 +54,48 @@ describe('CountObjectsExercise', () => {
     ])
   })
 
-  it('stukanie w obiekty nigdy nie woła onAnswer — dopiero kafelek cyfry', () => {
+  it('stukanie w obiekty nigdy nie woła onAnswer — dopiero kafelek cyfry', async () => {
     const { onAnswer } = renderExercise(2)
     const objects = screen.getAllByTestId('count-object')
     for (const o of objects) tap(o)
     expect(onAnswer).not.toHaveBeenCalled()
     const choices = screen.getAllByTestId('count-choice')
     expect(choices).toHaveLength(4)
+    await act(async () => {})
     fireEvent.click(choices[0]!.firstElementChild!)
     expect(onAnswer).toHaveBeenCalledTimes(1)
     const [outcome, value] = onAnswer.mock.calls[0]!
     expect(outcome).toBe(value === 2 ? 'correct' : 'wrong')
+  })
+
+  it('kafelki są zablokowane póki kolejka pytania nie wybrzmi', async () => {
+    let resolveHowmany: (v: boolean) => void = () => {}
+    const play = vi.fn<(key: string) => Promise<boolean>>((key) =>
+      key === 'count-objects-howmany'
+        ? new Promise<boolean>((r) => {
+            resolveHowmany = r
+          })
+        : Promise.resolve(true),
+    )
+    const onAnswer = vi.fn()
+    render(
+      <CountObjectsExercise
+        audioBus={{ play, stop: vi.fn() }}
+        payload={{ n: 2, emoji: '🍎', seed: 42 }}
+        onAnswer={onAnswer}
+      />,
+    )
+    for (const o of screen.getAllByTestId('count-object')) tap(o)
+    const tiles = screen.getByTestId('count-cardinality')
+    expect(tiles.dataset.locked).toBe('true')
+    fireEvent.click(screen.getAllByTestId('count-choice')[0]!.firstElementChild!)
+    expect(onAnswer).not.toHaveBeenCalled()
+    await act(async () => {
+      resolveHowmany(true)
+    })
+    expect(screen.getByTestId('count-cardinality').dataset.locked).toBe('false')
+    fireEvent.click(screen.getAllByTestId('count-choice')[0]!.firstElementChild!)
+    expect(onAnswer).toHaveBeenCalledTimes(1)
   })
 
   it('n === 1 startuje od razu w fazie kardynalności', () => {
@@ -73,12 +104,30 @@ describe('CountObjectsExercise', () => {
     expect(bus.keys()).toEqual(['count-objects-howmany'])
   })
 
+  it('plansza skaluje się z szerokością — pozycje w % planszy', () => {
+    renderExercise(6)
+    const board = screen.getByTestId('count-board')
+    expect(board.style.width).toBe('100%')
+    expect(board.style.aspectRatio).toBe('900 / 400')
+    for (const o of screen.getAllByTestId('count-object') as HTMLElement[]) {
+      expect(o.style.left.endsWith('%')).toBe(true)
+      expect(o.style.top.endsWith('%')).toBe(true)
+      expect(parseFloat(o.style.left)).toBeGreaterThan(0)
+      expect(parseFloat(o.style.left)).toBeLessThan(100)
+      expect(parseFloat(o.style.top)).toBeGreaterThan(0)
+      expect(parseFloat(o.style.top)).toBeLessThan(100)
+      // Tap-target ≥60 px nawet gdy plansza zwęzi się do iPada w pionie.
+      expect(o.style.width).toContain('60px')
+    }
+  })
+
   it('obiekty nie nachodzą na siebie (środki ≥96 px)', () => {
     renderExercise(10)
     const objects = screen.getAllByTestId('count-object') as HTMLElement[]
+    // Pozycje są w % planszy 900×400; translate(-50%,-50%) → to wprost środek.
     const centers = objects.map((o) => ({
-      x: parseFloat(o.style.left) + 36,
-      y: parseFloat(o.style.top) + 36,
+      x: (parseFloat(o.style.left) / 100) * 900,
+      y: (parseFloat(o.style.top) / 100) * 400,
     }))
     for (let i = 0; i < centers.length; i++) {
       for (let j = i + 1; j < centers.length; j++) {
