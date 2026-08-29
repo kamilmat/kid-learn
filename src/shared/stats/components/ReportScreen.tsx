@@ -17,7 +17,6 @@ import { ALL_SYLLABLES } from '@/modules/reading/data/syllables'
 import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '@/modules/czytanki/data/czytanki'
 import { exportReportToMarkdown, topTappedWords } from '@/shared/stats/exporter'
 import { toUnifiedSessions } from '@/shared/stats/aggregate'
-import { completedSessionsToday } from '@/shared/stats/todaySessions'
 import {
   FALLBACK_SUGGESTION,
   generateSuggestions,
@@ -313,6 +312,7 @@ export function ReportScreen({
   const numbersConcepts = useNumbers((s) => s.concepts)
   const czytankiOpenedIds = useCzytanki((s) => s.openedIds)
   const czytankiReadCounts = useCzytanki((s) => s.readCounts)
+  const czytankiLastCountedAt = useCzytanki((s) => s.lastCountedAt)
 
   // Raport rodzica pokazuje całą aplikację, nie tylko moduł 1 — Aktywność,
   // Ostatnia sesja i Flagi zaangażowania jadą na scalonej liście sesji.
@@ -350,6 +350,7 @@ export function ReportScreen({
         czytanki: {
           openedIds: czytankiOpenedIds,
           readCounts: czytankiReadCounts,
+          lastCountedAt: czytankiLastCountedAt,
         },
       }),
     [
@@ -362,6 +363,7 @@ export function ReportScreen({
       numbersConcepts,
       czytankiOpenedIds,
       czytankiReadCounts,
+      czytankiLastCountedAt,
     ],
   )
 
@@ -375,6 +377,7 @@ export function ReportScreen({
       wordTaps: useCzytanki.getState().wordTaps,
       timeMs: useCzytanki.getState().timeMs,
       readCounts: useCzytanki.getState().readCounts,
+      lastCountedAt: useCzytanki.getState().lastCountedAt,
     }
     const readingSnapshot = {
       syllables: useReading.getState().syllables,
@@ -562,7 +565,6 @@ export function ReportScreen({
           <SuggestionsSection
             letters={letters}
             sessions={sessions}
-            sessionsToday={completedSessionsToday(allSessions, nowMs)}
             nextSteps={nextSteps}
           />
         </CollapsibleSection>

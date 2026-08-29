@@ -20,9 +20,11 @@ import {
   streakDays,
 } from './components/ActivitySection'
 import { generateSuggestions } from './components/SuggestionsSection'
-import { completedSessionsToday } from './todaySessions'
 import { collectFlagsForRecentSessions } from './components/AntiCheatSection'
-import { antiCheatFlagText } from '@/shared/engagement/antiCheatFlags'
+import {
+  antiCheatFlagText,
+  type AntiCheatFlag,
+} from '@/shared/engagement/antiCheatFlags'
 import {
   FALLBACK_SUGGESTION,
   generateSuggestions as generateNextSteps,
@@ -82,6 +84,13 @@ export type CzytankiSnapshot = {
   timeMs?: Record<string, number>
   /** id czytanki → ile razy przeczytana (wejścia na ekran). */
   readCounts?: Record<string, number>
+  /** id czytanki → timestamp ostatniego zaliczonego przeczytania. */
+  lastCountedAt?: Record<string, number>
+}
+
+const SEVERITY_LABEL: Record<AntiCheatFlag['severity'], string> = {
+  warning: 'ostrzeżenie',
+  alert: 'alarm',
 }
 
 
@@ -160,6 +169,7 @@ export function exportReportToMarkdown(
           czytanki: {
             openedIds: czytankiSnapshot.openedIds,
             readCounts: czytankiSnapshot.readCounts ?? {},
+            lastCountedAt: czytankiSnapshot.lastCountedAt ?? {},
           },
         }
       : {}),
@@ -297,13 +307,8 @@ export function exportReportToMarkdown(
   for (const s of nextSteps.slice(1)) {
     lines.push(`- ${s.text} — ${s.why}`)
   }
-  // Ta sama funkcja karmi UI i markdown — treść musi być identyczna, więc
-  // nudge „druga sesja wieczorem" liczymy tu tak samo jak w `ReportScreen`.
-  for (const s of generateSuggestions(
-    letters,
-    sessions,
-    completedSessionsToday(allSessions, now),
-  )) {
+  // Ta sama funkcja karmi UI i markdown — treść musi być identyczna.
+  for (const s of generateSuggestions(letters, sessions)) {
     lines.push(`- ${s}`)
   }
   lines.push('')
@@ -320,8 +325,11 @@ export function exportReportToMarkdown(
       const icon = fws.flag.severity === 'alert' ? '🚨' : '⚠'
       const moduleLabel = sessionById.get(fws.sessionId)?.moduleLabel ?? ''
       const { title, hint } = antiCheatFlagText(fws.flag.type)
+      // Tytuł pogrubiony, a `hint` po nim: bez tego oba zdania zlewały się
+      // w jedną linię i nie było widać, gdzie kończy się obserwacja,
+      // a zaczyna rada.
       lines.push(
-        `- ${icon} ${title} ${hint} · ${moduleLabel} · sesja ${fmtDate(fws.sessionStartedAt)}`,
+        `- ${icon} **${title}** ${hint} — ${SEVERITY_LABEL[fws.flag.severity]} · ${moduleLabel} · sesja ${fmtDate(fws.sessionStartedAt)}`,
       )
     }
   }

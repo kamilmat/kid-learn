@@ -14,8 +14,6 @@ const SUGGESTIONS_COLOR_TEXT = '#2d2d33'
 export type SuggestionsSectionProps = {
   letters: Record<string, LetterState>
   sessions: SessionLog[]
-  /** Sesje ukończone dziś we wszystkich modułach — patrz `completedSessionsToday`. */
-  sessionsToday?: number
   /**
    * Dane do „Więcej sugestii" (silnik `stats/suggestions.ts`, wszystkie moduły).
    * Bez nich sekcja pokazuje wyłącznie heurystyki liter — tak jak przed Falą 2.
@@ -97,15 +95,13 @@ export function isResponseTimeIncreasing(sessions: SessionLog[]): boolean {
 export function generateSuggestions(
   letters: Record<string, LetterState>,
   sessions: SessionLog[],
-  sessionsToday?: number,
 ): string[] {
   const out: string[] = []
 
-  // Nudge na dziś — dwie krótkie sesje konsolidują lepiej niż jedna długa.
-  // Pokazujemy go NA GÓRZE, bo to jedyna sugestia „do zrobienia jeszcze dziś".
-  if (sessionsToday === 1) {
-    out.push('Dziś była jedna sesja; druga wieczorem działa lepiej niż jedna długa.')
-  }
+  // Nudge „druga sesja wieczorem" NIE jest tutaj: liczy go reguła
+  // `two-sessions` w `stats/suggestions.ts` (wszystkie moduły, nie same
+  // Litery), a dwie implementacje tego samego kazałyby rodzicowi przeczytać
+  // ten sam nudge dwa razy.
 
   // Najsłabsze 3
   const weakest = topNLetters(letters, letterWeaknessScore, 3)
@@ -139,10 +135,9 @@ export { POLISH_ALPHABET }
 export function SuggestionsSection({
   letters,
   sessions,
-  sessionsToday,
   nextSteps,
 }: SuggestionsSectionProps) {
-  const suggestions = generateSuggestions(letters, sessions, sessionsToday)
+  const suggestions = generateSuggestions(letters, sessions)
   // `nextSteps[0]` jest już na karcie „Następny krok" na górze raportu —
   // powtarzanie go tutaj kazałoby rodzicowi czytać to samo dwa razy.
   const more = (nextSteps ?? []).slice(1)
