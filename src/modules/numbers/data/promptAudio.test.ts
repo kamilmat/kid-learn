@@ -36,6 +36,15 @@ describe('promptAudioKeys', () => {
     expect(promptAudioKeys(q('ten-frame-fill', [7]))).toEqual(['number-7', 'ask-howmany-missing'])
     expect(promptAudioKeys(q('number-bond-builder', [10]))).toEqual(['number-10', 'ask-build-bond'])
   })
+  it('doubles — jeden argument powielony wokół op-plus', () =>
+    expect(promptAudioKeys(q('doubles', [4]))).toEqual([
+      'number-4',
+      'op-plus',
+      'number-4',
+      'ask-howmany-total',
+    ]))
+  it('ten-frame-fill z args[0]===0 (tenframe-need-10) → bez wiodącej liczby', () =>
+    expect(promptAudioKeys(q('ten-frame-fill', [0]))).toEqual(['ask-howmany-missing']))
   it('subitize-flash bez liczb (są celem pytania)', () =>
     expect(promptAudioKeys(q('subitize-flash', [4]))).toEqual(['ask-howmany']))
   it('argument poza 0-20 → sam klucz generyczny', () =>
