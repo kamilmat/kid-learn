@@ -212,3 +212,63 @@ describe('useReadingSession — pauza w trakcie retry / hiperkorekcja', () => {
     expect(result.current.currentQuestionIndex).toBe(1)
   })
 })
+
+describe('useReadingSession — krok syntezy a druga próba / wyjście', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useReading.getState().reset()
+    localStorage.clear()
+  })
+
+  // `playBlend` rusza dopiero po wybrzmieniu już zakolejkowanego audio
+  // feedbacku — przy zamockowanym busie to kilka mikrotasków.
+  const flushMicrotasks = async (): Promise<void> => {
+    for (let i = 0; i < 6; i++) await Promise.resolve()
+  }
+
+  it('składanie czeka na drugą próbę, a quit() je ubija', async () => {
+    seedOgnikWordsAtBox3()
+    const audioBus = makeAudioBus()
+    const { result } = renderHook(() =>
+      useReadingSession({ level: 'ognik', audioBus, settings: makeSettings(true) }),
+    )
+
+    act(() => result.current.start())
+    const q = result.current.currentQuestion
+    if (q?.type !== 'word-choice') throw new Error('oczekiwano word-choice')
+    const target = q.targetWord
+    const wrong = q.choices.find((c) => c !== target)!
+
+    // Pierwsza pomyłka z zaplanowanym retry: dziecko ma jeszcze raz WSKAZAĆ
+    // kafelek, nie wysłuchać gotowego rozwiązania — składania nie ma.
+    await act(async () => {
+      result.current.submitAnswer(wrong)
+      await flushMicrotasks()
+    })
+    expect(audioBus.play).not.toHaveBeenCalledWith('reading-blend-prefix')
+    expect(result.current.blend).toBeNull()
+
+    act(() => result.current.skipFeedback(false))
+    expect(result.current.status).toBe('retry')
+    audioBus.play.mockClear()
+
+    // Podejście nr 2 — dopiero teraz składamy słowo.
+    await act(async () => {
+      result.current.submitAnswer(target)
+      await flushMicrotasks()
+    })
+    expect(audioBus.play).toHaveBeenCalledWith('reading-blend-prefix')
+    expect(result.current.blend?.syllables.length).toBeGreaterThan(0)
+
+    // Wyjście z sesji w środku składania: pętla nie może dogrywać sylab
+    // na ekranie domowym.
+    audioBus.play.mockClear()
+    act(() => result.current.quit())
+    expect(result.current.blend).toBeNull()
+    await act(async () => {
+      await flushMicrotasks()
+      await new Promise((r) => setTimeout(r, 400))
+    })
+    expect(audioBus.play).not.toHaveBeenCalled()
+  })
+})
