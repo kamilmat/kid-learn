@@ -12,20 +12,21 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
 const DROP_TARGET_ID = 'answer-target'
 const DOT_COLOR = '#dc2626'
 
-export function ArrayMatchExercise({ audioBus, payload, onAnswer }: Props) {
+export function ArrayMatchExercise({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const rows = clamp(payload.args[0] ?? 2, 1, 6)
   const cols = clamp(payload.args[1] ?? 2, 1, 6)
   const total = rows * cols
 
   useEffect(() => {
-    void audioBus.play('ask-howmany-total')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(
     () =>

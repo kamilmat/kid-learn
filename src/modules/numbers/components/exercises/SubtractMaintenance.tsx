@@ -13,6 +13,7 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
@@ -21,17 +22,17 @@ const DOT_COLOR = '#dc2626'
 const REMOVE_DELAY_MS = 1500
 const REMOVE_TRANSITION_MS = 600
 
-export function SubtractMaintenance({ audioBus, payload, onAnswer }: Props) {
+export function SubtractMaintenance({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const a = clamp(payload.args[0] ?? 5, 0, 20)
   const b = clamp(payload.args[1] ?? 1, 0, a)
   const result = a - b
   const [removed, setRemoved] = useState(false)
 
   useEffect(() => {
-    void audioBus.play('ask-howmany-left')
+    for (const key of promptKeys) void audioBus.play(key)
     const t = setTimeout(() => setRemoved(true), REMOVE_DELAY_MS)
     return () => clearTimeout(t)
-  }, [audioBus])
+  }, [audioBus, promptKeys])
 
   const displayCount = removed ? result : a
   const highlightAfter = removed ? undefined : result

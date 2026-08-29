@@ -12,17 +12,18 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
 const DROP_TARGET_ID = 'match-digit-dots-target'
 
-export function MatchDigitDotsExercise({ audioBus, payload, onAnswer }: Props) {
+export function MatchDigitDotsExercise({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const correct = clamp(payload.args[0] ?? 1, 1, 10)
 
   useEffect(() => {
-    void audioBus.play('ask-howmany')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(() => buildChoices(correct, { min: 1, max: 10 }), [correct])
 

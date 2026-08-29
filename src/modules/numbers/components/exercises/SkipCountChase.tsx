@@ -12,25 +12,20 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
 const DROP_TARGET_ID = 'answer-target'
 
-export function SkipCountChase({ audioBus, payload, onAnswer }: Props) {
+export function SkipCountChase({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const step = clamp(payload.args[0] ?? 2, 1, 10)
   const currentIdx = clamp(payload.args[1] ?? 1, 0, 20)
   const nextValue = clamp(payload.args[2] ?? step * (currentIdx + 1), 1, 100)
 
   useEffect(() => {
-    const audioKey =
-      step === 5
-        ? 'ask-skip-count-5'
-        : step === 10
-          ? 'ask-skip-count-10'
-          : 'ask-skip-count-2'
-    void audioBus.play(audioKey)
-  }, [audioBus, step])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   const sequence = useMemo(() => {
     const arr: number[] = []

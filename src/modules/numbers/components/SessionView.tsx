@@ -9,8 +9,9 @@ import { colors, radii, tapTargets } from '@/app/theme'
 import { useNumbersSession, type SessionStatus } from '../hooks/useNumbersSession'
 import { useNumbers } from '../store/numbersStore'
 import { extractCorrectValue } from '../data/correctValue'
-import { promptAudioKey, thinkingAloudKey } from '../data/promptAudio'
+import { promptAudioKeys, thinkingAloudKey } from '../data/promptAudio'
 import { NUMBERS_PRAISE_KEYS, type NumbersPraiseKey } from '../data/praise'
+import { MAX_STRATEGY_CUES_PER_SESSION, strategyAudioKey } from '../data/strategyAudio'
 import type { AnswerOutcome, ExerciseType, Question } from '../types'
 import { ConceptIntro } from './intros/ConceptIntro'
 import { SessionEnd } from './SessionEnd'
@@ -151,12 +152,38 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
     void audioBus.play(key)
   }, [thinkingAloudOn, showIntro, currentExerciseType, audioBus])
 
+  // Nazwanie strategii po błędzie — limit na sesję, bo częściej brzmi jak
+  // zrzędzenie. SessionView montuje się raz na sesję, więc ref startuje z zera.
+  const strategyCuesRef = useRef(0)
+  const strategyKey =
+    session.lastOutcome !== null &&
+    session.lastOutcome !== 'correct' &&
+    session.currentQuestion !== null &&
+    strategyCuesRef.current < MAX_STRATEGY_CUES_PER_SESSION
+      ? strategyAudioKey(
+          session.currentQuestion.conceptId,
+          (session.currentQuestion.payload as { op?: '+' | '-' }).op ?? '+',
+        )
+      : null
+
+  // Licznik rośnie w efekcie, nie w renderze. Klucz `questionIdx` sprawia, że
+  // podwójne wywołanie efektu w StrictMode liczy jedną podpowiedź, nie dwie.
+  const countedStrategyRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (session.status !== 'feedback' || strategyKey === null) return
+    const id = `${session.questionIdx}-${strategyKey}`
+    if (countedStrategyRef.current === id) return
+    countedStrategyRef.current = id
+    strategyCuesRef.current += 1
+  }, [session.status, session.questionIdx, strategyKey])
+
   const handleRepeatPrompt = useCallback(() => {
-    const key = promptAudioKey(session.currentQuestion)
-    if (key === null) return
+    const keys = promptAudioKeys(session.currentQuestion)
+    if (keys.length === 0) return
     // Stop przed play — powtórka ma restartować, nie kolejkować (jak w literach).
     audioBus.stop()
-    void audioBus.play(key)
+    // Kolejka jest FIFO — klucze lecą po sobie bez `await` i bez `stop()` w środku.
+    for (const key of keys) void audioBus.play(key)
   }, [audioBus, session.currentQuestion])
 
   const handleDontKnow = useCallback(() => {
@@ -230,6 +257,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
           audioBus={audioBus}
           onAdvance={session.advance}
           paused={session.status === 'paused'}
+          strategyKey={strategyKey}
           {...(session.praiseKey !== null ? { praiseKey: session.praiseKey } : {})}
         />
       )}
@@ -247,6 +275,11 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
 type ExerciseProps = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  /**
+   * Pełna sekwencja polecenia (liczby + operator + pytanie). Liczy ją router,
+   * bo tylko on widzi całe `Question`; ćwiczenie zna jedynie `payload`.
+   */
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
@@ -259,9 +292,12 @@ function ExerciseRouter({
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   onAnswer: (outcome: AnswerOutcome) => void
 }) {
+  // Stabilna referencja — tablica trafia do deps `useEffect` ćwiczeń.
+  const promptKeys = useMemo(() => promptAudioKeys(question), [question])
   const props: ExerciseProps = {
     audioBus,
     payload: question.payload as { args: number[] },
+    promptKeys,
     onAnswer,
   }
   // Re-mount na zmianę question.factId — gwarantuje czysty stan ćwiczenia
@@ -429,6 +465,7 @@ export function FeedbackOverlay({
   onAdvance,
   praiseKey,
   paused = false,
+  strategyKey = null,
 }: {
   outcome: AnswerOutcome
   correctValue: number | null
@@ -438,8 +475,14 @@ export function FeedbackOverlay({
   praiseKey?: NumbersPraiseKey
   /** Pauza — wstrzymuje odliczanie; po wznowieniu audio leci raz jeszcze. */
   paused?: boolean
+  /** Nazwa strategii grana po korekcie; null = limit sesji wyczerpany. */
+  strategyKey?: string | null
 }) {
   const onAdvanceRef = useRef(onAdvance)
+  // Prop czytany przez ref: rodzic dobija licznik jeszcze w trakcie feedbacku,
+  // a zmiana klucza nie może przekolejkować całej ścieżki audio od nowa.
+  const strategyKeyRef = useRef(strategyKey)
+  strategyKeyRef.current = strategyKey
   useEffect(() => {
     onAdvanceRef.current = onAdvance
   }, [onAdvance])
@@ -480,6 +523,9 @@ export function FeedbackOverlay({
       if (correctValue !== null) {
         plays.push(settled(audioBus.play(`correct-show-${correctValue}`)))
       }
+      // Strategia PO korekcie — najpierw wynik, potem narzędzie do liczenia.
+      const strategy = strategyKeyRef.current
+      if (strategy !== null) plays.push(settled(audioBus.play(strategy)))
     }
 
     // Bezpiecznik: gdyby audio nigdy nie zamknęło obietnicy (element bez

@@ -12,18 +12,19 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
 const DROP_TARGET_ID = 'tenframe-fill-target'
 
-export function TenFrameFill({ audioBus, payload, onAnswer }: Props) {
+export function TenFrameFill({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const filled = clamp(payload.args[0] ?? 0, 0, 10)
   const missing = clamp(payload.args[1] ?? 10 - filled, 1, 10)
 
   useEffect(() => {
-    void audioBus.play('ask-howmany-missing')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(() => buildChoices(missing, { min: 1, max: 10 }), [missing])
 
