@@ -44,10 +44,18 @@ export function WordScene({
     let cancelled = false
 
     const alreadyPlayed = effectivePlayedRef.current === scene.id
-    effectivePlayedRef.current = scene.id
 
-    // Play audio sequence
+    // Play audio sequence. Stamp playedRef only once the sequence actually
+    // completes (not cancelled) — a StrictMode phantom first run gets
+    // cancelled before it finishes, so it must NOT stamp the ref, otherwise
+    // the real second run would see `alreadyPlayed === true` and skip audio.
+    // The leading microtask yield matters too: StrictMode's mount → cleanup
+    // → remount cycle runs synchronously, so without the yield the phantom
+    // run would already call audioBus.play() before its own cleanup flips
+    // `cancelled` — this way it bails out before ever touching the bus.
     const playSeq = async () => {
+      await Promise.resolve()
+      if (cancelled) return
       for (const audioKey of scene.audio) {
         if (cancelled) break
         try {
@@ -55,6 +63,9 @@ export function WordScene({
         } catch {
           // Missing audio file — log and continue
         }
+      }
+      if (!cancelled) {
+        effectivePlayedRef.current = scene.id
       }
     }
     const audioDone = alreadyPlayed ? Promise.resolve() : playSeq()
