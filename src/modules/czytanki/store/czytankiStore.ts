@@ -17,8 +17,11 @@ export type CzytankiState = {
   readCounts: Record<string, number>
   /** id czytanki → timestamp ostatniego zaliczonego przeczytania (guard 60 s). */
   lastCountedAt: Record<string, number>
+  /** id czytanek, w których dziecko odpowiedziało na pytanie o rozumienie. */
+  answeredQuestionIds: string[]
   markOpened: (id: string, nowMs?: number) => void
   recordVisit: (id: string, taps: Record<string, number>, ms: number) => void
+  markQuestionAnswered: (id: string) => void
   markIntroSeen: (key: string) => void
   hasSeenIntro: (key: string) => boolean
   resetAllProgress: () => void
@@ -32,6 +35,7 @@ const initialState = {
   timeMs: {} as Record<string, number>,
   readCounts: {} as Record<string, number>,
   lastCountedAt: {} as Record<string, number>,
+  answeredQuestionIds: [] as string[],
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -48,11 +52,12 @@ export function migrateCzytankiV2(persisted: unknown): PersistedCzytanki {
   return p
 }
 
-/** v2 → v3: licznik przeczytań + timestamp guardu. */
+/** v2 → v3: licznik przeczytań + timestamp guardu + odpowiedzi na pytania. */
 export function migrateCzytankiV3(persisted: unknown): PersistedCzytanki {
   const p = (persisted ?? {}) as PersistedCzytanki
   if (!isPlainObject(p.readCounts)) p.readCounts = {}
   if (!isPlainObject(p.lastCountedAt)) p.lastCountedAt = {}
+  if (!Array.isArray(p.answeredQuestionIds)) p.answeredQuestionIds = []
   return p
 }
 
@@ -67,6 +72,7 @@ export function mergeCzytankiState(persisted: unknown, current: CzytankiState): 
     timeMs: isPlainObject(p.timeMs) ? (p.timeMs as Record<string, number>) : {},
     readCounts: isPlainObject(p.readCounts) ? (p.readCounts as Record<string, number>) : {},
     lastCountedAt: isPlainObject(p.lastCountedAt) ? (p.lastCountedAt as Record<string, number>) : {},
+    answeredQuestionIds: Array.isArray(p.answeredQuestionIds) ? p.answeredQuestionIds : [],
   } as CzytankiState
 }
 
@@ -94,6 +100,12 @@ export const useCzytanki = create<CzytankiState>()(
             timeMs: { ...s.timeMs, [id]: (s.timeMs[id] ?? 0) + ms },
           }
         }),
+      markQuestionAnswered: (id) =>
+        set((s) =>
+          s.answeredQuestionIds.includes(id)
+            ? s
+            : { answeredQuestionIds: [...s.answeredQuestionIds, id] },
+        ),
       markIntroSeen: (key) =>
         set((s) => (s.seenIntros.includes(key) ? s : { seenIntros: [...s.seenIntros, key] })),
       hasSeenIntro: (key) => get().seenIntros.includes(key),

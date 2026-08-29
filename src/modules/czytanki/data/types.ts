@@ -15,6 +15,12 @@ export type Actor = {
 }
 export type SceneSpec = { bg: BgKind; actors: readonly Actor[] }
 
+export type Comprehension = {
+  question: string                             // "Kto jadł trawę?"
+  options: readonly [string, string, string]   // emoji, dokładnie 3
+  answer: 0 | 1 | 2
+}
+
 export type Czytanka = {
   id: string          // 'cz-01' … 'cz-60'
   group: CzytankaGroup
@@ -22,4 +28,5 @@ export type Czytanka = {
   emoji: string       // ikona kafelka
   sentences: readonly Sentence[]
   scene: SceneSpec
+  comprehension?: Comprehension
 }
