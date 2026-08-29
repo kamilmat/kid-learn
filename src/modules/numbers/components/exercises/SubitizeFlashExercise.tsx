@@ -12,13 +12,15 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
-  onAnswer: (outcome: AnswerOutcome) => void
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 const FLASH_MS = 2000
 const DROP_TARGET_ID = 'subitize-target'
 
-export function SubitizeFlashExercise({ audioBus, payload, onAnswer }: Props) {
+export function SubitizeFlashExercise({ audioBus, payload, onAnswer, restrictChoicesTo }: Props) {
   const correct = clamp(payload.args[0] ?? 1, 1, 6)
   const [phase, setPhase] = useState<'flash' | 'answer'>('flash')
 
@@ -28,13 +30,13 @@ export function SubitizeFlashExercise({ audioBus, payload, onAnswer }: Props) {
     return () => clearTimeout(t)
   }, [audioBus])
 
-  const choices = useMemo(() => buildChoices(correct, { min: 1, max: 6 }), [correct])
+  const choices = useMemo(() => buildChoices(correct, { restrictChoicesTo, min: 1, max: 6 }), [correct, restrictChoicesTo])
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
     const dropped = event.active.data.current?.['digit'] as number | undefined
     if (dropped === undefined) return
-    onAnswer(dropped === correct ? 'correct' : 'wrong')
+    onAnswer(dropped === correct ? 'correct' : 'wrong', dropped)
   }
 
   return (

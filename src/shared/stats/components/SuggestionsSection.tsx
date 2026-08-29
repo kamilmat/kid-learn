@@ -57,7 +57,9 @@ function avgResponseMs(events: SessionEvent[]): number {
   let sum = 0
   let count = 0
   for (const ev of events) {
-    if (ev.type !== 'answer') continue
+    // Druga próba ma sztucznie krótki czas (dwa kafelki, cel dopiero co
+    // wybrzmiał) — wliczona zaniżałaby średnią i chowała realne spowolnienie.
+    if (ev.type !== 'answer' || ev.attempt === 2) continue
     sum += ev.responseMs
     count++
   }

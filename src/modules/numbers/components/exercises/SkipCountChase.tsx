@@ -12,12 +12,14 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
-  onAnswer: (outcome: AnswerOutcome) => void
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 const DROP_TARGET_ID = 'answer-target'
 
-export function SkipCountChase({ audioBus, payload, onAnswer }: Props) {
+export function SkipCountChase({ audioBus, payload, onAnswer, restrictChoicesTo }: Props) {
   const step = clamp(payload.args[0] ?? 2, 1, 10)
   const currentIdx = clamp(payload.args[1] ?? 1, 0, 20)
   const nextValue = clamp(payload.args[2] ?? step * (currentIdx + 1), 1, 100)
@@ -40,18 +42,19 @@ export function SkipCountChase({ audioBus, payload, onAnswer }: Props) {
 
   const choices = useMemo(
     () => buildChoices(nextValue, {
+      restrictChoicesTo,
       min: 1,
       max: 100,
       offsets: [-step, step, -1, 1, -2, 2],
     }),
-    [nextValue, step],
+    [nextValue, step, restrictChoicesTo],
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
     const dropped = event.active.data.current?.['digit'] as number | undefined
     if (dropped === undefined) return
-    onAnswer(dropped === nextValue ? 'correct' : 'wrong')
+    onAnswer(dropped === nextValue ? 'correct' : 'wrong', dropped)
   }
 
   return (

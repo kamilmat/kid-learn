@@ -14,13 +14,15 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
-  onAnswer: (outcome: AnswerOutcome) => void
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 const DROP_TARGET_ID = 'answer-target'
 const GROUP_COLORS = ['#fee2e2', '#dbeafe', '#dcfce7', '#fef3c7', '#f3e8ff']
 
-export function EqualGroupsExercise({ audioBus, payload, onAnswer }: Props) {
+export function EqualGroupsExercise({ audioBus, payload, onAnswer, restrictChoicesTo }: Props) {
   const n = clamp(payload.args[0] ?? 2, 1, 5)
   const m = clamp(payload.args[1] ?? 2, 1, 6)
   const total = n * m
@@ -32,15 +34,15 @@ export function EqualGroupsExercise({ audioBus, payload, onAnswer }: Props) {
 
   const choices = useMemo(
     () =>
-      buildChoices(total, { min: 1, max: 30, offsets: NEAR_MISS_OFFSETS }),
-    [total],
+      buildChoices(total, { restrictChoicesTo, min: 1, max: 30, offsets: NEAR_MISS_OFFSETS }),
+    [total, restrictChoicesTo],
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
     const dropped = event.active.data.current?.['digit'] as number | undefined
     if (dropped === undefined) return
-    onAnswer(dropped === total ? 'correct' : 'wrong')
+    onAnswer(dropped === total ? 'correct' : 'wrong', dropped)
   }
 
   const additionExpr = Array.from({ length: n }, () => String(m)).join(' + ')

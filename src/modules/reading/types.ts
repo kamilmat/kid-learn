@@ -41,4 +41,6 @@ export type ReadingSessionEvent = {
   outcome: Outcome
   responseMs: number
   timestamp: number
+  /** Druga próba po błędzie. Brak pola = 1 (stare logi). */
+  attempt?: 1 | 2
 }

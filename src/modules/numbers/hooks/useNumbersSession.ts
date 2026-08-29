@@ -26,10 +26,11 @@ import {
   POCHODNIA_SUB_MAINTENANCE_FACTS,
 } from '../data/levelFacts'
 import { NUMBERS_PRAISE_KEYS, type NumbersPraiseKey } from '../data/praise'
+import { extractCorrectValue } from '../data/correctValue'
 import { exerciseTypeForFact } from './exerciseRouter'
 import { pickConcept } from './pickConcept'
 
-export type SessionStatus = 'asking' | 'feedback' | 'paused' | 'ended'
+export type SessionStatus = 'asking' | 'feedback' | 'retry' | 'paused' | 'ended'
 
 const DEFAULT_QUESTION_COUNT = 8
 // Pochodnia: ~18% pytań to maintenance odejmowania (interleaving Bjork & Bjork 1994)
@@ -43,6 +44,11 @@ export type UseNumbersSessionParams = {
   skipCountStep?: SkipCountStep
   /** Ustawienie rodzica: cue `tree-grow` gdy koncept osiąga mastery. */
   treeCelebrationsOn?: boolean
+  /**
+   * Druga próba po błędzie (`settings.secondAttempt`). Default `true`.
+   * Pierwsza pomyłka i tak aktualizuje SRS — retry uczy autokorekty.
+   */
+  secondAttempt?: boolean
   rng?: () => number
   now?: () => number
 }
@@ -53,6 +59,7 @@ export function useNumbersSession({
   questionCount = DEFAULT_QUESTION_COUNT,
   skipCountStep = 'mixed',
   treeCelebrationsOn = true,
+  secondAttempt = true,
   rng = Math.random,
   now = Date.now,
 }: UseNumbersSessionParams) {
@@ -70,7 +77,16 @@ export function useNumbersSession({
   const lastFactRef = useRef<MathFactId | null>(null)
   const lastConceptRef = useRef<ConceptId | null>(null)
   const finishedRef = useRef(false)
-  const pausedFromRef = useRef<'asking' | 'feedback'>('asking')
+  const pausedFromRef = useRef<'asking' | 'feedback' | 'retry'>('asking')
+  // Druga próba: dokładnie dwie opcje — poprawna i ta, którą dziecko wybrało.
+  // `null` = ekran nie jest w fazie retry. `retryPendingRef` mówi, że po
+  // wybrzmieniu bieżącego feedbacku wchodzimy w retry zamiast iść dalej.
+  const [retryChoices, setRetryChoices] = useState<number[] | null>(null)
+  const retryChoicesRef = useRef<number[] | null>(null)
+  const retryPendingRef = useRef(false)
+  // Numer podejścia ostatniej odpowiedzi — overlay gra `retry-correct` zamiast
+  // pochwały, gdy dziecko poprawiło się w drugiej próbie.
+  const [lastAttempt, setLastAttempt] = useState<1 | 2>(1)
 
   const ensureFactsInitialized = useNumbers((s) => s.ensureFactsInitialized)
   const applySessionResults = useNumbers((s) => s.applySessionResults)
@@ -125,6 +141,13 @@ export function useNumbersSession({
     const fact = levelFacts.find((f) => f.id === factId)
     if (!fact) return
 
+    // Nowe pytanie zamyka temat drugiej próby — zaległe opcje przeniosłyby się
+    // na kolejny błąd.
+    retryPendingRef.current = false
+    retryChoicesRef.current = null
+    setRetryChoices(null)
+    setLastAttempt(1)
+
     const exerciseType = exerciseTypeForFact(fact, level)
     const op = opForFact(fact)
     setCurrentQuestion({
@@ -151,12 +174,18 @@ export function useNumbersSession({
     pickAndSetQuestion()
   }, [audioBus, level, now, pickAndSetQuestion, ensureFactsInitialized, levelFacts])
 
+  /**
+   * `attempt === 2` to poprawka w drugiej próbie: leci do logu, ale nie rusza
+   * SRS (event jest pomijany w `computeUpdatedFacts`/`computeMasteryProgress`)
+   * ani liczników sesji. Pierwsza pomyłka zostaje pomyłką.
+   */
   const answer = useCallback(
-    (outcome: AnswerOutcome) => {
+    (outcome: AnswerOutcome, attempt: 1 | 2 = 1, chosenValue?: number) => {
       if (!currentQuestion) return
       // Guard: overlay feedbacku i pauza nie mogą przyjmować kolejnych odpowiedzi
       // (double-tap w trakcie feedbacku liczył się dwa razy).
-      if (status !== 'asking') return
+      if (status !== (attempt === 2 ? 'retry' : 'asking')) return
+      const isFirstAttempt = attempt === 1
       const responseMs = now() - questionStartedAtRef.current
 
       eventsRef.current.push({
@@ -166,24 +195,49 @@ export function useNumbersSession({
         outcome,
         responseMs,
         timestamp: now(),
+        ...(attempt === 2 ? { attempt: 2 as const } : {}),
       })
 
       setLastOutcome(outcome)
-      if (outcome === 'correct') {
+      setLastAttempt(attempt)
+      if (outcome === 'correct' && isFirstAttempt) {
         const key = pickNoRepeat(NUMBERS_PRAISE_KEYS, lastPraiseRef.current, rng)
         lastPraiseRef.current = key
         setPraiseKey(key)
       } else {
         setPraiseKey(null)
       }
-      setCounters((c) => ({
-        correct: c.correct + (outcome === 'correct' ? 1 : 0),
-        wrong: c.wrong + (outcome === 'wrong' ? 1 : 0),
-        dontKnow: c.dontKnow + (outcome === 'dontKnow' ? 1 : 0),
-      }))
+      if (isFirstAttempt) {
+        setCounters((c) => ({
+          correct: c.correct + (outcome === 'correct' ? 1 : 0),
+          wrong: c.wrong + (outcome === 'wrong' ? 1 : 0),
+          dontKnow: c.dontKnow + (outcome === 'dontKnow' ? 1 : 0),
+        }))
+      }
+
+      // Pierwsza pomyłka z wyborem wartości → druga próba zamiast przejścia
+      // dalej. `number-bond-builder` i `fact-family-triangle` są wyłączone:
+      // odpowiedź nie jest tam wyborem z listy, więc nie da się jej przyciąć
+      // do dwóch opcji. „Nie wiem" też nie — dziecko nie postawiło hipotezy.
+      const isChoiceExercise =
+        currentQuestion.exerciseType !== 'number-bond-builder' &&
+        currentQuestion.exerciseType !== 'fact-family-triangle'
+      if (
+        outcome === 'wrong' &&
+        isFirstAttempt &&
+        secondAttempt &&
+        isChoiceExercise &&
+        chosenValue !== undefined
+      ) {
+        const correctValue = extractCorrectValue(currentQuestion)
+        if (correctValue !== null && correctValue !== chosenValue) {
+          retryChoicesRef.current = [correctValue, chosenValue]
+          retryPendingRef.current = true
+        }
+      }
       setStatus('feedback')
     },
-    [currentQuestion, now, rng, status],
+    [currentQuestion, now, rng, secondAttempt, status],
   )
 
   // Zapisz wyniki sesji (SRS + mastery + log). Idempotentne — druga próba
@@ -226,6 +280,16 @@ export function useNumbersSession({
   )
 
   const advance = useCallback(() => {
+    // Druga próba: to samo pytanie z dwoma kafelkami, bez timera. Cue
+    // `try-again` gra dopiero tutaj — overlay feedbacku właśnie wybrzmiał.
+    if (retryPendingRef.current && retryChoicesRef.current !== null) {
+      retryPendingRef.current = false
+      setRetryChoices(retryChoicesRef.current)
+      questionStartedAtRef.current = now()
+      setStatus('retry')
+      void audioBus.play('try-again')
+      return
+    }
     const nextIdx = questionIdx + 1
     if (nextIdx >= questionCount) {
       persistResults(false)
@@ -235,7 +299,7 @@ export function useNumbersSession({
     setQuestionIdx(nextIdx)
     setStatus('asking')
     pickAndSetQuestion()
-  }, [questionIdx, questionCount, persistResults, pickAndSetQuestion])
+  }, [audioBus, now, questionIdx, questionCount, persistResults, pickAndSetQuestion])
 
   /**
    * Wyjście w trakcie sesji (przycisk Wyjdź na pauzie) — zapisuje częściowe
@@ -251,7 +315,7 @@ export function useNumbersSession({
 
   const pause = useCallback(
     (reason: PauseReason = 'manual') => {
-      if (status !== 'asking' && status !== 'feedback') return
+      if (status !== 'asking' && status !== 'feedback' && status !== 'retry') return
       pausedFromRef.current = status
       antiCheatRef.current.push({ type: 'pause', ts: now(), reason })
       audioBus.stop()
@@ -269,6 +333,9 @@ export function useNumbersSession({
     // Wracamy do stanu sprzed pauzy — pauza w trakcie feedbacku nie może
     // zgubić przejścia do następnego pytania (odpowiedź jest już zalogowana).
     setStatus(pausedFromRef.current)
+    // `pause()` zrobiło stop(), więc bez ponownego `try-again` dziecko wraca
+    // do dwóch kafelków bez wyjaśnienia, po co tu jest.
+    if (pausedFromRef.current === 'retry') void audioBus.play('try-again')
   }, [status, now, audioBus])
 
   return {
@@ -280,6 +347,10 @@ export function useNumbersSession({
     currentQuestion,
     counters,
     lastOutcome,
+    /** Numer podejścia ostatniej odpowiedzi — `2` = poprawka w drugiej próbie. */
+    lastAttempt,
+    /** Dwie opcje drugiej próby (poprawna + wybrana) albo `null` poza retry. */
+    retryChoices,
     praiseKey,
     start,
     answer,
@@ -297,6 +368,9 @@ function computeUpdatedFacts(
 ): Record<MathFactId, MathFactState> {
   const updated: Record<MathFactId, MathFactState> = {}
   for (const ev of events) {
+    // Poprawka w drugiej próbie nie odkręca boxa ani `recentWrong` — pierwsza
+    // pomyłka zostaje pomyłką (kontrakt drugiej próby, moduł liter).
+    if (ev.attempt === 2) continue
     // Fold sekwencyjny: ten sam fakt powtórzony w sesji musi kumulować wyniki
     // (wcześniej każdy event startował od stanu sprzed sesji → liczył się tylko
     // ostatni).
@@ -322,6 +396,8 @@ function computeMasteryProgress(
   const updated: Partial<Record<ConceptId, ConceptMastery>> = {}
   const byConcept = new Map<ConceptId, NumbersSessionEvent[]>()
   for (const ev of events) {
+    // Jak wyżej — poprawka nie wskrzesza serii, którą błąd właśnie zerwał.
+    if (ev.attempt === 2) continue
     const arr = byConcept.get(ev.conceptId) ?? []
     arr.push(ev)
     byConcept.set(ev.conceptId, arr)
