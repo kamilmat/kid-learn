@@ -66,6 +66,10 @@ export function useNumbersSession({
 }: UseNumbersSessionParams) {
   const [status, setStatus] = useState<SessionStatus>('asking')
   const [questionIdx, setQuestionIdx] = useState(0)
+  // Ref obok stanu: `pickAndSetQuestion` biegnie w tym samym ticku co
+  // `setQuestionIdx`, więc stan byłby jeszcze stary — a router przeplata typ
+  // ćwiczenia właśnie po numerze pytania.
+  const questionIdxRef = useRef(0)
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null)
   const [lastOutcome, setLastOutcome] = useState<AnswerOutcome | null>(null)
   const [praiseKey, setPraiseKey] = useState<NumbersPraiseKey | null>(null)
@@ -150,7 +154,7 @@ export function useNumbersSession({
     setRetryChoices(null)
     setLastAttempt(1)
 
-    const exerciseType = exerciseTypeForFact(fact, level)
+    const exerciseType = exerciseTypeForFact(fact, level, questionIdxRef.current)
     const op = opForFact(fact)
     setCurrentQuestion({
       factId,
@@ -171,6 +175,8 @@ export function useNumbersSession({
     lastPraiseRef.current = null
     lastFactRef.current = null
     lastConceptRef.current = null
+    questionIdxRef.current = 0
+    setQuestionIdx(0)
     setPraiseKey(null)
     // Bulk init całej puli poziomu — jeden zapis persist zamiast N (Płomyk: 128).
     ensureFactsInitialized(levelFacts)
@@ -306,6 +312,7 @@ export function useNumbersSession({
       setStatus('ended')
       return
     }
+    questionIdxRef.current = nextIdx
     setQuestionIdx(nextIdx)
     setStatus('asking')
     pickAndSetQuestion()

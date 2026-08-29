@@ -58,6 +58,7 @@ export type ConceptMastery = {
 
 export type ExerciseType =
   // Iskierka
+  | 'count-objects'
   | 'subitize-flash'
   | 'match-digit-dots'
   | 'number-rhythm'
