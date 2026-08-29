@@ -171,6 +171,14 @@ function CzytankiStats() {
   const openedIds = useCzytanki((s) => s.openedIds)
   const wordTaps = useCzytanki((s) => s.wordTaps)
   const timeMs = useCzytanki((s) => s.timeMs)
+  const readCounts = useCzytanki((s) => s.readCounts)
+
+  // Powtórne czytanie tej samej czytanki to sygnał płynności, nie nudy —
+  // rodzic widzi, co dziecko wraca czytać samo.
+  const repeatList = useMemo(
+    () => CZYTANKI.filter((c) => (readCounts[c.id] ?? 0) >= 2),
+    [readCounts],
+  )
 
   const topTaps = useMemo(() => topTappedWords(wordTaps), [wordTaps])
   const totalMinutes = useMemo(
@@ -211,6 +219,14 @@ function CzytankiStats() {
             </p>
           )
         })}
+        <p style={{ margin: '4px 0 0' }} data-testid="czytanki-repeats">
+          Przeczytane ≥2×: {repeatList.length}
+        </p>
+        {repeatList.length > 0 && (
+          <p style={{ margin: '2px 0 0', fontSize: 13, color: '#6b7280' }}>
+            {repeatList.map((c) => `${c.emoji} ${c.title}`).join(', ')}
+          </p>
+        )}
         {openedList.length > 0 ? (
           <p style={{ margin: '8px 0 0', fontSize: 13, color: '#6b7280' }}>
             {openedList.map((c) => `${c.emoji} ${c.title}`).join(', ')}
@@ -314,6 +330,7 @@ export function ReportScreen({
       openedIds: useCzytanki.getState().openedIds,
       wordTaps: useCzytanki.getState().wordTaps,
       timeMs: useCzytanki.getState().timeMs,
+      readCounts: useCzytanki.getState().readCounts,
     }
     const md = exportReportToMarkdown(
       letters,

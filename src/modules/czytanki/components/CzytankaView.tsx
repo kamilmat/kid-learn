@@ -57,6 +57,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   const updateSetting = useSettings((s) => s.updateSetting)
   const echoMode = czytankiSettings.echoMode
   const tempo = czytankiSettings.tempo
+  const merged = czytankiSettings.mergedSyllables
   const [heldWord, setHeldWord] = useState<{ s: number; w: number } | null>(null)
   const { activeWord, reading, echoing, toggle, stop, skipEcho } = useReadAloud({
     czytanka,
@@ -183,6 +184,16 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     },
   })
 
+  const mergeTap = useTapHandler({
+    onTap: () => {
+      const next = !merged
+      stop()
+      audioBus.stop()
+      updateSetting('czytanki', { ...czytankiSettings, mergedSyllables: next })
+      void audioBus.play(next ? 'czytanki-ui-merge-on' : 'czytanki-ui-merge-off')
+    },
+  })
+
   const echoSkipTap = useTapHandler({ onTap: skipEcho, disabled: echoing === null })
 
   // Bez scrolla i bez przycinania: mierzymy raz przy rozmiarze bazowym grupy
@@ -210,7 +221,9 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     setFitPass((n) => n + 1)
   }, [baseFont, czytanka.group])
 
-  useLayoutEffect(() => { refit() }, [czytanka.id, refit])
+  // `merged` zmienia odstępy i podkreślenia, więc wysokość bloku tekstu też —
+  // bez ponownego fitu auto-fit zostaje przy rozmiarze policzonym dla drugiego trybu.
+  useLayoutEffect(() => { refit() }, [czytanka.id, merged, refit])
 
   // resize/orientationchange potrafią odpalić kilka razy pod rząd (np. obrót
   // iPada) — rAF zbija je do jednego refitu na klatkę zamiast serii rekalkulacji.
@@ -281,6 +294,11 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
             style={{ ...toggleBtn, background: tempo === 'turtle' ? '#bbf7d0' : '#fff' }}>
             🐢
           </button>
+          <button type="button" aria-label={merged ? 'Rozdziel sylaby' : 'Scal sylaby'} aria-pressed={merged}
+            data-testid="merge-syllables" {...mergeTap}
+            style={{ ...toggleBtn, fontFamily: 'var(--font-block)', fontWeight: 700, fontSize: 14, letterSpacing: '0.02em', color: colors.text, background: merged ? '#bbf7d0' : '#fff' }}>
+            {merged ? 'KOTA' : 'KO|TA'}
+          </button>
         </div>
       </div>
 
@@ -311,7 +329,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
                     <span
                       data-testid="word"
                       style={{
-                        display: 'inline-flex', alignItems: 'baseline', gap: '0.12em',
+                        display: 'inline-flex', alignItems: 'baseline', gap: merged ? 0 : '0.12em',
                         padding: '0.04em 0.22em', borderRadius: '0.4em',
                         background: isActive ? '#fde047' : '#ffffff',
                         border: `3px solid ${isActive ? '#f59e0b' : '#cfd8e6'}`,
@@ -320,7 +338,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
                       }}
                     >
                       {word.syllables.map((syl, i) => (
-                        <SyllableButton key={i} text={syl} cue={getSyllableCue(i)} fontSize={fontSize}
+                        <SyllableButton key={i} text={syl} cue={getSyllableCue(i)} fontSize={fontSize} merged={merged}
                           onTap={() => tapSyllable(syl, word.syllables)} onLongPress={() => holdWord(s, w, word.syllables)} />
                       ))}
                     </span>

@@ -134,7 +134,7 @@ export const useSettings = create<SettingsStore>()(
         mathGateState: state.mathGateState,
         parentGateUnlockedUntil: state.parentGateUnlockedUntil,
       }),
-      version: 5,
+      version: 6,
       // Bez `migrate` zustand ODRZUCA persist przy niezgodnej wersji (merge dostaje
       // undefined) — przepuszczamy blob dalej, resztę roboty robi `merge` poniżej.
       //
@@ -236,10 +236,17 @@ export const useSettings = create<SettingsStore>()(
         }
         // Moduł 4 (czytanki): echo/tempo dodane po v4 — deep-merge jak `reading`.
         const persistedCzytanki = sanitizedSettings.czytanki as Record<string, unknown> | undefined
-        sanitizedSettings.czytanki = {
+        const mergedCzytanki: Record<string, unknown> = {
           ...defaultSettings.czytanki,
           ...(persistedCzytanki ?? {}),
         }
+        // v5 → v6: `mergedSyllables` (scalanie sylab). Stary persist ma tu
+        // `undefined`, co w JSX dałoby „ani scalone, ani rozdzielone".
+        mergedCzytanki.mergedSyllables =
+          typeof persistedCzytanki?.mergedSyllables === 'boolean'
+            ? persistedCzytanki.mergedSyllables
+            : defaultSettings.czytanki.mergedSyllables
+        sanitizedSettings.czytanki = mergedCzytanki
         // v4 → v5: `sessionLength` (5|10|15, tylko Litery) → globalne
         // `questionsPerSession` (5|8|12) wspólne dla wszystkich modułów.
         const legacyLength = sanitizedSettings.sessionLength

@@ -36,6 +36,7 @@ export const NUMBERS_DEFAULTS: NumbersSettings = {
 export const CZYTANKI_DEFAULTS: CzytankiSettings = {
   echoMode: false,
   tempo: 'normal',
+  mergedSyllables: false,
 }
 
 // Lista wszystkich poziomów w kolejności rosnącej trudności. Single source of truth
