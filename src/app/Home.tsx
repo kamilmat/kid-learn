@@ -17,11 +17,18 @@ import { playIntroOnce } from '@/shared/audio/playIntroOnce'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { IskraHero } from '@/shared/ui/IskraHero'
 import { colors, radii, tapTargets } from '@/app/theme'
-import { getSyllableColor } from '@/shared/ui/syllableColors'
+import { getSyllableCue } from '@/shared/ui/syllableColors'
 import { useLetters } from '@/modules/letters/store/lettersStore'
 import { useReading } from '@/modules/reading/store/readingStore'
 import { useNumbers } from '@/modules/numbers/store/numbersStore'
 import { useCzytanki } from '@/modules/czytanki/store/czytankiStore'
+
+// Kolor NIE MOŻE być jedynym nośnikiem granicy sylaby (WCAG 1.4.1) — jak w
+// czytankach, każdy indeks dostaje też własny styl podkreślenia.
+function syllableStyle(index: number): { color: string; borderBottom: string } {
+  const cue = getSyllableCue(index)
+  return { color: cue.color, borderBottom: `3px ${cue.underline} ${cue.color}` }
+}
 
 export function Home() {
   const navigate = useNavigate()
@@ -169,9 +176,9 @@ export function Home() {
               gap: 4,
             }}
           >
-            <span style={{ color: getSyllableColor(0) }}>A</span>
-            <span style={{ color: getSyllableColor(1) }}>B</span>
-            <span style={{ color: getSyllableColor(2) }}>C</span>
+            <span style={syllableStyle(0)}>A</span>
+            <span style={syllableStyle(1)}>B</span>
+            <span style={syllableStyle(2)}>C</span>
           </div>
           <span
             style={{
@@ -220,8 +227,8 @@ export function Home() {
               lineHeight: 1,
             }}
           >
-            <span style={{ color: getSyllableColor(0) }}>MA</span>
-            <span style={{ color: getSyllableColor(1) }}>MA</span>
+            <span style={syllableStyle(0)}>MA</span>
+            <span style={syllableStyle(1)}>MA</span>
           </div>
           <span
             style={{
@@ -271,9 +278,9 @@ export function Home() {
               gap: 4,
             }}
           >
-            <span style={{ color: getSyllableColor(0) }}>1</span>
-            <span style={{ color: getSyllableColor(1) }}>2</span>
-            <span style={{ color: getSyllableColor(2) }}>3</span>
+            <span style={{ color: getSyllableCue(0).color }}>1</span>
+            <span style={{ color: getSyllableCue(1).color }}>2</span>
+            <span style={{ color: getSyllableCue(2).color }}>3</span>
           </div>
           <span
             style={{
@@ -325,13 +332,13 @@ export function Home() {
             }}
           >
             <span>
-              <span style={{ color: getSyllableColor(0) }}>TA</span>
-              <span style={{ color: getSyllableColor(1) }}>TA</span>
+              <span style={syllableStyle(0)}>TA</span>
+              <span style={syllableStyle(1)}>TA</span>
             </span>
-            <span style={{ color: getSyllableColor(0) }}>MA</span>
+            <span style={syllableStyle(0)}>MA</span>
             <span>
-              <span style={{ color: getSyllableColor(0) }}>KO</span>
-              <span style={{ color: getSyllableColor(1) }}>TA</span>
+              <span style={syllableStyle(0)}>KO</span>
+              <span style={syllableStyle(1)}>TA</span>
             </span>
           </div>
           <span

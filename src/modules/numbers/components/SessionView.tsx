@@ -534,40 +534,66 @@ export function FeedbackOverlay({
     firstRunRef.current = true
   }, [outcome, correctValue, praiseKey, attempt])
 
+  // Audio już wystawione dla BIEŻĄCEGO wystąpienia feedbacku (klucz treści +
+  // lista obietnic `plays`). React w dev/StrictMode odpala ten efekt jako
+  // setup→cleanup→setup przy pierwszym mouncie — bez tej pamięci druga kopia
+  // dokładałaby DRUGI komplet `audioBus.play()` (dziecko słyszało `try-again`
+  // dwa razy). Ta sama identyczność treści == druga kopia efektu, więc
+  // ponownie wykorzystujemy JUŻ wystawione obietnice zamiast grać od nowa —
+  // to odróżnia dubel StrictMode (identyczna treść, bez przejścia przez
+  // pauzę) od prawdziwego wznowienia (identyczna treść, ale przez pauzę
+  // czyścimy ten cache poniżej, więc audio celowo leci raz jeszcze).
+  const activePlaysRef = useRef<{ identity: string; plays: Array<Promise<unknown>> } | null>(
+    null,
+  )
+
   useEffect(() => {
-    if (paused) return
+    if (paused) {
+      activePlaysRef.current = null
+      return
+    }
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
     let safetyTimer: ReturnType<typeof setTimeout> | undefined
     const startedAt = Date.now()
     const alreadyElapsed = elapsedRef.current
 
-    // stop() tylko przy pierwszym wejściu — po wznowieniu kolejka zawiera
-    // świeże `nav-resume`, którego nie wolno uciąć.
-    if (firstRunRef.current) audioBus.stop()
-    firstRunRef.current = false
-    const plays: Array<Promise<unknown>> = []
-    if (outcome === 'correct' && attempt === 2) {
-      // Druga próba trafiona: cicha pochwała za autokorektę — bez pochwały
-      // z puli, bo iskierki za to nie ma i fanfara byłaby obietnicą nagrody.
-      plays.push(settled(audioBus.play('retry-correct')))
-    } else if (outcome === 'correct') {
-      const praise =
-        praiseKey ?? NUMBERS_PRAISE_KEYS[Math.floor(Math.random() * NUMBERS_PRAISE_KEYS.length)]!
-      plays.push(settled(audioBus.play(praise)))
+    const identity = `${outcome}|${correctValue}|${praiseKey ?? ''}|${attempt}`
+    let plays: Array<Promise<unknown>>
+
+    if (activePlaysRef.current !== null && activePlaysRef.current.identity === identity) {
+      // Dubel tej samej treści bez przejścia przez pauzę — odtwarzanie już
+      // trwa (poprzedni run tego samego efektu je wystawił).
+      plays = activePlaysRef.current.plays
     } else {
-      plays.push(
-        settled(audioBus.play(outcome === 'wrong' ? 'try-again-soft' : 'try-again')),
-      )
-      // Hypercorrection — kolejka jest FIFO, więc "tu było N" zagra zaraz po
-      // korekcie; żadnego timera nie trzeba, a przejście czeka na koniec audio.
-      if (correctValue !== null) {
-        plays.push(settled(audioBus.play(`correct-show-${correctValue}`)))
+      // stop() tylko przy pierwszym wejściu — po wznowieniu kolejka zawiera
+      // świeże `nav-resume`, którego nie wolno uciąć.
+      if (firstRunRef.current) audioBus.stop()
+      plays = []
+      if (outcome === 'correct' && attempt === 2) {
+        // Druga próba trafiona: cicha pochwała za autokorektę — bez pochwały
+        // z puli, bo iskierki za to nie ma i fanfara byłaby obietnicą nagrody.
+        plays.push(settled(audioBus.play('retry-correct')))
+      } else if (outcome === 'correct') {
+        const praise =
+          praiseKey ?? NUMBERS_PRAISE_KEYS[Math.floor(Math.random() * NUMBERS_PRAISE_KEYS.length)]!
+        plays.push(settled(audioBus.play(praise)))
+      } else {
+        plays.push(
+          settled(audioBus.play(outcome === 'wrong' ? 'try-again-soft' : 'try-again')),
+        )
+        // Hypercorrection — kolejka jest FIFO, więc "tu było N" zagra zaraz po
+        // korekcie; żadnego timera nie trzeba, a przejście czeka na koniec audio.
+        if (correctValue !== null) {
+          plays.push(settled(audioBus.play(`correct-show-${correctValue}`)))
+        }
+        // Strategia PO korekcie — najpierw wynik, potem narzędzie do liczenia.
+        const strategy = strategyKeyRef.current
+        if (strategy !== null) plays.push(settled(audioBus.play(strategy)))
       }
-      // Strategia PO korekcie — najpierw wynik, potem narzędzie do liczenia.
-      const strategy = strategyKeyRef.current
-      if (strategy !== null) plays.push(settled(audioBus.play(strategy)))
+      activePlaysRef.current = { identity, plays }
     }
+    firstRunRef.current = false
 
     // Bezpiecznik: gdyby audio nigdy nie zamknęło obietnicy (element bez
     // zdarzeń `ended`/`error`), sesja nie może utknąć na overlayu.
