@@ -49,4 +49,26 @@ describe('czytankiStore', () => {
     expect(merged.lastOpenedId).toBeNull()
     expect(merged.seenIntros).toEqual([])
   })
+  it('migracja v1 → v2 daje puste mapy i NIE gubi openedIds', () => {
+    const v1 = { openedIds: ['cz-01', 'cz-02'], lastOpenedId: 'cz-02', seenIntros: ['czytanka-first'] }
+    const merged = mergeCzytankiState(v1, useCzytanki.getState())
+    expect(merged.openedIds).toEqual(['cz-01', 'cz-02'])
+    expect(merged.lastOpenedId).toBe('cz-02')
+    expect(merged.seenIntros).toEqual(['czytanka-first'])
+    expect(merged.wordTaps).toEqual({})
+    expect(merged.timeMs).toEqual({})
+  })
+  it('recordVisit kumuluje tapy i czas przy dwóch wizytach', () => {
+    useCzytanki.getState().recordVisit('cz-01', { mama: 2, tata: 1 }, 30_000)
+    useCzytanki.getState().recordVisit('cz-01', { mama: 3 }, 15_000)
+    useCzytanki.getState().recordVisit('cz-02', { oko: 1 }, 5_000)
+    expect(useCzytanki.getState().wordTaps['cz-01']).toEqual({ mama: 5, tata: 1 })
+    expect(useCzytanki.getState().timeMs).toEqual({ 'cz-01': 45_000, 'cz-02': 5_000 })
+  })
+  it('resetAllProgress czyści tapy i czas', () => {
+    useCzytanki.getState().recordVisit('cz-01', { mama: 2 }, 1_000)
+    useCzytanki.getState().resetAllProgress()
+    expect(useCzytanki.getState().wordTaps).toEqual({})
+    expect(useCzytanki.getState().timeMs).toEqual({})
+  })
 })

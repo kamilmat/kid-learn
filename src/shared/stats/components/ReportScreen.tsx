@@ -15,7 +15,7 @@ import { useCzytanki } from '@/modules/czytanki/store/czytankiStore'
 import { ALL_WORDS } from '@/modules/reading/data/words'
 import { ALL_SYLLABLES } from '@/modules/reading/data/syllables'
 import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '@/modules/czytanki/data/czytanki'
-import { exportReportToMarkdown } from '@/shared/stats/exporter'
+import { exportReportToMarkdown, topTappedWords } from '@/shared/stats/exporter'
 import { toUnifiedSessions } from '@/shared/stats/aggregate'
 import { LettersSection } from './LettersSection'
 import { ActivitySection } from './ActivitySection'
@@ -168,6 +168,14 @@ function ReadingStats() {
 
 function CzytankiStats() {
   const openedIds = useCzytanki((s) => s.openedIds)
+  const wordTaps = useCzytanki((s) => s.wordTaps)
+  const timeMs = useCzytanki((s) => s.timeMs)
+
+  const topTaps = useMemo(() => topTappedWords(wordTaps), [wordTaps])
+  const totalMinutes = useMemo(
+    () => Math.round(Object.values(timeMs).reduce((a, b) => a + b, 0) / 60000),
+    [timeMs],
+  )
 
   const openedList = useMemo(
     () => CZYTANKI.filter((c) => openedIds.includes(c.id)),
@@ -212,6 +220,24 @@ function CzytankiStats() {
           </p>
         )}
       </div>
+
+      {(topTaps.length > 0 || totalMinutes > 0) && (
+        <div style={sectionStyle} data-testid="czytanki-taps">
+          <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>Najczęściej dotykane</h3>
+          {topTaps.length > 0 ? (
+            topTaps.map((t) => (
+              <p key={t.slug} style={{ margin: '0 0 2px', fontSize: 13 }}>
+                {t.label} — {t.count}×
+              </p>
+            ))
+          ) : (
+            <p style={{ margin: '0 0 2px', color: '#6b7280' }}>Brak danych</p>
+          )}
+          <p style={{ margin: '8px 0 0', fontSize: 13, color: '#6b7280' }}>
+            Łączny czas czytania: {totalMinutes} min
+          </p>
+        </div>
+      )}
     </section>
   )
 }
@@ -285,6 +311,8 @@ export function ReportScreen({
     }
     const czytankiSnapshot = {
       openedIds: useCzytanki.getState().openedIds,
+      wordTaps: useCzytanki.getState().wordTaps,
+      timeMs: useCzytanki.getState().timeMs,
     }
     const md = exportReportToMarkdown(
       letters,

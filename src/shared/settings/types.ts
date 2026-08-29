@@ -20,6 +20,16 @@ export type TilesPerQuestion = 3 | 4 | 5 | 6 | 8 | 10
 export type HumorMode = 'on' | 'off'
 export type WordAnimations = 'on' | 'off'
 export type SkipCountStep = 2 | 5 | 10 | 'mixed'
+export type CzytankiTempo = 'turtle' | 'normal'
+
+// Ustawienia modułu 4 (czytanki). Dziecko przełącza je ikonami w scenie —
+// settings tylko PAMIĘTAJĄ ostatni wybór między wizytami.
+export type CzytankiSettings = {
+  // Echo: po każdym zdaniu pauza na powtórzenie przez dziecko. Default false.
+  echoMode: boolean
+  // Tempo czytania całości: 'turtle' = 0.75× rate. Default 'normal'.
+  tempo: CzytankiTempo
+}
 
 // Moduł 1: jak brzmi prompt litery. `phoneme` = sam dźwięk („b"), `name` =
 // nazwa litery („be"), `both` = nazwa + dźwięk („be… b"). Typ mieszka w
@@ -78,6 +88,8 @@ export type Settings = {
   }
   // Ustawienia modułu matematyki (moduł 3)
   numbers: NumbersSettings
+  // Ustawienia modułu czytanek (moduł 4)
+  czytanki: CzytankiSettings
 }
 
 // Math gate / parent gate state — sekcja 13.1.

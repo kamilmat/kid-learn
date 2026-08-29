@@ -59,6 +59,7 @@ export class AudioBus {
   private basePath = DEFAULT_BASE_PATH
   private warnedKeys = new Set<string>()
   private unlocked = false
+  private playbackRate = 1
 
   static getInstance(): AudioBus {
     if (!AudioBus.instance) {
@@ -73,6 +74,14 @@ export class AudioBus {
 
   setBasePath(path: string): void {
     this.basePath = path
+  }
+
+  /**
+   * Tempo kolejnych klipów. Przypisywane w `playOne` przy KAŻDYM klipie —
+   * `playbackRate` gubi się przy podmianie `src`. <0.5 zniekształca głos w iOS Safari.
+   */
+  setPlaybackRate(rate: number): void {
+    this.playbackRate = Math.min(2, Math.max(0.5, rate))
   }
 
   private getElement(): HTMLAudioElement {
@@ -195,6 +204,7 @@ export class AudioBus {
       this.clearCurrentListeners()
       audio.src = `${this.basePath}/${key}.mp3`
       audio.currentTime = 0
+      audio.playbackRate = this.playbackRate
       // `started` zapala się przy pierwszym dowodzie, że element naprawdę
       // odtwarza ten klucz. Raz zapalone nie gaśnie — późniejszy stop() ma
       // zwrócić `true` (patrz nagłówek klasy).

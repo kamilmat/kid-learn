@@ -8,7 +8,7 @@ import { setPendingCue, takePendingCue } from './audio/pendingCue'
 import { CzytankaList } from './components/CzytankaList'
 import { CzytankaView } from './components/CzytankaView'
 
-type Bus = Pick<AudioBus, 'play' | 'stop' | 'unlock'>
+type Bus = Pick<AudioBus, 'play' | 'stop' | 'unlock' | 'setPlaybackRate'>
 
 export function CzytankiModule({ audioBus = defaultAudioBus }: { audioBus?: Bus } = {}) {
   const location = useLocation()

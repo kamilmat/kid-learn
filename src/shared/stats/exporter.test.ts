@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { exportReportToMarkdown } from './exporter'
+import { exportReportToMarkdown, topTappedWords } from './exporter'
 import { createInitialLetterState } from '@/shared/srs/createInitialLetterState'
 import { defaultSettings } from '@/shared/settings/defaults'
 import type { LetterState } from '@/shared/srs/types'
@@ -225,4 +225,25 @@ describe('exportReportToMarkdown', () => {
     expect(md).toContain('Szybkie klikanie')
     expect(md).toContain('Cyferki')
   })
+
+  it('topTappedWords sortuje malejąco, tnie do 5 i mapuje slug na sylaby', () => {
+    const top = topTappedWords({
+      'cz-01': { tata: 2, kota: 5, mama: 1 },
+      'cz-02': { tata: 4, aaa: 3, bbb: 2, ccc: 1, ddd: 1 },
+    })
+    expect(top.map((t) => t.count)).toEqual([6, 5, 3, 2, 1])
+    expect(top[0]).toMatchObject({ slug: 'tata', label: 'TA-TA', count: 6 })
+    expect(top[1]).toMatchObject({ slug: 'kota', label: 'KO-TA', count: 5 })
+  })
+
+  it('sekcja Czytanki podaje najczęściej dotykane i łączny czas', () => {
+    const md = exportReportToMarkdown({}, [], defaultSettings, NOW, undefined, {
+      openedIds: ['cz-01'],
+      wordTaps: { 'cz-01': { tata: 3 } },
+      timeMs: { 'cz-01': 125_000 },
+    })
+    expect(md).toContain('**Najczęściej dotykane**: TA-TA — 3×')
+    expect(md).toContain('**Łączny czas czytania**: 2 min')
+  })
+
 })
