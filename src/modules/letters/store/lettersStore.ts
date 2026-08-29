@@ -25,11 +25,20 @@ import type { SessionLog } from '@/shared/stats/types'
 export const LETTERS_STORAGE_KEY = 'iskierki-letters-v1'
 export const MAX_SESSION_HISTORY = 50
 
+/** Literka dnia zamrożona na dobę — `dayKey` w czasie lokalnym (`data/dailyLetter`). */
+export type DailyLetter = {
+  letter: string
+  dayKey: string
+}
+
 export type LettersState = {
   letters: Record<string, LetterState>
   sessions: SessionLog[]
   seenIntros: string[]
   lastUsedLevel: Level | null
+  dailyLetter: DailyLetter | null
+  /** `dayKey` doby, w której mikrosesja „Literka dnia" została dokończona. */
+  dailyDoneDayKey: string | null
 }
 
 export type LettersStore = LettersState & {
@@ -44,7 +53,9 @@ export type LettersStore = LettersState & {
   markIntroSeen: (introKey: string) => void
   hasSeenIntro: (introKey: string) => boolean
   setLastUsedLevel: (level: Level) => void
-  /** Czyści letters/sessions/seenIntros. lastUsedLevel pozostaje. */
+  setDailyLetter: (daily: DailyLetter) => void
+  markDailyDone: (dayKey: string) => void
+  /** Czyści letters/sessions/seenIntros + literkę dnia. lastUsedLevel pozostaje. */
   resetAllProgress: () => void
 }
 
@@ -55,6 +66,8 @@ const initialLettersState: LettersState = {
   sessions: [],
   seenIntros: [],
   lastUsedLevel: null,
+  dailyLetter: null,
+  dailyDoneDayKey: null,
 }
 
 export const useLetters = create<LettersStore>()(
@@ -93,11 +106,21 @@ export const useLetters = create<LettersStore>()(
         set({ lastUsedLevel: level })
       },
 
+      setDailyLetter: (daily) => {
+        set({ dailyLetter: daily })
+      },
+
+      markDailyDone: (dayKey) => {
+        set({ dailyDoneDayKey: dayKey })
+      },
+
       resetAllProgress: () => {
         set((state) => ({
           letters: {},
           sessions: [],
           seenIntros: [],
+          dailyLetter: null,
+          dailyDoneDayKey: null,
           // lastUsedLevel zostaje (UX: nie kasujemy ostatnio wybranego poziomu)
           lastUsedLevel: state.lastUsedLevel,
         }))
@@ -111,8 +134,10 @@ export const useLetters = create<LettersStore>()(
         sessions: state.sessions,
         seenIntros: state.seenIntros,
         lastUsedLevel: state.lastUsedLevel,
+        dailyLetter: state.dailyLetter,
+        dailyDoneDayKey: state.dailyDoneDayKey,
       }),
-      version: 1,
+      version: 2,
       // Bez `migrate` bump wersji wyrzuciłby cały postęp — `merge` sanityzuje shape.
       migrate: (persisted) => persisted as PersistedLettersShape,
       // Defensywne sklejanie: jeśli zapisany stan nie ma jakiegoś pola
@@ -126,6 +151,8 @@ export const useLetters = create<LettersStore>()(
           sessions: Array.isArray(p.sessions) ? p.sessions : [],
           seenIntros: Array.isArray(p.seenIntros) ? p.seenIntros : [],
           lastUsedLevel: p.lastUsedLevel ?? null,
+          dailyLetter: p.dailyLetter ?? null,
+          dailyDoneDayKey: p.dailyDoneDayKey ?? null,
         }
         // Migration: assign id to LetterState entries that pre-date the id field.
         if (merged.letters) {
