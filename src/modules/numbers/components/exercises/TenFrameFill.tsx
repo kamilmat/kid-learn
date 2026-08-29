@@ -74,7 +74,7 @@ export function TenFrameFill({
           {/* fiveStructure wyłączone: dziecko DOKŁADA kropki, a drugi odcień
               czytałby się jako „te są już wypełnione". */}
           <TenFrame
-            count={revealValue === null ? filled : filled + revealValue}
+            count={revealValue === null ? filled : Math.min(10, filled + revealValue)}
             size={48}
             fiveStructure={false}
             {...(revealValue === null

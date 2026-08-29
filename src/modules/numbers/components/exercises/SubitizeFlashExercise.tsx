@@ -11,7 +11,7 @@ import { clamp } from '../../utils/clamp'
 
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
-  payload: { args: number[]; conceptId?: ConceptId }
+  payload: { args: number[]; conceptId?: ConceptId; factId?: string }
   promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
   /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
@@ -22,6 +22,16 @@ type Props = {
 
 const FLASH_MS = 2000
 const DROP_TARGET_ID = 'subitize-target'
+
+/** FNV-1a — stabilne ziarno układu kropek z id faktu. */
+function hashFactId(id: string): number {
+  let h = 2166136261
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
 
 export function SubitizeFlashExercise({
   audioBus,
@@ -36,11 +46,11 @@ export function SubitizeFlashExercise({
   const maxN = payload.conceptId === 'iskierka-counting-10' ? 10 : 6
   const correct = clamp(payload.args[0] ?? 1, 1, maxN)
   const [phase, setPhase] = useState<'flash' | 'answer'>('flash')
+  // Ziarno z id faktu zamiast Math.random: układ jest stały dla tego samego
+  // pytania (także po odsłonięciu korekty), a nie losowany przy każdym mouncie.
+  const seed = hashFactId(payload.factId ?? `subitize-${correct}`)
   // DotPattern zna układ 'dice' tylko do 6 — powyżej wymuszamy scattered.
-  // Losujemy raz na mount: układ nie może się zmienić w trakcie pytania.
-  const [pattern] = useState<'dice' | 'scattered'>(() =>
-    correct > 6 || Math.random() >= 0.6 ? 'scattered' : 'dice',
-  )
+  const pattern: 'dice' | 'scattered' = correct > 6 || seed % 5 >= 3 ? 'scattered' : 'dice'
 
   useEffect(() => {
     for (const key of promptKeys) void audioBus.play(key)
@@ -82,7 +92,7 @@ export function SubitizeFlashExercise({
       >
         <DropTarget droppableId={DROP_TARGET_ID} minSize={240}>
           {phase === 'flash' || revealValue !== null ? (
-            <DotPattern count={revealValue ?? correct} pattern={pattern} size={200} />
+            <DotPattern count={revealValue ?? correct} pattern={pattern} size={200} seed={seed} />
           ) : (
             <span style={{ fontSize: 96, opacity: 0.3, fontFamily: 'var(--font-block)' }}>?</span>
           )}

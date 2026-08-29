@@ -162,7 +162,7 @@ export function useNumbersSession({
       exerciseType,
       // `conceptId` także w payloadzie: ćwiczenie widzi tylko payload, a zakres
       // liczb (np. subitizing do 6 vs liczenie do 10) zależy od konceptu.
-      payload: { args: fact.args, op, conceptId: fact.conceptId },
+      payload: { args: fact.args, op, conceptId: fact.conceptId, factId },
     })
     questionStartedAtRef.current = now()
   }, [levelFacts, mainPoolIds, level, now, rng])

@@ -249,13 +249,14 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
     )
   }
 
-  // Pas korekty zasłania tylko górę ekranu, więc zadanie pod nim musi pokazać
-  // POPRAWNĄ liczbę — dziecko widzi reprezentację tego, co słyszy („tu było N").
+  const feedbackActive =
+    session.status === 'feedback' ||
+    (session.status === 'paused' && session.pausedFrom === 'feedback')
+  // Pas korekty siedzi w PRZEPŁYWIE nad zadaniem, więc zadanie pod nim musi
+  // pokazać POPRAWNĄ liczbę — dziecko widzi reprezentację tego, co słyszy
+  // („tu było N").
   const revealValue =
-    (session.status === 'feedback' ||
-      (session.status === 'paused' && session.pausedFrom === 'feedback')) &&
-    session.lastOutcome !== null &&
-    session.lastOutcome !== 'correct'
+    feedbackActive && session.lastOutcome !== null && session.lastOutcome !== 'correct'
       ? extractCorrectValue(session.currentQuestion)
       : null
 
@@ -277,6 +278,23 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
         onRepeatPrompt={handleRepeatPrompt}
         onDontKnow={handleDontKnow}
       />
+      {/* Overlay ZOSTAJE zamontowany pod pauzą — unmount/remount kasował
+          `nav-resume` (stop() w efekcie) i odliczał feedback od zera.
+          Renderowany PRZED zadaniem: wariant korekty jest elementem przepływu
+          (skraca miejsce na zadanie, nigdy go nie zasłania), a pochwała i tak
+          jest absolutna na cały ekran — kolejność w DOM jej nie dotyczy. */}
+      {feedbackActive && (
+        <FeedbackOverlay
+          outcome={session.lastOutcome ?? 'correct'}
+          correctValue={extractCorrectValue(session.currentQuestion)}
+          audioBus={audioBus}
+          onAdvance={session.advance}
+          paused={session.status === 'paused'}
+          strategyKey={session.lastAttempt === 2 ? null : strategyKey}
+          attempt={session.lastAttempt}
+          {...(session.praiseKey !== null ? { praiseKey: session.praiseKey } : {})}
+        />
+      )}
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <ExerciseRouter
           question={session.currentQuestion}
@@ -289,21 +307,6 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
             : {})}
         />
       </div>
-      {/* Overlay ZOSTAJE zamontowany pod pauzą — unmount/remount kasował
-          `nav-resume` (stop() w efekcie) i odliczał feedback od zera. */}
-      {(session.status === 'feedback' ||
-        (session.status === 'paused' && session.pausedFrom === 'feedback')) && (
-        <FeedbackOverlay
-          outcome={session.lastOutcome ?? 'correct'}
-          correctValue={extractCorrectValue(session.currentQuestion)}
-          audioBus={audioBus}
-          onAdvance={session.advance}
-          paused={session.status === 'paused'}
-          strategyKey={session.lastAttempt === 2 ? null : strategyKey}
-          attempt={session.lastAttempt}
-          {...(session.praiseKey !== null ? { praiseKey: session.praiseKey } : {})}
-        />
-      )}
       {session.status === 'paused' && (
         <PauseOverlay
           onResume={session.resume}
@@ -682,30 +685,33 @@ export function FeedbackOverlay({
   // pełnoekranowa — to nagroda, nie moment nauki.
   const isCorrection = outcome !== 'correct'
   const commonStyle: CSSProperties = {
-    position: 'absolute',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     color: '#fff',
     fontFamily: 'var(--font-handwritten)',
-    // 'auto' — overlay musi POCHŁANIAĆ tapy, inaczej dziecko odpowiada drugi raz
-    // na to samo pytanie zanim feedback się skończy.
+    // 'auto' — overlay POCHŁANIA tapy w swoim obszarze. Pas korekty zajmuje
+    // tylko górę ekranu, więc resztę zasłania przezroczysty scrim poniżej —
+    // bez niego dziecko dotyka zadania (brudzi jego stan) zanim feedback minie.
     pointerEvents: 'auto',
   }
   const overlayStyle: CSSProperties = isCorrection
     ? {
         ...commonStyle,
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '28%',
+        // W PRZEPŁYWIE pod StatusBarem, nie absolutnie nad zadaniem: pas nie
+        // może zasłonić reprezentacji, którą właśnie odsłania („tu było N").
+        position: 'relative',
+        flex: '0 0 28%',
+        minHeight: 96,
+        width: '100%',
         background: 'rgba(239, 68, 68, 0.92)',
         gap: 24,
-        // <2000 (PauseOverlay nad pasem), > StatusBar (pas zostaje widoczny).
+        // <2000 (PauseOverlay nad pasem), > scrim.
         zIndex: 900,
       }
     : {
         ...commonStyle,
+        position: 'absolute',
         inset: 0,
         flexDirection: 'column',
         background: 'rgba(22, 163, 74, 0.85)',
@@ -713,14 +719,29 @@ export function FeedbackOverlay({
       }
 
   return (
-    <div data-testid="feedback-overlay" data-outcome={outcome} style={overlayStyle}>
-      <div style={{ fontSize: isCorrection ? 64 : 160 }} aria-hidden="true">
-        {emoji}
-      </div>
-      {isCorrection && correctValue !== null && (
-        <div style={{ fontSize: 56, fontWeight: 800 }}>{correctValue}</div>
+    <>
+      {isCorrection && (
+        <div
+          data-testid="feedback-scrim"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'transparent',
+            pointerEvents: 'auto',
+            zIndex: 899,
+          }}
+        />
       )}
-    </div>
+      <div data-testid="feedback-overlay" data-outcome={outcome} style={overlayStyle}>
+        <div style={{ fontSize: isCorrection ? 64 : 160 }} aria-hidden="true">
+          {emoji}
+        </div>
+        {isCorrection && correctValue !== null && (
+          <div style={{ fontSize: 56, fontWeight: 800 }}>{correctValue}</div>
+        )}
+      </div>
+    </>
   )
 }
 

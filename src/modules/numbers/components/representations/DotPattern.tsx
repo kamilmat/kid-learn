@@ -28,18 +28,38 @@ function mulberry32(seed: number): () => number {
   }
 }
 
+/**
+ * Deterministyczna siatka — awaryjny układ, gdy losowanie z odrzuceniem nie
+ * zmieści wszystkich kropek. Bez tego przy 9-10 kropkach renderowało się ich
+ * mniej niż `count`, więc dziecko liczyło INNĄ liczbę niż poprawna.
+ */
+function gridPositions(count: number): Array<[number, number]> {
+  const cols = Math.ceil(Math.sqrt(count))
+  const rows = Math.ceil(count / cols)
+  const out: Array<[number, number]> = []
+  for (let i = 0; i < count; i++) {
+    const col = i % cols
+    const row = Math.floor(i / cols)
+    out.push([0.15 + ((col + 0.5) / cols) * 0.7, 0.15 + ((row + 0.5) / rows) * 0.7])
+  }
+  return out
+}
+
 function scatteredPositions(count: number, seed: number): Array<[number, number]> {
   const rng = mulberry32(seed)
   const positions: Array<[number, number]> = []
+  // Odstęp musi maleć z liczbą kropek: przy 0.22 w polu 0.7x0.7 mieści się
+  // najwyżej 8, więc 9-10 nigdy się nie układało.
+  const minDist = count > 6 ? 0.17 : 0.22
   let attempts = 0
-  while (positions.length < count && attempts < 200) {
+  while (positions.length < count && attempts < 2000) {
     attempts++
     const x = 0.15 + rng() * 0.7
     const y = 0.15 + rng() * 0.7
-    const tooClose = positions.some(([px, py]) => Math.hypot(px - x, py - y) < 0.22)
+    const tooClose = positions.some(([px, py]) => Math.hypot(px - x, py - y) < minDist)
     if (!tooClose) positions.push([x, y])
   }
-  return positions
+  return positions.length < count ? gridPositions(count) : positions
 }
 
 export function DotPattern({
