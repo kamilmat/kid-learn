@@ -583,8 +583,15 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     clearFeedbackTimer()
     setStatus('finished')
     setCurrentQuestion(null)
-    const isPerfect = detectPerfectSession(eventsRef.current, cfgRef.current.sessionLength)
-    void cfgRef.current.audioBus.play(isPerfect ? 'session-end-perfect' : 'session-end')
+    // „Literka dnia" ma własne pożegnanie (kotwica słowna + `letters-daily-end`)
+    // — fanfara sesji tylko wydłużyłaby przed nim kolejkę AudioBus.
+    if (cfgRef.current.level !== 'daily') {
+      const isPerfect = detectPerfectSession(
+        eventsRef.current,
+        cfgRef.current.sessionLength,
+      )
+      void cfgRef.current.audioBus.play(isPerfect ? 'session-end-perfect' : 'session-end')
+    }
 
     const log: SessionLog = {
       id: sessionIdRef.current,

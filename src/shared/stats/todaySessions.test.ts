@@ -48,6 +48,14 @@ describe('completedSessionsToday', () => {
     expect(completedSessionsToday(sessions, TODAY)).toBe(1)
   })
 
+  it('pomija mikrosesję „Literka dnia" (level: daily)', () => {
+    const sessions = [
+      makeSession({ id: 'daily', level: 'daily', questions: 4 }),
+      makeSession({ id: 'real', questions: 4 }),
+    ]
+    expect(completedSessionsToday(sessions, TODAY)).toBe(1)
+  })
+
   it('liczy dwie sesje dziś z różnych modułów jako 2', () => {
     const sessions = [
       makeSession({ id: 'letters-today', module: 'letters' }),
