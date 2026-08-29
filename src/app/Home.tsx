@@ -17,6 +17,7 @@ import { playIntroOnce } from '@/shared/audio/playIntroOnce'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { IskraHero } from '@/shared/ui/IskraHero'
 import { colors, radii, tapTargets } from '@/app/theme'
+import { getSyllableColor } from '@/shared/ui/syllableColors'
 import { useLetters } from '@/modules/letters/store/lettersStore'
 import { useReading } from '@/modules/reading/store/readingStore'
 import { useNumbers } from '@/modules/numbers/store/numbersStore'
@@ -168,9 +169,9 @@ export function Home() {
               gap: 4,
             }}
           >
-            <span style={{ color: '#1d4ed8' }}>A</span>
-            <span style={{ color: '#dc2626' }}>B</span>
-            <span style={{ color: '#16a34a' }}>C</span>
+            <span style={{ color: getSyllableColor(0) }}>A</span>
+            <span style={{ color: getSyllableColor(1) }}>B</span>
+            <span style={{ color: getSyllableColor(2) }}>C</span>
           </div>
           <span
             style={{
@@ -219,8 +220,8 @@ export function Home() {
               lineHeight: 1,
             }}
           >
-            <span style={{ color: '#1d4ed8' }}>MA</span>
-            <span style={{ color: '#dc2626' }}>MA</span>
+            <span style={{ color: getSyllableColor(0) }}>MA</span>
+            <span style={{ color: getSyllableColor(1) }}>MA</span>
           </div>
           <span
             style={{
@@ -270,9 +271,9 @@ export function Home() {
               gap: 4,
             }}
           >
-            <span style={{ color: '#1d4ed8' }}>1</span>
-            <span style={{ color: '#dc2626' }}>2</span>
-            <span style={{ color: '#16a34a' }}>3</span>
+            <span style={{ color: getSyllableColor(0) }}>1</span>
+            <span style={{ color: getSyllableColor(1) }}>2</span>
+            <span style={{ color: getSyllableColor(2) }}>3</span>
           </div>
           <span
             style={{
@@ -324,13 +325,13 @@ export function Home() {
             }}
           >
             <span>
-              <span style={{ color: '#1d4ed8' }}>TA</span>
-              <span style={{ color: '#dc2626' }}>TA</span>
+              <span style={{ color: getSyllableColor(0) }}>TA</span>
+              <span style={{ color: getSyllableColor(1) }}>TA</span>
             </span>
-            <span style={{ color: '#1d4ed8' }}>MA</span>
+            <span style={{ color: getSyllableColor(0) }}>MA</span>
             <span>
-              <span style={{ color: '#1d4ed8' }}>KO</span>
-              <span style={{ color: '#dc2626' }}>TA</span>
+              <span style={{ color: getSyllableColor(0) }}>KO</span>
+              <span style={{ color: getSyllableColor(1) }}>TA</span>
             </span>
           </div>
           <span

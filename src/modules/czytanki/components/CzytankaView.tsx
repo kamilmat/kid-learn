@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { playIntroOnce } from '@/shared/audio/playIntroOnce'
 import { colors, radii, tapTargets } from '@/app/theme'
-import { getSyllableColor } from '@/shared/ui/syllableColors'
+import { getSyllableCue } from '@/shared/ui/syllableColors'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { usePageVisibility } from '@/shared/engagement/usePageVisibility'
 import type { Czytanka, CzytankaGroup } from '../data/types'
@@ -217,7 +217,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
                       }}
                     >
                       {word.syllables.map((syl, i) => (
-                        <SyllableButton key={i} text={syl} color={getSyllableColor(i)} fontSize={fontSize}
+                        <SyllableButton key={i} text={syl} cue={getSyllableCue(i)} fontSize={fontSize}
                           onTap={() => tapSyllable(syl)} onLongPress={() => holdWord(s, w, word.syllables)} />
                       ))}
                     </span>
