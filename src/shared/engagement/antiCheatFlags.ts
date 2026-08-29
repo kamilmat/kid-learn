@@ -33,6 +33,9 @@ export function analyzeSession(events: SessionEvent[]): AntiCheatFlag[] {
   for (let i = 0; i < events.length; i++) {
     const ev = events[i]!
     if (ev.type !== 'answer') continue
+    // Poprawka (druga próba) mierzy czas od pokazania ekranu retry, nie od
+    // pytania — zawsze szybka, więc nie liczy się do anti-cheat.
+    if (ev.attempt === 2) continue
     if (ev.responseMs < FAST_CLICK_THRESHOLD_MS) {
       fastChainIdx.push(i)
       if (fastChainIdx.length >= FAST_CLICK_REQUIRED) {
@@ -54,6 +57,9 @@ export function analyzeSession(events: SessionEvent[]): AntiCheatFlag[] {
   for (let i = 0; i < events.length; i++) {
     const ev = events[i]!
     if (ev.type !== 'answer') continue
+    // Retry ma tylko 2 kafelki (poprawny + wybrany) — pozycja jest z innej
+    // puli niż pierwsze podejście i nie powinna wpadać w streak.
+    if (ev.attempt === 2) continue
     if (ev.chosenPosition === undefined) {
       lastPosition = null
       positionStreak = []
