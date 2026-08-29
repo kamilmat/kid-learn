@@ -27,6 +27,7 @@ import {
 } from '../data/levelFacts'
 import { NUMBERS_PRAISE_KEYS, type NumbersPraiseKey } from '../data/praise'
 import { exerciseTypeForFact } from './exerciseRouter'
+import { pickConcept } from './pickConcept'
 
 export type SessionStatus = 'asking' | 'feedback' | 'paused' | 'ended'
 
@@ -67,6 +68,7 @@ export function useNumbersSession({
   const startedAtRef = useRef<number>(0)
   const questionStartedAtRef = useRef<number>(0)
   const lastFactRef = useRef<MathFactId | null>(null)
+  const lastConceptRef = useRef<ConceptId | null>(null)
   const finishedRef = useRef(false)
   const pausedFromRef = useRef<'asking' | 'feedback'>('asking')
 
@@ -92,7 +94,24 @@ export function useNumbersSession({
     ) {
       pool = POCHODNIA_SUB_MAINTENANCE_FACTS.map((f) => f.id)
     } else {
-      pool = mainPoolIds
+      // Dwa kroki: najpierw KONCEPT (ważony, z prerekwizytami), potem fakt z jego
+      // puli. Płaska pula poziomu dawała proporcje wg liczby faktów — Płomyk
+      // wyrzucał `addsub-10` w ~70% pytań.
+      const store = useNumbers.getState()
+      const conceptId = pickConcept({
+        level,
+        concepts: store.concepts,
+        facts: store.facts,
+        lastConceptId: lastConceptRef.current,
+        rng,
+      })
+      const conceptPool = conceptId
+        ? excludeMaintenance(levelFacts)
+            .filter((f) => f.conceptId === conceptId)
+            .map((f) => f.id)
+        : []
+      pool = conceptPool.length > 0 ? conceptPool : mainPoolIds
+      if (conceptId) lastConceptRef.current = conceptId
     }
 
     if (pool.length === 0) return
@@ -123,6 +142,8 @@ export function useNumbersSession({
     startedAtRef.current = now()
     finishedRef.current = false
     lastPraiseRef.current = null
+    lastFactRef.current = null
+    lastConceptRef.current = null
     setPraiseKey(null)
     // Bulk init całej puli poziomu — jeden zapis persist zamiast N (Płomyk: 128).
     ensureFactsInitialized(levelFacts)

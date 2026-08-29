@@ -12,6 +12,11 @@ export type ConceptDef = {
   //   + age >= MIN_AGE_FOR_MASTERY_MS
   minFacts: number
   minStreakForMastery: number
+  /**
+   * Koncepty, które muszą być `mastered`, zanim ten trafi do puli losowania
+   * (`unlockedConcepts`). Brak pola = koncept wejściowy poziomu.
+   */
+  prerequisites?: ConceptId[]
 }
 
 export const CONCEPTS: Record<ConceptId, ConceptDef> = {
@@ -58,24 +63,28 @@ export const CONCEPTS: Record<ConceptId, ConceptDef> = {
     introAudioKey: 'intro-plomyk-bonds-10',
     masteryAudioKey: 'mastery-bonds-10',
     minFacts: 5, minStreakForMastery: 8,
+    prerequisites: ['plomyk-bonds-5'],
   },
   'plomyk-tenframe': {
     id: 'plomyk-tenframe', level: 'plomyk',
     introAudioKey: 'intro-plomyk-tenframe',
     masteryAudioKey: 'mastery-tenframe',
     minFacts: 5, minStreakForMastery: 8,
+    prerequisites: ['plomyk-bonds-10'],
   },
   'plomyk-addsub-10': {
     id: 'plomyk-addsub-10', level: 'plomyk',
     introAudioKey: 'intro-plomyk-addsub-10',
     masteryAudioKey: 'mastery-addsub-10',
     minFacts: 6, minStreakForMastery: 8,
+    prerequisites: ['plomyk-bonds-10'],
   },
   'plomyk-factfamily': {
     id: 'plomyk-factfamily', level: 'plomyk',
     introAudioKey: 'intro-plomyk-factfamily',
     masteryAudioKey: 'mastery-factfamily',
     minFacts: 4, minStreakForMastery: 8,
+    prerequisites: ['plomyk-tenframe', 'plomyk-addsub-10'],
   },
   // Ognik
   'ognik-doubles': {
@@ -89,18 +98,21 @@ export const CONCEPTS: Record<ConceptId, ConceptDef> = {
     introAudioKey: 'intro-ognik-neardoubles',
     masteryAudioKey: 'mastery-neardoubles',
     minFacts: 5, minStreakForMastery: 8,
+    prerequisites: ['ognik-doubles'],
   },
   'ognik-make10': {
     id: 'ognik-make10', level: 'ognik',
     introAudioKey: 'intro-ognik-make10',
     masteryAudioKey: 'mastery-make10',
     minFacts: 6, minStreakForMastery: 8,
+    prerequisites: ['ognik-neardoubles'],
   },
   'ognik-factfamily-20': {
     id: 'ognik-factfamily-20', level: 'ognik',
     introAudioKey: 'intro-ognik-factfamily-20',
     masteryAudioKey: 'mastery-factfamily',
     minFacts: 5, minStreakForMastery: 8,
+    prerequisites: ['ognik-make10'],
   },
   // Pochodnia
   'pochodnia-skipcount-2': {
@@ -114,30 +126,35 @@ export const CONCEPTS: Record<ConceptId, ConceptDef> = {
     introAudioKey: 'intro-pochodnia-skipcount-5',
     masteryAudioKey: 'mastery-skipcount-5',
     minFacts: 4, minStreakForMastery: 8,
+    prerequisites: ['pochodnia-skipcount-2'],
   },
   'pochodnia-skipcount-10': {
     id: 'pochodnia-skipcount-10', level: 'pochodnia',
     introAudioKey: 'intro-pochodnia-skipcount-10',
     masteryAudioKey: 'mastery-skipcount-10',
     minFacts: 4, minStreakForMastery: 8,
+    prerequisites: ['pochodnia-skipcount-2'],
   },
   'pochodnia-equalgroups': {
     id: 'pochodnia-equalgroups', level: 'pochodnia',
     introAudioKey: 'intro-pochodnia-equalgroups',
     masteryAudioKey: 'mastery-equalgroups',
     minFacts: 5, minStreakForMastery: 8,
+    prerequisites: ['pochodnia-skipcount-2'],
   },
   'pochodnia-arrays': {
     id: 'pochodnia-arrays', level: 'pochodnia',
     introAudioKey: 'intro-pochodnia-arrays',
     masteryAudioKey: 'mastery-arrays',
     minFacts: 4, minStreakForMastery: 8,
+    prerequisites: ['pochodnia-equalgroups'],
   },
   'pochodnia-commutativity': {
     id: 'pochodnia-commutativity', level: 'pochodnia',
     introAudioKey: 'intro-pochodnia-commutativity',
     masteryAudioKey: 'mastery-commutativity',
     minFacts: 4, minStreakForMastery: 8,
+    prerequisites: ['pochodnia-arrays'],
   },
 }
 
