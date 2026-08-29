@@ -21,9 +21,19 @@ describe('promptAudioKeys', () => {
   })
   it('każda litera puli Pochodni ma wpis w obu plikach źródłowych', () => {
     for (const letter of levelLetterPools.pochodnia) {
-      const [nameKey, phonKey] = promptAudioKeys(letter, 'both')
-      expect(names, letter).toHaveProperty(nameKey!)
-      expect(phonemes, letter).toHaveProperty(phonKey!)
+      const nameKey = promptAudioKeys(letter, 'name')[0]!
+      const phonKey = promptAudioKeys(letter, 'phoneme')[0]!
+      expect(names, letter).toHaveProperty(nameKey)
+      expect(phonemes, letter).toHaveProperty(phonKey)
     }
+  })
+})
+
+describe('promptAudioKeys — samogłoski w trybie both', () => {
+  it('nie dubluje bodźca, gdy nazwa litery = fonem', () => {
+    expect(promptAudioKeys('a', 'both')).toEqual(['phon-a'])
+    expect(promptAudioKeys('ę', 'both')).toEqual(['phon-e_'])
+    expect(promptAudioKeys('ó', 'both')).toEqual(['letter-name-o_', 'phon-o_'])
+    expect(promptAudioKeys('b', 'both')).toEqual(['letter-name-b', 'phon-b'])
   })
 })
