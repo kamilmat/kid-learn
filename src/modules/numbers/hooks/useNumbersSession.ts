@@ -104,6 +104,7 @@ export function useNumbersSession({
         facts: store.facts,
         lastConceptId: lastConceptRef.current,
         rng,
+        levelFacts,
       })
       const conceptPool = conceptId
         ? excludeMaintenance(levelFacts)
