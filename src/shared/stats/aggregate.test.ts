@@ -139,6 +139,47 @@ describe('toUnifiedSessions', () => {
     // I15: „nie wiem" (sesja czytania) nie wpada już do `wrong`.
     expect(combined.map((s) => s.wrong)).toEqual([0, 1, 1])
     expect(combined.map((s) => s.dontKnow)).toEqual([1, 0, 0])
+    expect(combined.map((s) => s.retries)).toEqual([0, 0, 0])
+  })
+
+  it('liczy poprawki (attempt 2) osobno w `retries`, poza questions/correct/wrong', () => {
+    const withRetry: SessionLog = {
+      id: 'letters-retry',
+      startedAt: T + 500_000,
+      endedAt: T + 560_000,
+      level: 'iskierka',
+      events: [
+        {
+          type: 'question-start',
+          ts: T + 501_000,
+          targetLetter: 'a',
+          distractors: ['m'],
+          positions: [0, 1],
+          style: 'print',
+          case: 'lower',
+        },
+        {
+          type: 'answer',
+          ts: T + 502_000,
+          outcome: 'wrong',
+          chosenLetter: 'm',
+          responseMs: 800,
+        },
+        {
+          type: 'answer',
+          ts: T + 503_000,
+          outcome: 'correct',
+          chosenLetter: 'a',
+          responseMs: 200,
+          attempt: 2,
+        },
+      ],
+    }
+    const [session] = toUnifiedSessions({ letters: [withRetry] })
+    expect(session!.questions).toBe(1)
+    expect(session!.correct).toBe(0)
+    expect(session!.wrong).toBe(1)
+    expect(session!.retries).toBe(1)
   })
 
   it('nie wymyśla pól question-start dla modułów bez liter', () => {

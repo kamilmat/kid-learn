@@ -161,6 +161,11 @@ const FEEDBACK_DURATION_BASE_MS: Record<FeedbackVariant, number> = {
   mastery: 7000,
 }
 
+// `scheduleRetry` kolejkuje "try-again" ZA wrong-feedback audio (AudioBus
+// FIFO), ale timer ekranu retry liczy tylko czas wrong-feedbacku — bez tego
+// bufora ekran retry potrafi wskoczyć zanim "spróbuj jeszcze raz" doigra.
+const TRY_AGAIN_CUE_MS = 1200
+
 const TEMPO_MULTIPLIERS: Record<CelebrationTempo, number> = {
   short: 0.7,
   medium: 1.0,
@@ -461,6 +466,10 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   // co indeksy pytań szły 0,0,1,2… i psuły alternację stylu w Ogniku.
   const generateNextQuestion = useCallback((num: number) => {
     const cfg = cfgRef.current
+    // Obrona: nowe pytanie zamyka wątek ewentualnej niedokończonej retry
+    // ścieżki (np. przerwanej pauzą/unmountem) — inaczej stale `true` mógłby
+    // pomylić późniejszy `resume()`/`skipFeedback()` co do tego, gdzie jesteśmy.
+    retryPendingRef.current = false
     const states = Object.values(statesRef.current)
     const target = pickNextLetter(
       states,
@@ -670,7 +679,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
         setCurrentQuestion(retryQuestionRef.current)
         questionStartedAtRef.current = cfgRef.current.now()
         setStatus('retry')
-      }, effectiveMs)
+      }, effectiveMs + TRY_AGAIN_CUE_MS)
     },
     [clearFeedbackTimer],
   )

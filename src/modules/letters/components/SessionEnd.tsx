@@ -92,9 +92,18 @@ function summarize(events: SessionEvent[]): {
       cur.total += 1
       stats.set(ev.targetLetter, cur)
     } else if (ev.type === 'answer' && lastTarget !== null) {
+      const target = lastTarget
+      // Pytanie skonsumowane — druga próba (poprawka po błędzie) nie ma
+      // własnego question-start, więc bez tego resetu przypisałaby się do
+      // tego samego targetu i podwoiłaby total.
+      lastTarget = null
+      // Poprawka po błędzie (attempt 2) NIE wpada do statystyk — inaczej
+      // błąd+poprawka liczyłyby się jako 2 pytania i litera wyglądałaby na
+      // "opanowaną" mimo pierwszej pomyłki.
+      if (ev.attempt === 2) continue
       counts[ev.outcome] += 1
       counts.total += 1
-      const cur = stats.get(lastTarget)
+      const cur = stats.get(target)
       if (cur && ev.outcome === 'correct') {
         cur.correct += 1
       }

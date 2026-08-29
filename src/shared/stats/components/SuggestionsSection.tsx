@@ -58,6 +58,9 @@ function avgResponseMs(events: SessionEvent[]): number {
   let count = 0
   for (const ev of events) {
     if (ev.type !== 'answer') continue
+    // Poprawka (attempt 2) mierzy czas od ekranu retry, nie od pytania —
+    // sztucznie zaniżałaby średnią.
+    if (ev.attempt === 2) continue
     sum += ev.responseMs
     count++
   }

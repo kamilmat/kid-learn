@@ -285,6 +285,32 @@ describe('useSession — druga próba po błędzie', () => {
     expect(result.current.currentQuestion!.tiles).toHaveLength(2)
   })
 
+  it('ekran retry czeka na cue "try-again" (nie tylko na koniec feedbacku błędu)', () => {
+    const { result } = renderHook(() => useSession(makeConfig()))
+
+    act(() => {
+      result.current.start()
+    })
+    const q = result.current.currentQuestion!
+    const wrongIdx = q.tiles.findIndex((t) => t !== q.targetLetter)
+    act(() => {
+      result.current.answer(q.tiles[wrongIdx]!, wrongIdx)
+    })
+
+    // Wrong-feedback (5500ms, tempo medium) samo w sobie NIE wystarcza —
+    // "try-again" jest kolejkowane ZA nim w AudioBus i potrzebuje własnego
+    // bufora (TRY_AGAIN_CUE_MS), inaczej retry wskoczyłby zanim cue doigra.
+    act(() => {
+      vi.advanceTimersByTime(5500)
+    })
+    expect(result.current.status).toBe('feedback')
+
+    act(() => {
+      vi.advanceTimersByTime(1200)
+    })
+    expect(result.current.status).toBe('retry')
+  })
+
   it('pauza w drugiej próbie wraca do retry i powtarza try-again', () => {
     const audioBus = makeAudioBus()
     const { result } = renderHook(() => useSession(makeConfig({ audioBus })))

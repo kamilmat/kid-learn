@@ -154,6 +154,39 @@ describe('analyzeSession', () => {
     expect(types).toContain('many-dont-know')
   })
 
+  it('poprawki (attempt 2) nie liczą się do fast-click', () => {
+    const events: SessionEvent[] = [
+      answer(100, 'wrong', 500, 0),
+      { ...answer(150, 'correct', 100, 1), attempt: 2 },
+      answer(200, 'correct', 500, 2),
+      answer(300, 'correct', 600, 3),
+      { ...answer(350, 'correct', 100, 0), attempt: 2 },
+    ]
+    // Tylko 3 odpowiedzi attempt=1 są szybkie (0, 2, 3) — poprawki (1, 4)
+    // pomijamy, więc łańcuch nie przerywa się na nich i wciąż flaguje.
+    const flags = analyzeSession(events)
+    const fast = flags.filter((f) => f.type === 'fast-click')
+    expect(fast).toHaveLength(1)
+    expect(fast[0]!.relatedEventIndices).toEqual([0, 2, 3])
+  })
+
+  it('poprawki (attempt 2) nie liczą się do same-position', () => {
+    const events: SessionEvent[] = [
+      answer(100, 'wrong', 1500, 0),
+      { ...answer(150, 'correct', 1500, 1), attempt: 2 },
+      answer(200, 'correct', 1500, 0),
+      answer(300, 'correct', 1500, 0),
+      answer(400, 'correct', 1500, 0),
+      answer(500, 'correct', 1500, 0),
+    ]
+    // 5 odpowiedzi attempt=1 w slot 0 (0, 2, 3, 4, 5) — poprawka w slot 1
+    // (attempt=2, idx 1) jest ignorowana zamiast zerwać streak.
+    const flags = analyzeSession(events)
+    const sp = flags.filter((f) => f.type === 'same-position')
+    expect(sp).toHaveLength(1)
+    expect(sp[0]!.relatedEventIndices).toEqual([0, 2, 3, 4, 5])
+  })
+
   it('answer bez chosenPosition nie zalicza do same-position streak', () => {
     const events: SessionEvent[] = [
       answer(100, 'correct', 1500, 0),
