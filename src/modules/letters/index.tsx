@@ -3,6 +3,7 @@
 // Sekcje 11 (poziomy) i 6 (pętla nauki) spec:
 //   - `/letters`              → ekran wyboru poziomu (LevelSelect)
 //   - `/letters/session/:level` → sesja nauki dla wybranego poziomu (SessionView)
+//   - `/letters/hard`         → „Trudne literki" (powtórka celowana z SRS)
 //
 // Onboarding głosowy (sekcja 5.2):
 //   - `letters-intro`     1× przy pierwszym wejściu na ekran wyboru
@@ -33,6 +34,12 @@ import { KidNav } from '@/shared/ui/KidNav'
 import type { LetterState } from '@/shared/srs/types'
 import type { SessionLog } from '@/shared/stats/types'
 
+import {
+  HARD_LETTERS_MIN_POOL,
+  configLevelForHard,
+  selectHardLetters,
+} from './data/hardLetters'
+import { HardLettersSession } from './components/HardLettersSession'
 import { LevelSelect } from './components/LevelSelect'
 import { SessionView } from './components/SessionView'
 import {
@@ -79,6 +86,10 @@ export function LettersModule({
         <Route
           path="session/:level"
           element={<LettersSession audioBus={audioBus} showNav={showNav} />}
+        />
+        <Route
+          path="hard"
+          element={<LettersHardRoute audioBus={audioBus} showNav={showNav} />}
         />
         <Route path="*" element={<Navigate to="." replace />} />
       </Routes>
@@ -153,9 +164,19 @@ function LettersIndex({ audioBus, showNav }: LettersIndexProps) {
     [navigate, setLastUsedLevel],
   )
 
+  const handleSelectHard = useCallback(() => {
+    // replace — ta sama konwencja co `handleSelect`: wyjście z sesji wraca
+    // replace'em na LevelSelect, więc push zostawiałby duplikat w historii.
+    navigate('hard', { replace: true })
+  }, [navigate])
+
   return (
     <Screen nav={showNav ? <KidNav /> : null}>
-      <LevelSelect onSelect={handleSelect} audioBus={audioBus} />
+      <LevelSelect
+        onSelect={handleSelect}
+        onSelectHard={handleSelectHard}
+        audioBus={audioBus}
+      />
     </Screen>
   )
 }
@@ -238,6 +259,81 @@ function LettersSession({ audioBus, showNav }: LettersSessionProps) {
       <SessionView
         level={level}
         settings={settings}
+        initialStates={initialStates}
+        onExit={handleExit}
+        onSessionComplete={handleSessionComplete}
+        audioBus={audioBus}
+        quitRef={quitRef}
+      />
+    </Screen>
+  )
+}
+
+// ---------- Hard — „Trudne literki" (powtórka celowana) ----------
+
+function LettersHardRoute({ audioBus, showNav }: LettersSessionProps) {
+  const navigate = useNavigate()
+
+  const settings = useSettings((s) => s.settings)
+  const applySessionResults = useLetters((s) => s.applySessionResults)
+  const letters = useLetters((s) => s.letters)
+  const sessions = useLetters((s) => s.sessions)
+  const seenIntros = useLetters((s) => s.seenIntros)
+  const lastUsedLevel = useLetters((s) => s.lastUsedLevel)
+
+  // Config poziomu liczymy raz — `sessions` rośnie po zapisie sesji i bez
+  // zamrożenia pula/kafelki zmieniałyby się w trakcie grania.
+  const configLevel = useMemo(
+    () => configLevelForHard(sessions),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+
+  // Wejście wprost z URL-a omija bramkę kafelka 🔁 — bez tego pusta pula
+  // dałaby sesję na jedno losowe pytanie z całego poziomu.
+  const hasEnoughHard = useRef(
+    selectHardLetters(letters, Date.now()).length >= HARD_LETTERS_MIN_POOL,
+  ).current
+
+  // Pełna pula poziomu — dystraktory muszą mieć swoje `LetterState`.
+  const initialStates = useMemo(() => {
+    const snapshot: LettersState = { letters, sessions, seenIntros, lastUsedLevel }
+    return selectLetterStateMap(snapshot, configLevel, settings)
+  }, [configLevel, lastUsedLevel, letters, seenIntros, sessions, settings])
+
+  const handleExit = useCallback(() => {
+    navigate('..', { state: { fromExit: true }, replace: true })
+  }, [navigate])
+
+  const quitRef = useRef<(() => void) | null>(null)
+  const handleNavBack = useCallback(() => {
+    quitRef.current?.()
+    navigate('..', { state: { fromExit: true }, replace: true })
+  }, [navigate])
+  const handleNavHome = useCallback(() => {
+    quitRef.current?.()
+    navigate('/')
+  }, [navigate])
+
+  const handleSessionComplete = useCallback(
+    (log: SessionLog, updatedStates: Record<string, LetterState>) => {
+      applySessionResults(updatedStates, log)
+    },
+    [applySessionResults],
+  )
+
+  if (!hasEnoughHard) {
+    return <Navigate to=".." replace />
+  }
+
+  return (
+    <Screen
+      nav={showNav ? <KidNav onBack={handleNavBack} onHome={handleNavHome} /> : null}
+    >
+      <HardLettersSession
+        settings={settings}
+        letters={letters}
+        sessions={sessions}
         initialStates={initialStates}
         onExit={handleExit}
         onSessionComplete={handleSessionComplete}

@@ -30,6 +30,7 @@ import { FeedbackOverlay } from './FeedbackOverlay'
 import { PauseOverlay } from '@/shared/ui/PauseOverlay'
 import { QuizCard } from './QuizCard'
 import { SessionEnd } from './SessionEnd'
+import type { SessionMode } from '@/shared/stats/types'
 import type {
   LetterState,
   SessionLog,
@@ -37,7 +38,17 @@ import type {
 } from '@/modules/letters/types'
 
 export type SessionViewProps = {
+  /** Poziom, z którego bierzemy pulę liter i config (case/style/kafelki). */
   level: Level
+  /**
+   * Czym była sesja w logu — domyślnie `level`. Tryby powtórki (`hard`)
+   * używają configu poziomu, ale muszą zapisać się w raporcie pod swoją nazwą.
+   */
+  mode?: SessionMode
+  /** Pula celów pytań (powtórka). Brak → cała pula poziomu. */
+  targetPool?: string[]
+  /** Nadpisanie `settings.questionsPerSession` (powtórka ma tyle pytań ile liter). */
+  sessionLength?: number
   /** Override settings (np. z store). Domyślnie defaults. */
   settings?: Settings
   /** Inicjalne LetterState'y z lettersStore. */
@@ -68,6 +79,9 @@ function resolveStyleMode(settings: Settings, level: Level): StyleMode {
 
 export function SessionView({
   level,
+  mode,
+  targetPool,
+  sessionLength,
   settings = defaultSettings,
   initialStates,
   onExit,
@@ -81,10 +95,13 @@ export function SessionView({
   const styleMode = resolveStyleMode(settings, level)
   const promptMode = getEffectivePromptMode(settings, level)
 
+  const effectiveSessionLength = sessionLength ?? settings.questionsPerSession
+
   const session = useSession({
-    level,
+    level: mode ?? level,
     activeLetters,
-    sessionLength: settings.questionsPerSession,
+    ...(targetPool !== undefined ? { targetPool } : {}),
+    sessionLength: effectiveSessionLength,
     timeLimit: getEffectiveTimeLimit(settings, level),
     showCountdownBar: getEffectiveShowCountdownBar(settings, level),
     caseMode,
@@ -171,7 +188,7 @@ export function SessionView({
       <SessionEnd
         iskierki={session.iskierki}
         totalQuestions={session.totalQuestions}
-        sessionLength={settings.questionsPerSession}
+        sessionLength={effectiveSessionLength}
         events={session.sessionEvents}
         onRestart={session.start}
         onExit={onExit}
