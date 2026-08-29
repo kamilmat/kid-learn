@@ -11,6 +11,7 @@ import { CzytankaTile, GROUP_LEVEL } from './CzytankaTile'
 
 export function CzytankaList({ audioBus, onOpen }: { audioBus: Pick<AudioBus, 'play' | 'stop'>; onOpen: (id: string) => void }) {
   const openedIds = useCzytanki((s) => s.openedIds)
+  const readCounts = useCzytanki((s) => s.readCounts)
   const lastOpenedId = useCzytanki((s) => s.lastOpenedId)
   const hasSeenIntro = useCzytanki((s) => s.hasSeenIntro)
   const markIntroSeen = useCzytanki((s) => s.markIntroSeen)
@@ -48,7 +49,7 @@ export function CzytankaList({ audioBus, onOpen }: { audioBus: Pick<AudioBus, 'p
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 14 }}>
               {getCzytankiByGroup(g).map((c) => (
-                <CzytankaTile key={c.id} czytanka={c} opened={openedIds.includes(c.id)} onOpen={onOpen} />
+                <CzytankaTile key={c.id} czytanka={c} opened={openedIds.includes(c.id)} readCount={readCounts[c.id] ?? 0} onOpen={onOpen} />
               ))}
             </div>
           </section>

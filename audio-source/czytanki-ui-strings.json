@@ -12,5 +12,8 @@
   "czytanki-ui-echo-on": "Będę czekać, aż powtórzysz.",
   "czytanki-ui-echo-off": "Czytam bez przerw.",
   "czytanki-ui-slow": "Czytam wolniej.",
-  "czytanki-ui-normal": "Czytam normalnie."
+  "czytanki-ui-normal": "Czytam normalnie.",
+
+  "czytanki-ui-merge-on": "Teraz sylaby są razem.",
+  "czytanki-ui-merge-off": "Teraz widzisz sylaby osobno."
 }

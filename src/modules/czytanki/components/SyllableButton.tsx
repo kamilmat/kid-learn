@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type { SyllableCue } from '@/shared/ui/syllableColors'
+import { colors } from '@/app/theme'
 import { useSyllablePress } from '../hooks/useSyllablePress'
 import './scene.css'
 
@@ -8,11 +9,17 @@ type Props = {
   text: string
   cue: SyllableCue
   fontSize: number
+  /**
+   * Tryb scalony: sylaba gubi własny kolor i podkreślenie, żeby słowo czytało
+   * się jako całość. Warstwa czysto wizualna — tap i long-press działają jak
+   * zawsze (dziecko wciąż może dotknąć pojedynczej sylaby).
+   */
+  merged?: boolean
   onTap: () => void
   onLongPress: () => void
 }
 
-export function SyllableButton({ text, cue, fontSize, onTap, onLongPress }: Props) {
+export function SyllableButton({ text, cue, fontSize, merged = false, onTap, onLongPress }: Props) {
   const [bounce, setBounce] = useState(0)
   const tapSize = Math.max(56, Math.min(60, Math.round(fontSize * 1.5)))
   const handleTap = useCallback(() => {
@@ -51,8 +58,8 @@ export function SyllableButton({ text, cue, fontSize, onTap, onLongPress }: Prop
         fontWeight: 700,
         fontSize,
         lineHeight: 1.1,
-        color: cue.color,
-        borderBottom: `3px ${cue.underline} ${cue.color}`,
+        color: merged ? colors.text : cue.color,
+        ...(merged ? {} : { borderBottom: `3px ${cue.underline} ${cue.color}` }),
         borderRadius: 12,
         background: 'transparent',
         transition: 'background 150ms',

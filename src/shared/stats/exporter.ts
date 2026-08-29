@@ -77,6 +77,8 @@ export type CzytankiSnapshot = {
   openedIds: string[]
   wordTaps?: Record<string, Record<string, number>>
   timeMs?: Record<string, number>
+  /** id czytanki → ile razy przeczytana (wejścia na ekran). */
+  readCounts?: Record<string, number>
 }
 
 
@@ -358,6 +360,13 @@ export function exportReportToMarkdown(
       const inGroup = getCzytankiByGroup(g)
       const n = inGroup.filter((c) => czytankiSnapshot.openedIds.includes(c.id)).length
       lines.push(`  - Grupa ${g}: ${n}/${inGroup.length}`)
+    }
+    // Kontrakt: te dwie linie muszą mówić to samo co sekcja Czytanki w UI raportu.
+    const readCounts = czytankiSnapshot.readCounts ?? {}
+    const repeats = CZYTANKI.filter((c) => (readCounts[c.id] ?? 0) >= 2)
+    lines.push(`- **Przeczytane ≥2×**: ${repeats.length}`)
+    if (repeats.length > 0) {
+      lines.push(`  - ${repeats.map((c) => `${c.emoji} ${c.title}`).join(', ')}`)
     }
     const topTaps = topTappedWords(czytankiSnapshot.wordTaps ?? {})
     if (topTaps.length > 0) {
