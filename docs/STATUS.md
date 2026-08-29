@@ -36,9 +36,9 @@ Punkt powrotu sprzed fali: tag `v4.1-fala-1` (Fala 1), `v4.0-po-cr` (przed falam
 - **Odpalenie martwych `mastery-*`** (C-14) — `data/masteryAudio.ts` mapuje 20 `ConceptId` → 19 kluczy; grane w `persistResults` przed `tree-grow`.
 
 **Czytanki (moduł 4)**
-- **Mini-pytanie o rozumienie** (#17) — `Comprehension { question, options: [3× emoji], answer }` w 59 z 60 czytanek. ❓ (72 px) widoczne po zakończeniu ▶ **albo** dotknięciu ≥60% sylab. Overlay `ComprehensionQuestion` (`zIndex: 1500`, pod `PauseOverlay`): auto-play `czytanki-q-intro` + `cz-q-NN`, 🔊 do powtórzenia, ✋ do wyjścia. Poprawnie → 👏 + `czytanki-q-praise`; źle → `czytanki-q-again` i zły kafelek znika (zostają 2, w tym poprawny). Bez punktów i SRS — tylko `answeredQuestionIds` dla ✔.
+- **Mini-pytanie o rozumienie** (#17) — `Comprehension { question, options: [3× emoji], answer }` w 59 z 60 czytanek. ❓ (72 px) widoczne po zakończeniu ▶ **albo** dotknięciu ≥60% sylab. Overlay `ComprehensionQuestion` (`zIndex: 1500`, pod `PauseOverlay`): auto-play `czytanki-q-intro` + `cz-q-NN`, 🔊 do powtórzenia, ✋ do wyjścia. Poprawnie → 👏 + `czytanki-q-praise`; źle → `czytanki-q-again` + powtórka pytania, zły kafelek znika (zostają 2). Druga pomyłka → `czytanki-q-miss` + krótkie podświetlenie poprawnego, bez ✔. Bez punktów i SRS — `answeredQuestionIds` dla ✔ (tylko trafione za 1./2. razem) + `comprehensionResults: Record<id,'first'|'second'|'miss'>` → raport rodzica („Pytania o rozumienie: X za 1. razem, Y za 2., Z nietrafione") i eksport MD. ✋ (`czytanki-q-close`) widoczne także w trakcie pochwały.
 - **„Scal sylaby"** (#19) — przycisk `KO|TA` ↔ `KOTA` obok ▶; `settings.czytanki.mergedSyllables` (globalne). Scalone: odstęp 0, jeden kolor, bez podkreśleń; obwolutka słowa zostaje, tap/long-press bez zmian. Auto-fit przelicza się po zmianie trybu.
-- **Licznik przeczytań** (#19) — `readCounts` + `lastCountedAt` z guardem 60 s. Kafelek: ⭐ przy 1, ⭐ + 2-3 kropki przy ≥2 (kropki, nie cyfra — zasada no-text). Raport: „Przeczytane ≥2×: N" + lista tytułów, także w eksporcie MD.
+- **Licznik przeczytań** (#19) — `readCounts` + `lastCountedAt` z guardem 60 s; od CR fali zaliczane przez `markRead` dopiero z tym samym dowodem co ❓ (▶ do końca albo ≥60% sylab), `markOpened` na mouncie ustawia tylko `openedIds` (`timeMs` liczy się od mountu). Kafelek: ⭐ przy 1, ⭐ + 2-3 kropki przy ≥2 (kropki, nie cyfra — zasada no-text). Raport: „Przeczytane ≥2×: N" + lista tytułów, także w eksporcie MD.
 
 **Raport rodzica** (#12)
 - `NextStepCard` na samej górze: jedno zdanie akcji + linijka „dlaczego"; zawsze dokładnie jedna sugestia (fallback gdy brak danych).
@@ -61,11 +61,20 @@ Punkt powrotu sprzed fali: tag `v4.1-fala-1` (Fala 1), `v4.0-po-cr` (przed falam
 ### Liczby po implementacji
 
 - `pnpm tsc -b` — czysto.
-- `pnpm vitest run --dir src` — **926/926** zielone (114 plików).
-- `pnpm test --run` — **1045/1045** zielone (118 plików: 926 src + 119 scripts). `vitest.config.ts` wyklucza teraz `**/.claude/**` (bez tego zbierał testy ze starych worktree'ów agentów).
+- `pnpm vitest run --dir src` — **943/943** zielone (po CR fali).
+- `pnpm test --run` — **1062/1062** zielone (943 src + 119 scripts). `vitest.config.ts` wyklucza teraz `**/.claude/**` (bez tego zbierał testy ze starych worktree'ów agentów).
 - `pnpm build` — OK, `669 kB` JS, 1411 precache entries (16491,43 KiB).
-- `pnpm audio:check` — **1378/1378** kluczy źródłowych. `ls public/audio/*.mp3 | wc -l` = **1385** (te same 7 nadwyżkowych co po Fali 1: `correction-prefix` używany w runtime + 6 osieroconych).
+- `pnpm audio:check` — **1380/1380** kluczy źródłowych (po CR: +`czytanki-q-miss`, `czytanki-q-close`). `ls public/audio/*.mp3 | wc -l` = **1387** (te same 7 nadwyżkowych co po Fali 1: `correction-prefix` używany w runtime + 6 osieroconych).
 - **+77 nowych kluczy audio**: 59 `cz-q-*` (Agnieszka/azure, generowane) + 3 `czytanki-q-*` + 2 `czytanki-ui-merge-*` (Agnieszka/azure) + 6 liter (`letters-hard-intro/-empty`, `letters-daily-intro/-end/-done`, `home-daily-letter`) + 1 `letters-reverse-prompt` + 2 `reading-level-up/-down` + 1 `reading-meaning-prompt` + 3 `count-objects-*` (Zofia/edge).
+
+### CR całej fali (3 obszary, po T16) — poprawione
+
+- **Litery:** biały ekran w Trudnych literkach/Literce dnia (50 sesji `hard`/`daily` wypychało poziomowe z historii → `configLevelForHard` spadał na Iskierkę, `targetPool` z Pochodni bez przecięcia z `activeLetters` → `pickNextItem` rzucał). Teraz `targetPool ∩ activeLetters` (fallback: cała pula), `configLevelForHard(sessions, lastUsedLevel)`, zamrożona `dailyLetter` walidowana względem puli, `src/app/ErrorBoundary.tsx` (↻/🏠, bez tekstu) wokół `Routes`. Wariant odwrotny: dźwięk celu pomijany TYLKO gdy faktycznie będzie retry (`willRetry`), nie przy `attempt 2`/`dontKnow`/`timeout`. ⬅ z Literki dnia = 🏠. Pasek Literki dnia na Home przelicza `dayKey` co 60 s + na `visibilitychange`/`focus`.
+- **Czytanie:** `previousRatios` w sugestii poziomu pomija `attempt: 2` (wcześniej ⬇ było praktycznie nieosiągalne przy włączonej drugiej próbie).
+- **Czytanki:** ⭐/`readCounts` za dowód przeczytania, nie za wejście; druga pomyłka w ❓ nie jest chwalona; `comprehensionResults` w raporcie.
+- **Cyferki:** odliczanie recountu w `count-objects` gaśnie po pauzie/🤷 (prop `active`); pas korekty 28% w przepływie tylko dla ćwiczeń z reveal (`subitize-flash`, `ten-frame-fill`), reszta ma pełnoekranowy overlay + scrim; `restrictChoicesTo` trzymane też w `feedback` po 2. próbie (kafelki nie skaczą 2→4).
+- **Raport:** `stuck-concept` wymaga `lastSeenAt` ≤14 dni i ≥5 ostatnich wyników z <50% poprawnych; memoizacja flag.
+- **Odłożone z CR:** czterolinia w `ReverseQuizCard` (litera-cel gołym spanem), pomiar wysokości Home na iPadzie w landscape (arytmetyka na styk, ~6-10 px), `revealValue` dla ćwiczeń konkretnych (dziś tylko 2 z 15).
 
 ### Odstępstwa od speca / planu (świadome, zaakceptowane w review)
 
