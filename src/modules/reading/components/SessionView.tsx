@@ -18,6 +18,7 @@ import { SyllableMatchExercise } from './exercises/SyllableMatchExercise'
 import { WordAssemblyExercise } from './exercises/WordAssemblyExercise'
 import { WordChoiceExercise } from './exercises/WordChoiceExercise'
 import { SyllableFillExercise } from './exercises/SyllableFillExercise'
+import { WordMeaningExercise } from './exercises/WordMeaningExercise'
 import { FeedbackOverlay } from './FeedbackOverlay'
 import { PauseOverlay } from '@/shared/ui/PauseOverlay'
 import { SessionEnd } from './SessionEnd'
@@ -343,6 +344,15 @@ export function SessionView({
             distractors={q.distractors}
             onComplete={() => session.submitAnswer(q.targetWord)}
             onDropError={session.recordDropError}
+            onDontKnow={session.submitDontKnow}
+            onAudioRepeat={session.repeatAudio}
+          />
+        )}
+        {q && q.type === 'word-meaning' && (
+          <WordMeaningExercise
+            targetWord={q.targetWord}
+            choices={q.choices}
+            onAnswer={session.submitAnswer}
             onDontKnow={session.submitDontKnow}
             onAudioRepeat={session.repeatAudio}
           />
