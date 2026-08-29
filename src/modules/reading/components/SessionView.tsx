@@ -70,6 +70,10 @@ export function SessionView({
   const session = useReadingSession({ level, audioBus, settings })
   const seenVariants = useReading(s => s.seenSceneVariants)
   const markSceneSeen = useReading(s => s.markSceneSeen)
+  // Box celu — rusztowanie koloru sylab gaśnie wraz z opanowaniem (Task 6).
+  const targetWordText =
+    session.currentQuestion?.type === 'syllable-fill' ? session.currentQuestion.targetWord : null
+  const targetWordBox = useReading(s => (targetWordText ? s.words[`word-${targetWordText}`]?.box : undefined))
   const [activeScene, setActiveScene] = useState<Scene | null>(null)
   const [activeWildCelebration, setActiveWildCelebration] = useState<WildCelebrationDef | null>(null)
   const iskra = useIskraReactions()
@@ -359,6 +363,7 @@ export function SessionView({
             missingPosition={q.missingPosition}
             missingSyllable={q.missingSyllable}
             choices={q.choices}
+            box={targetWordBox}
             onAnswer={session.submitAnswer}
             onDontKnow={session.submitDontKnow}
             onAudioRepeat={session.repeatAudio}

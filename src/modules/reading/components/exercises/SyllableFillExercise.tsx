@@ -9,7 +9,8 @@
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { SyllableTile } from '../SyllableTile'
 import type { SyllableFillVariant } from '../../types'
-import { getSyllableCue } from '@/shared/ui/syllableColors'
+import { syllableColorForBox } from '@/shared/ui/syllableColors'
+import type { Box } from '@/shared/srs/types'
 
 export type SyllableFillExerciseProps = {
   targetWord: string
@@ -17,6 +18,7 @@ export type SyllableFillExerciseProps = {
   missingPosition: SyllableFillVariant
   missingSyllable: string
   choices: string[]
+  box?: Box | undefined
   onAnswer: (syllable: string) => void
   onDontKnow: () => void
   onAudioRepeat: () => void
@@ -102,6 +104,7 @@ export function SyllableFillExercise({
   visibleSyllables,
   missingPosition,
   choices,
+  box,
   onAnswer,
   onDontKnow,
   onAudioRepeat,
@@ -152,11 +155,10 @@ export function SyllableFillExercise({
               </div>
             )
           }
-          const cue = getSyllableCue(i)
           return (
             <div
               key={`syl-${i}-${syl}`}
-              style={{ ...syllableBoxStyle, color: cue.color, borderBottom: `3px ${cue.underline} ${cue.color}` }}
+              style={{ ...syllableBoxStyle, ...syllableColorForBox(i, box) }}
             >
               {syl}
             </div>
