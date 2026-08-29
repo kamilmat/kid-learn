@@ -104,4 +104,21 @@ describe('configLevelForHard', () => {
     expect(configLevelForHard([log('hard'), log('daily')])).toBe('iskierka')
     expect(configLevelForHard([log('plomyk'), log('hard')])).toBe('plomyk')
   })
+
+  it('bierze lastUsedLevel, gdy historię wypełniły same hard/daily', () => {
+    // Repro białego ekranu: 50 sesji powtórkowych wypycha z okna wszystkie
+    // wpisy poziomowe, więc sama historia dałaby `iskierka` (6 liter), a
+    // „Trudne literki" celują w ż/ź/ń z Pochodni.
+    const history = Array.from({ length: 50 }, (_, i) =>
+      i % 2 === 0 ? log('hard') : log('daily'),
+    )
+    expect(configLevelForHard(history)).toBe('iskierka')
+    expect(configLevelForHard(history, 'pochodnia')).toBe('pochodnia')
+  })
+
+  it('bierze wyższy z historii i lastUsedLevel', () => {
+    expect(configLevelForHard([log('ognik')], 'iskierka')).toBe('ognik')
+    expect(configLevelForHard([log('iskierka')], 'ognik')).toBe('ognik')
+    expect(configLevelForHard([], null)).toBe('iskierka')
+  })
 })

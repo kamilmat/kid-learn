@@ -289,7 +289,7 @@ function LettersHardRoute({ audioBus, showNav }: LettersSessionProps) {
   // Config poziomu liczymy raz — `sessions` rośnie po zapisie sesji i bez
   // zamrożenia pula/kafelki zmieniałyby się w trakcie grania.
   const configLevel = useMemo(
-    () => configLevelForHard(sessions),
+    () => configLevelForHard(sessions, lastUsedLevel),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )
@@ -366,7 +366,7 @@ function LettersDailyRoute({ audioBus, showNav }: LettersSessionProps) {
 
   // Config poziomu i literka mrożone na wejściu — patrz `LettersHardRoute`.
   const configLevel = useMemo(
-    () => configLevelForHard(sessions),
+    () => configLevelForHard(sessions, lastUsedLevel),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )
@@ -378,14 +378,14 @@ function LettersDailyRoute({ audioBus, showNav }: LettersSessionProps) {
   }, [configLevel, lastUsedLevel, letters, seenIntros, sessions, settings])
 
   const quitRef = useRef<(() => void) | null>(null)
-  const handleNavBack = useCallback(() => {
-    quitRef.current?.()
-    navigate('..', { state: { fromExit: true }, replace: true })
-  }, [navigate])
+  // Mikrosesja nie ma własnego ekranu wyboru, a `quit()` sam woła `onDone(null)`
+  // → nawigację na `/`. Wstecz robi więc dokładnie to co domek: jedno przejście
+  // na Home. Wcześniejsze `navigate('..')` doklejało drugą nawigację po flushu.
   const handleNavHome = useCallback(() => {
     quitRef.current?.()
     navigate('/')
   }, [navigate])
+  const handleNavBack = handleNavHome
 
   const handleSessionComplete = useCallback(
     (log: SessionLog, updatedStates: Record<string, LetterState>) => {
@@ -412,6 +412,7 @@ function LettersDailyRoute({ audioBus, showNav }: LettersSessionProps) {
         settings={settings}
         letters={letters}
         sessions={sessions}
+        lastUsedLevel={lastUsedLevel}
         dailyLetter={initialDailyLetter}
         initialStates={initialStates}
         onPickLetter={setDailyLetter}

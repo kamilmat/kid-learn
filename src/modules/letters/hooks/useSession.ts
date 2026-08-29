@@ -522,8 +522,15 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     retryPendingRef.current = false
     const states = Object.values(statesRef.current)
     // Cel z puli powtórki (jeśli podana), dystraktory dalej z pełnej puli poziomu.
-    const pool =
+    // Przecięcie z `activeLetters` jest obowiązkowe: `targetPool` („Trudne
+    // literki", „Literka dnia") liczy się z CAŁEGO postępu, a config poziomu może
+    // być niższy — bez przecięcia `pickNextLetter` zwracał literę spoza puli,
+    // dla której nie ma `LetterState`, i sesja padała białym ekranem.
+    const requested =
       cfg.targetPool && cfg.targetPool.length > 0 ? cfg.targetPool : cfg.activeLetters
+    const active = new Set(cfg.activeLetters)
+    const intersected = requested.filter((l) => active.has(l))
+    const pool = intersected.length > 0 ? intersected : cfg.activeLetters
     const target = pickNextLetter(
       states,
       pool,
@@ -657,18 +664,21 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       chosenLetter: string | undefined,
       newStreak: number,
       attempt: 1 | 2 = 1,
-      isReverse = false,
+      willRetry = false,
     ): number => {
       const cfg = cfgRef.current
       let extraDurationMs = 0
-      // W wariancie odwrotnym dźwięk litery JEST odpowiedzią — zagranie go w
-      // korekcie rozwiązywałoby za dziecko drugą próbę (2 kafelki, wystarczy
-      // dopasować to, co przed chwilą zabrzmiało). Zostaje sama fraza korekty
-      // / wsparcia. `FEEDBACK_DURATION_BASE_MS` zostaje bez zmian — jest
-      // stałą per wariant, nie sumą kolejki, więc krótsza kolejka oznacza
-      // tylko odrobinę ciszy przed przejściem dalej (bezpieczny kierunek).
+      // Dźwięk celu pomijamy TYLKO gdy zaraz będzie druga próba wariantu
+      // odwrotnego — tam dźwięk litery JEST odpowiedzią i zagranie go
+      // rozwiązywałoby retry za dziecko (2 kafelki, wystarczy dopasować to, co
+      // przed chwilą zabrzmiało). Gdy retry nie będzie (druga próba, „nie
+      // wiem", timeout, `secondAttempt` off), dziecko MUSI usłyszeć literę —
+      // inaczej wychodzi z pytania bez poprawnej odpowiedzi.
+      // `FEEDBACK_DURATION_BASE_MS` zostaje bez zmian — jest stałą per wariant,
+      // nie sumą kolejki, więc krótsza kolejka to tylko odrobina ciszy przed
+      // przejściem dalej (bezpieczny kierunek).
       const playTargetPrompt = () => {
-        if (isReverse) return
+        if (willRetry) return
         for (const key of promptAudioKeys(target, cfg.promptMode)) {
           void cfg.audioBus.play(key)
         }
@@ -878,27 +888,29 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
         setCurrentStreak(newStreak)
       }
 
+      // Pierwsza pomyłka z wyborem kafelka → druga próba zamiast przejścia
+      // dalej. „Nie wiem"/timeout retry NIE dostają: dziecko nie postawiło
+      // hipotezy, więc nie ma czego korygować. Liczone PRZED audio, bo tylko
+      // zapowiedziana retry uzasadnia przemilczenie dźwięku celu.
+      const goesToRetry =
+        outcome === 'wrong' &&
+        attempt === 1 &&
+        cfg.secondAttempt &&
+        chosenLetter !== undefined
+
       const extraDurationMs = playFeedbackAudio(
         variant,
         target,
         chosenLetter,
         newStreak,
         attempt,
-        q.kind === 'letter-to-sound',
+        goesToRetry && q.kind === 'letter-to-sound',
       )
       const effectiveMs = durationMs + extraDurationMs
       lastFeedbackEffectiveMsRef.current = effectiveMs
       lastFeedbackAttemptRef.current = attempt
 
-      // Pierwsza pomyłka z wyborem kafelka → druga próba zamiast przejścia
-      // dalej. „Nie wiem"/timeout retry NIE dostają: dziecko nie postawiło
-      // hipotezy, więc nie ma czego korygować.
-      if (
-        outcome === 'wrong' &&
-        attempt === 1 &&
-        cfg.secondAttempt &&
-        chosenLetter !== undefined
-      ) {
+      if (goesToRetry && chosenLetter !== undefined) {
         scheduleRetry(q, chosenLetter, effectiveMs)
         return
       }

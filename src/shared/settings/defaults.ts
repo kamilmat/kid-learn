@@ -15,8 +15,8 @@ import type {
   WordAnimations,
 } from './types'
 
-// Moduł 1: default `both` (nazwa → fonem). Sama nazwa nie wystarcza do scalania
-// głosek, sam fonem bywa nieidentyfikowalny — para uczy obu (Piasta & Wagner 2010).
+// Moduł 1: default `phoneme` — „jak się czyta" (klucze `letter-*`, nagrania
+// rodzica). Nazwy liter (`name`/`both`) zostają opcją w ustawieniach.
 export const LETTERS_DEFAULTS: LettersSettings = {
   promptMode: 'phoneme',
   promptModeByLevel: {},

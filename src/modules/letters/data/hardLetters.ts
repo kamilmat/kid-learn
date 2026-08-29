@@ -39,9 +39,17 @@ export function selectHardLetters(
  * Poziom, z którego bierzemy config (case/style/tiles/dystraktory) dla powtórki:
  * najwyższy, na którym dziecko faktycznie grało. Tryby bez poziomu (`hard`,
  * `daily`) nie są w `LEVEL_ORDER`, więc `indexOf` daje -1 i je pomija.
+ *
+ * `lastUsedLevel` ze store'u jest drugim źródłem, bo historia jest przycięta do
+ * `MAX_SESSION_HISTORY` — seria sesji `hard`/`daily` wypycha z niej wpisy
+ * poziomowe i sam ranking historii spadłby do `iskierka` (6 liter), podczas gdy
+ * `selectHardLetters` dalej podaje litery z Pochodni. Bierzemy wyższy z dwóch.
  */
-export function configLevelForHard(sessions: readonly SessionLog[]): Level {
-  let best = -1
+export function configLevelForHard(
+  sessions: readonly SessionLog[],
+  lastUsedLevel?: Level | null,
+): Level {
+  let best = lastUsedLevel ? LEVEL_ORDER.indexOf(lastUsedLevel) : -1
   for (const s of sessions) {
     const i = LEVEL_ORDER.indexOf(s.level as Level)
     if (i > best) best = i

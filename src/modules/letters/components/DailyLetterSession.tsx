@@ -9,7 +9,7 @@ import type { RefObject } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import { getActiveLetterPool } from '@/shared/settings/defaults'
-import type { Settings } from '@/shared/settings/types'
+import type { Level, Settings } from '@/shared/settings/types'
 import type { SessionLog as StatsSessionLog } from '@/shared/stats/types'
 import { colors, radii } from '@/app/theme'
 import { ASSOCIATIONS } from '@/modules/letters/data/associations'
@@ -41,6 +41,8 @@ export type DailyLetterSessionProps = {
   letters: Record<string, LetterState>
   /** Historia sesji — z niej bierzemy poziom, z którego kopiujemy config. */
   sessions: readonly StatsSessionLog[]
+  /** Ostatnio wybrany poziom — ratunek, gdy historia wypadła z okna 50 sesji. */
+  lastUsedLevel?: Level | null
   /** Zapamiętana literka dnia (może być z wczoraj albo pusta). */
   dailyLetter: DailyLetter | null
   /** Inicjalne state'y dla PEŁNEJ puli poziomu (z `selectLetterStateMap`). */
@@ -66,6 +68,7 @@ export function DailyLetterSession({
   settings,
   letters,
   sessions,
+  lastUsedLevel = null,
   dailyLetter,
   initialStates,
   onPickLetter,
@@ -82,15 +85,24 @@ export function DailyLetterSession({
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
-  const level = useMemo(() => configLevelForHard(sessions), [sessions])
+  const level = useMemo(
+    () => configLevelForHard(sessions, lastUsedLevel),
+    [sessions, lastUsedLevel],
+  )
 
   // Literkę czytamy RAZ, w inicjalizatorze — zmiana daty (albo zapis SRS)
   // w trakcie mikrosesji nie może przelosować litery pod dzieckiem.
   const [today] = useState(() => {
     const ts = nowRef.current()
     const key = dayKey(ts)
-    if (dailyLetter && dailyLetter.dayKey === key) return dailyLetter
-    const pool = getActiveLetterPool(settings, configLevelForHard(sessions))
+    const pool = getActiveLetterPool(settings, configLevelForHard(sessions, lastUsedLevel))
+    // Zamrożona literka musi jeszcze BYĆ w puli: rodzic mógł w międzyczasie
+    // zmienić override puli albo poziom spadł. Litera spoza puli nie ma
+    // `LetterState` w `initialStates` → sesja wysypywałaby się białym ekranem.
+    // Wychodzimy wtedy na Home BEZ zaliczania doby (`today === null`).
+    if (dailyLetter && dailyLetter.dayKey === key) {
+      return pool.includes(dailyLetter.letter) ? dailyLetter : null
+    }
     const picked = pickDailyLetter(letters, pool, ts)
     return picked ? { letter: picked, dayKey: key } : null
   })
