@@ -21,13 +21,13 @@ import type {
   DefaultLevelSetting,
   HumorMode,
   Level,
-  SessionLength,
+  PromptMode,
   StyleMode,
   TilesPerQuestion,
   TimeLimit,
   WordAnimations,
 } from '@/shared/settings/types'
-import { DEFAULT_QUESTIONS_PER_SESSION as DEFAULT_READING_QUESTIONS_PER_SESSION } from '@/modules/reading/constants'
+
 import { ActiveLettersEditor } from './ActiveLettersEditor'
 import { MathGate } from './MathGate'
 
@@ -172,7 +172,17 @@ const STYLE_OPTIONS: StyleMode[] = [
   'oba-na-kafelku',
 ]
 
-const SESSION_LENGTH_OPTIONS: SessionLength[] = [5, 10, 15]
+const PROMPT_MODE_LABELS: Record<PromptMode, string> = {
+  phoneme: 'Sam dźwięk (b)',
+  name: 'Sama nazwa (be)',
+  both: 'Nazwa i dźwięk (be… b)',
+}
+const PROMPT_MODE_OPTIONS: PromptMode[] = ['phoneme', 'name', 'both']
+// Sentinel w selectach per poziom — pusty string znaczy "brak override, bierz
+// wartość globalną". Jedyna wartość, której nie da się pomylić z PromptMode.
+const PROMPT_MODE_INHERIT = ''
+
+const SESSION_LENGTH_OPTIONS = [5, 8, 12] as const
 const TIME_LIMIT_OPTIONS: TimeLimit[] = ['off', 10, 15, 20, 25]
 const TILES_PER_QUESTION_OPTIONS: TilesPerQuestion[] = [3, 4, 5, 6, 8, 10]
 const READING_QUESTIONS_PER_SESSION_OPTIONS = [6, 8, 10] as const
@@ -419,9 +429,92 @@ export function SettingsScreen({
         })}
       </section>
 
-      {/* Długość sesji */}
+      {/* Prompt litery (moduł 1) — fonem / nazwa / oba */}
+      <section style={sectionStyle} data-testid="section-prompt-mode">
+        <div style={labelStyle}>Jak czytamy literę</div>
+        <div style={{ fontSize: 13, color: '#6b7280' }}>
+          „Nazwa i dźwięk” uczy jednego i drugiego: nazwa identyfikuje literę, a
+          dźwięk (fonem) jest tym, co dziecko scala w słowo przy czytaniu.
+        </div>
+        <select
+          data-testid="prompt-mode"
+          aria-label="Jak czytamy literę"
+          value={settings.letters.promptMode}
+          onChange={(e) => {
+            updateSetting('letters', {
+              ...settings.letters,
+              promptMode: e.target.value as PromptMode,
+            })
+          }}
+          style={selectStyle}
+        >
+          {PROMPT_MODE_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {PROMPT_MODE_LABELS[opt]}
+            </option>
+          ))}
+        </select>
+        <details data-testid="prompt-mode-advanced" style={{ marginTop: 8 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 14, color: '#6b7280' }}>
+            Zaawansowane: inny tryb na wybranym poziomie
+          </summary>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}
+          >
+            {LEVELS.map((level) => {
+              const override = settings.letters.promptModeByLevel[level]
+              return (
+                <label
+                  key={level}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <span>{LEVEL_LABELS[level]}</span>
+                  <select
+                    data-testid={`prompt-mode-${level}`}
+                    aria-label={`Jak czytamy literę na poziomie ${LEVEL_LABELS[level]}`}
+                    value={override ?? PROMPT_MODE_INHERIT}
+                    onChange={(e) => {
+                      const next = { ...settings.letters.promptModeByLevel }
+                      if (e.target.value === PROMPT_MODE_INHERIT) {
+                        delete next[level]
+                      } else {
+                        next[level] = e.target.value as PromptMode
+                      }
+                      updateSetting('letters', {
+                        ...settings.letters,
+                        promptModeByLevel: next,
+                      })
+                    }}
+                    style={selectStyle}
+                  >
+                    <option value={PROMPT_MODE_INHERIT}>
+                      globalnie ({PROMPT_MODE_LABELS[settings.letters.promptMode]})
+                    </option>
+                    {PROMPT_MODE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {PROMPT_MODE_LABELS[opt]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )
+            })}
+          </div>
+        </details>
+      </section>
+
+      {/* Ile pytań — JEDNA kontrolka dla wszystkich modułów */}
       <section style={sectionStyle} data-testid="section-session-length">
-        <div style={labelStyle}>Długość sesji</div>
+        <div style={labelStyle}>Ile pytań</div>
+        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+          Wspólne dla wszystkich modułów. Dwie krótkie sesje dziennie działają
+          lepiej niż jedna długa.
+        </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {SESSION_LENGTH_OPTIONS.map((opt) => (
             <label
@@ -432,7 +525,7 @@ export function SettingsScreen({
                 padding: '6px 12px',
                 borderRadius: 8,
                 border: `1px solid ${
-                  settings.sessionLength === opt
+                  settings.questionsPerSession === opt
                     ? colors.accentBlue
                     : '#d8d8de'
                 }`,
@@ -441,11 +534,11 @@ export function SettingsScreen({
             >
               <input
                 type="radio"
-                name="sessionLength"
+                name="questionsPerSession"
                 value={opt}
-                checked={settings.sessionLength === opt}
-                onChange={() => updateSetting('sessionLength', opt)}
-                data-testid={`session-length-${opt}`}
+                checked={settings.questionsPerSession === opt}
+                onChange={() => updateSetting('questionsPerSession', opt)}
+                data-testid={`questions-per-session-${opt}`}
               />
               <span>{opt}</span>
             </label>
@@ -650,6 +743,18 @@ export function SettingsScreen({
         </select>
       </section>
 
+      {/* Druga próba po błędzie — globalnie, wszystkie moduły quizowe */}
+      <section style={sectionStyle} data-testid="section-second-attempt">
+        <div style={labelStyle}>Uczenie się na błędach</div>
+        <ToggleField
+          label="Druga próba po błędzie"
+          description="Po pomyłce dziecko dostaje to samo pytanie z dwiema opcjami: poprawną i tą, którą wybrało. Pierwsza pomyłka i tak liczy się do statystyk."
+          value={settings.secondAttempt}
+          onChange={(v) => updateSetting('secondAttempt', v)}
+          testId="second-attempt"
+        />
+      </section>
+
       {/* Czytanie (moduł 2) */}
       <section style={sectionStyle} data-testid="section-reading">
         <div style={labelStyle}>Czytanie (moduł 2)</div>
@@ -689,15 +794,28 @@ export function SettingsScreen({
           testId="reading-wild-celebration-freq"
         />
 
-        <div style={{ padding: '12px 0' }}>
-          <div style={{ fontWeight: 600, fontSize: 16 }}>Pytań na sesję (per poziom)</div>
-          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-            Mniej = krócej; więcej = solidniej
+        <details data-testid="reading-questions-advanced" style={{ padding: '12px 0' }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 16 }}>
+            Zaawansowane (nadpisują globalną)
+          </summary>
+          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 8 }}>
+            Pytań na sesję czytania per poziom. Bez wyboru obowiązuje globalne
+            „Ile pytań" ({settings.questionsPerSession}).
           </div>
           {LEVELS.map((level) => {
-            const value =
-              settings.reading.questionsPerSession[level] ??
-              DEFAULT_READING_QUESTIONS_PER_SESSION
+            const override = settings.reading.questionsPerSession[level]
+            const value = override ?? settings.questionsPerSession
+            // Wyczyszczenie override'u: usuwamy KLUCZ, nie ustawiamy undefined —
+            // `exactOptionalPropertyTypes` i tak by tego nie przepuścił, a klucz
+            // z `undefined` psułby `??` przy odczycie.
+            const clearOverride = () => {
+              const next = { ...settings.reading.questionsPerSession }
+              delete next[level]
+              updateSetting('reading', {
+                ...settings.reading,
+                questionsPerSession: next,
+              })
+            }
             return (
               <div
                 key={level}
@@ -710,12 +828,37 @@ export function SettingsScreen({
                   marginTop: 8,
                 }}
               >
-                <span>{LEVEL_LABELS[level]}</span>
+                <span>
+                  {LEVEL_LABELS[level]}{' '}
+                  <span style={{ color: '#6b7280' }}>({value})</span>
+                </span>
                 <div
                   role="radiogroup"
                   aria-label={`Pytań na sesję czytania dla poziomu ${LEVEL_LABELS[level]}`}
                   style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
                 >
+                  <label
+                    style={{
+                      display: 'flex',
+                      gap: 4,
+                      padding: '6px 12px',
+                      borderRadius: 8,
+                      border: `1px solid ${
+                        override === undefined ? colors.accentBlue : '#d8d8de'
+                      }`,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name={`reading-questions-per-session-${level}`}
+                      value=""
+                      checked={override === undefined}
+                      onChange={clearOverride}
+                      data-testid={`reading-questions-per-session-${level}-global`}
+                    />
+                    <span>globalnie</span>
+                  </label>
                   {READING_QUESTIONS_PER_SESSION_OPTIONS.map((n) => (
                     <label
                       key={n}
@@ -725,7 +868,7 @@ export function SettingsScreen({
                         padding: '6px 12px',
                         borderRadius: 8,
                         border: `1px solid ${
-                          value === n ? colors.accentBlue : '#d8d8de'
+                          override === n ? colors.accentBlue : '#d8d8de'
                         }`,
                         cursor: 'pointer',
                       }}
@@ -734,7 +877,7 @@ export function SettingsScreen({
                         type="radio"
                         name={`reading-questions-per-session-${level}`}
                         value={n}
-                        checked={value === n}
+                        checked={override === n}
                         onChange={() =>
                           updateSetting('reading', {
                             ...settings.reading,
@@ -753,7 +896,7 @@ export function SettingsScreen({
               </div>
             )
           })}
-        </div>
+        </details>
       </section>
 
       {/* Matematyka (moduł 3) */}
@@ -787,16 +930,52 @@ export function SettingsScreen({
           testId="numbers-tree-celebrations"
         />
 
-        <div style={{ padding: '12px 0', borderBottom: '1px solid #e5e7eb' }}>
-          <div style={{ fontWeight: 600, fontSize: 16 }}>Pytań na sesję</div>
-          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-            Mniej = krócej; więcej = solidniej
+        <details
+          data-testid="numbers-questions-advanced"
+          style={{ padding: '12px 0', borderBottom: '1px solid #e5e7eb' }}
+        >
+          <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 16 }}>
+            Zaawansowane (nadpisują globalną)
+          </summary>
+          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 8 }}>
+            Pytań na sesję matematyki. Bez wyboru obowiązuje globalne „Ile pytań"
+            ({settings.questionsPerSession}).
           </div>
           <div
             role="radiogroup"
             aria-label="Pytań na sesję matematyki"
             style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}
           >
+            <label
+              style={{
+                display: 'flex',
+                gap: 4,
+                padding: '6px 12px',
+                borderRadius: 8,
+                border: `1px solid ${
+                  settings.numbers.questionCount === undefined
+                    ? colors.accentBlue
+                    : '#d8d8de'
+                }`,
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="radio"
+                name="numbers-question-count"
+                value=""
+                checked={settings.numbers.questionCount === undefined}
+                onChange={() => {
+                  // Usuwamy KLUCZ — `exactOptionalPropertyTypes` nie przepuści
+                  // jawnego `undefined`, a taki klucz psułby `??` przy odczycie.
+                  const { questionCount: _drop, ...rest } = settings.numbers
+                  void _drop
+                  updateSetting('numbers', rest)
+                }}
+                data-testid="numbers-question-count-global"
+              />
+              <span>globalnie</span>
+            </label>
             {([6, 8, 10] as const).map((n) => (
               <label
                 key={n}
@@ -830,7 +1009,7 @@ export function SettingsScreen({
               </label>
             ))}
           </div>
-        </div>
+        </details>
 
         <div style={{ padding: '12px 0' }}>
           <div style={{ fontWeight: 600, fontSize: 16 }}>

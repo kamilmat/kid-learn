@@ -75,6 +75,10 @@ export function SessionView({
   const iskra = useIskraReactions()
   const lastFeedbackRef = useRef<typeof session.feedbackVariant>(null)
 
+  // Id scenki, której audio już poszło. Ref (nie state) przeżywa remount po
+  // pauzie — dzięki temu wznowienie nie dokłada klipu słowa drugi raz.
+  const scenePlayedRef = useRef<string | null>(null)
+
   const wordAnimationsEnabled = settings.reading.wordAnimations !== 'off'
 
   // Onboarding głosowy poziomu odpala się w `session.start()` — kolejka FIFO
@@ -82,15 +86,32 @@ export function SessionView({
 
   // Anti-cheat: idle detection — auto-pauza po 20s bez interakcji.
   // Także podczas feedbacku: overlay auto-znika, ale dziecko może odejść w trakcie.
+  //
+  // WYJĄTEK `session.blend !== null`: trwa krok syntezy („Składamy: MA… MA… MAMA"),
+  // czyli to aplikacja mówi, a dziecko ma słuchać. Detektor liczy tylko tapy, więc
+  // bez tego wyjątku najdłuższe słowa (LOKOMOTYWA) potrafiłyby przekroczyć próg
+  // i wpaść w auto-pauzę w środku zdania — za karę za grzeczne słuchanie.
+  //
+  // NIEZMIENNIK: składanie musi zmieścić się w `MAX_FEEDBACK_MS` (20 s w
+  // `FeedbackOverlay`) — to jedyny zawór, który domyka feedback, gdy sekwencja
+  // nie dojdzie do końca. Wydłużając `BLEND_PAUSE_MS` albo dokładając klipy,
+  // sprawdź oba progi razem.
   useIdleDetector({
     thresholdMs: 20_000,
-    enabled: session.status === 'asking' || session.status === 'feedback',
+    enabled:
+      (session.status === 'asking' ||
+        session.status === 'retry' ||
+        session.status === 'feedback') &&
+      session.blend === null,
     onIdle: () => session.pause(),
   })
 
   // Anti-cheat: page visibility — auto-pauza gdy dziecko opuszcza tab
   usePageVisibility({
-    enabled: session.status === 'asking' || session.status === 'feedback',
+    enabled:
+      session.status === 'asking' ||
+      session.status === 'retry' ||
+      session.status === 'feedback',
     onHidden: () => session.pause(),
     onVisible: () => {
       // pauza pozostaje aktywna — dziecko musi tapnąć Wznów (celowe)
@@ -174,6 +195,7 @@ export function SessionView({
   // Reset activeScene when feedback is dismissed
   useEffect(() => {
     if (session.feedbackVariant === null && activeScene !== null) {
+      scenePlayedRef.current = null
       setActiveScene(null)
     }
   }, [session.feedbackVariant, activeScene])
@@ -191,8 +213,17 @@ export function SessionView({
   }, [session.feedbackVariant])
 
   const handleSceneComplete = useCallback(() => {
+    scenePlayedRef.current = null
     setActiveScene(null)
   }, [])
+
+  const noteSceneAudioFn = session.noteSceneAudio
+  const handleSceneAudio = useCallback(
+    (audio: Promise<void>) => {
+      noteSceneAudioFn(audio)
+    },
+    [noteSceneAudioFn],
+  )
 
   // Wyjście w trakcie sesji — zapisz częściowy postęp SRS zanim odejdziemy
   const handleExit = useCallback(() => {
@@ -342,6 +373,9 @@ export function SessionView({
             scene={activeScene}
             audioBus={audioBus}
             onComplete={handleSceneComplete}
+            blend={session.blend}
+            playedRef={scenePlayedRef}
+            onAudioSequence={handleSceneAudio}
           />
         )}
 
@@ -352,6 +386,7 @@ export function SessionView({
             onSkip={session.skipFeedback}
             waitForAudio={session.waitForFeedbackAudio}
             paused={session.paused}
+            blend={session.blend}
           />
         )}
 

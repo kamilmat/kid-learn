@@ -3,6 +3,75 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
+## Fala 1 (2026-08-29/30) — ukończona
+
+**Zmergowane do `main` i wdrożone** (2026-08-30); tag `v4.1-fala-1`. Punkt powrotu sprzed fali: `v4.0-po-cr`.
+Spec: `docs/superpowers/specs/2026-08-29-fala-1-dydaktyka-design.md`. Plan: `docs/superpowers/plans/2026-08-29-fala-1-dydaktyka.md`.
+14 tasków, subagent-driven (worktree'e równoległe + review po każdym + fix-roundy + reconcile po konfliktach mergowania).
+
+**Cel:** domknąć lukę z researchu — uczymy rozpoznawania, za mało produkcji i strategii.
+
+### Co wdrożone (11 pozycji speca)
+
+1. **Czyste fonemy liter + tryb promptu** — `phon-<litera>` (azure-ipa, ciągłe wydłużone `ː`, zwarte bez przedłużenia) + `letter-name-<litera>` (azure, nazwy szkolne „be"/„ce"); `settings.letters.promptMode: 'phoneme'|'name'|'both'` (default `both`, kolejność nazwa→fonem), override per poziom.
+2. **Krok syntezy „MA + MA = MAMA"** (Czytanie) — po każdym pytaniu słownym sylaby po kolei + całe słowo, `FeedbackOverlay` podświetla aktualną sylabę; `pnpm audio:reading` dogenerował 65 brakujących sylab (91 kluczy razem) z sumy `SYLLABLE_TEXTS` ∪ sylab `ALL_WORDS`.
+3. **Druga próba po błędzie** (Litery/Czytanie/Cyferki) — wspólny kontrakt: SRS aktualizowany od razu na pierwszą pomyłkę; status `retry` z 2 opcjami (poprawna + wybrana); wynik `attempt: 2` nie dotyka SRS ani statystyk correct/wrong. Wyłączone tam, gdzie odpowiedź nie jest wyborem z listy (`word-assembly`, `number-bond-builder`, `fact-family-triangle`). `settings.secondAttempt` (default `true`).
+4. **Wypowiadanie liczb zadania** (Cyferki) — `promptAudioKeys(question)` gra `number-a op-X number-b ask-*` zamiast jednego generycznego klucza; ożywiło 29 martwych kluczy `number-*`/`op-*`.
+5. **Wagi konceptów + `prerequisites`** (Cyferki) — dwustopniowe losowanie: koncept ważony stanem (`pickConcept.ts`), potem fakt w obrębie konceptu. **Ruling ponad spec**: miękkie odblokowanie (prereq spełniony też przy `learning` ze streakiem ≥ połowa progu mastery, nie tylko `mastered`) + peek-ahead (waga 0.2 gdy pula faktów <8) + family remap (prerekwizyt wycięty ustawieniem `skipCountStep` zastępowany rodzeństwem) — bez tego Płomyk startowałby z 2 faktami na 2 doby.
+6. **Audio strategii po błędzie** (Cyferki) — `strategy-count-on/-make10/-doubles/-near-doubles/-count-back`, max 2× na sesję, po drugiej próbie.
+7. **Czytanki: echo + tempo** — 🗣 (pauza 2,5s po zdaniu, tap = skip) i 🐢 (`playbackRate` 0.75, `AudioBus.setPlaybackRate` przypisywany w `playOne` przy każdym klipie). `settings.czytanki.{echoMode, tempo}`.
+8. **Stopping cue + jedna kontrolka długości sesji** — `settings.questionsPerSession: 5|8|12` (globalne, default 8, `sessionLength` usunięte); `session-stop-enough` gra na każdym `SessionEnd` gdy `todaySessions.ts` naliczy ≥2 sesje dziś (dowolny moduł) — wtedy 🏠 staje się głównym przyciskiem.
+9. **Czytanki: licznik tapów i czas → raport** — `czytankiStore` v2 (`wordTaps`, `timeMs`), `CzytankiStats` dostaje „Najczęściej dotykane" (top 5) + łączny czas; eksport MD rozszerzony.
+10. **Pochwały procesowe** — `praise-proc-*` (Litery 10, Czytanie 6, Cyferki 6), `pickPraiseMixed.ts` losuje 50/50 między listą procesową i wynikową, potem no-repeat wewnątrz wybranej.
+11. **Paleta sylab bezpieczna dla daltonistów** — Okabe–Ito (`#0072B2`/`#B35900`/`#009E73`/`#CC79A7`, pomarańcz przyciemniony dla kontrastu ≥3:1) + `getSyllableCue` z niezależnym stylem podkreślenia (kolor nigdy jedynym nośnikiem granicy sylaby).
+
+### Liczby po implementacji (2026-08-30)
+
+- `pnpm tsc -b` — czysto.
+- `pnpm vitest run --dir src` — **759/759** zielone (94 pliki).
+- `pnpm vitest run --dir scripts` — **119/119** zielone (4 pliki).
+- **Razem 878/878** (baseline przed Falą 1: 746).
+- `pnpm build` — OK, `615.25 kB` JS (gzip `173.86 kB`), 1334 precache entries (15094.16 KiB) — rośnie głównie audio.
+- `pnpm audio:check` — **1301/1301** kluczy źródłowych na miejscu. `ls public/audio/*.mp3 | wc -l` = **1308**: 7 nadwyżka: `correction-prefix` jest UŻYWANY w runtime (`useReadingSession` drag-drop SFX) bez wpisu w audio-source — dodać klucz źródłowy; osierocone: `feedback-correct-suffix`, `feedback-wrong-prefix`, `still-there`, `summary-intro`, `timeout-1`, `timeout-2`) — nie w żadnym `audio-source/*.json`, kandydaci do sprzątnięcia, nieusunięte (poza zakresem Taska 14).
+
+### Do odsłuchu przez usera (Task 2 — nie zrobione, agent nie ma wyjścia audio)
+
+`ffprobe` potwierdził, że żaden `phon-*` nie jest ciszą/plikiem zerowym (0,25–0,47 s), ale nie wyklucza trzasku/artefaktu/złej barwy. Priorytety:
+
+1. **Zwarte/afrykaty** (ryzyko: Azure renderuje izolowaną zwartą jako cisza/trzask): `phon-b`, `phon-p`, `phon-t`, `phon-k`, `phon-d`, `phon-g`, `phon-c`, `phon-c_`
+2. **Ciągłe wydłużone `ː`** (ryzyko: nienaturalne „mmmm"): `phon-s`, `phon-r`, `phon-l_`, `phon-f`, `phon-h`, `phon-j`, `phon-l`, `phon-m`, `phon-n`, `phon-n_`, `phon-s_`, `phon-w`, `phon-z`, `phon-z_`, `phon-z-`
+3. **Nazwy liter** (ryzyko: Azure czyta ortografię zamiast nazwy): `letter-name-a_` (ą), `letter-name-e_` (ę), `letter-name-o_` („u otwarte" — czy nie rozjeżdża się na 2 słowa), `letter-name-z_` (ziet), `letter-name-z-` (żet), `letter-name-l_` (eł), `letter-name-g` (gie), `letter-name-c_` (cie)
+4. **Nowe sylaby złożone** (pierwszy raz przez `polishG2p`): `syl-dz_wiedz_`, `syl-s_liw`, `syl-nia_dz`, `syl-ge_s_`, `syl-ksie_`, `syl-chl_o`, `syl-czap`, `syl-musz`, `syl-tek`
+
+Zły klucz → `audio-source/pronunciation-overrides.json` (`{"ipa":…}` albo `{"text":…}`) + `pnpm audio:build`. Jeśli zwarta dalej wychodzi jako cisza → plan B `audio-source/manual-overrides/phon-<slug>.mp3` (istniejący mechanizm, wygrywa nad TTS).
+
+### Otwarte ryzyka
+
+- **Izolowane zwarte w Azure** — to jedyne ryzyko ze speca, które mogłoby wywrócić pozycję #1 (fonemy liter); dopóki odsłuch nie zrobiony, traktować `phon-b/p/t/k/d/g/c/c_` jako niezweryfikowane.
+- **Diakrytyki w nazwach plików** (`phon-a_.mp3`, `syl-ge_s_.mp3` — slugPl unika ich w nazwie, ale historyczne `letter-ą.mp3` nadal istnieje) — sprawdzić 404 w Network po deployu na GH Pages (Linux, case+encoding-sensitive; lokalnie macOS maskuje).
+- **Wydłużenie sesji** — tryb `both` (nazwa+fonem), synteza sylab, retry i strategia razem mogą wydłużyć sesję o 1-2 min; częściowo skompensowane obniżeniem domyślnego `questionsPerSession` do 8. Zmierzyć realny czas na iPadzie.
+
+### Odłożone drobiazgi (deferred, poza zakresem Fali 1)
+
+- **Migracja `word-*` na `slugPl`** (moduł 2, ~12-16 kluczy z diakrytykami: `word-gęś`, `word-niedźwiedź`, `word-chłopiec`, `word-księżyc`, `word-ogórek`, `word-sałata`, `word-pieniądz`, `word-ziemniak`, `word-czwartek`, `word-żaba`…) — zgłoszone w Task 1, powtórzone w Task 2 i Task 11; wymaga git mv + przepisanie manifestu, osobny task.
+- **Dev-only podwójne cue w StrictMode** (retry-flow, analogicznie do istniejącego `level-up-suggest`) — kosmetyczny, tylko w dev.
+- **Nazwa stałej `SESSION_LENGTH_OPTIONS`** (`shared/settings/components/SettingsScreen.tsx:185`, wartości `[5, 8, 12]`) nieaktualna — steruje teraz globalnym `questionsPerSession`, nie „długością sesji"; rename bez zmiany zachowania.
+- **Tap-target sylab czytanek 56 px** (nie 60) — auto-fit najdłuższych czytanek w portrait nie mieści się przy 60 px; świadome odstępstwo sprzed Fali 1, nadal aktualne.
+- **Quit z ekranu retry w Czytaniu** gubi kropkę postępu w UI (Task 9, UI-only, dane sesji nie tracą się).
+- **Ponowne odpalenie efektu promptu przy tym samym `factId` pod rząd** (Make10/ConcreteAdd, Task 5/6) — tylko gdy SRS wylosuje ten sam fakt 2× z rzędu; anti-repeat to w praktyce blokuje.
+
+### Do sprawdzenia na iPadzie
+
+- Odsłuch fonemów/nazw liter/nowych sylab (lista wyżej) — priorytet 1 przed pushem/mergem.
+- Realny czas trwania sesji po wydłużeniu feedbacku (`both`, synteza, retry, strategia).
+- 🗣 echo i 🐢 tempo w Czytankach — `playbackRate` 0.75 na fizycznym Safari (ryzyko zniekształcenia głosu <0.5 jest teoretyczne, ale 0.75 nie testowane na urządzeniu).
+- Retry (2 kafelki) w Literach/Czytaniu/Cyferkach palcem i Apple Pencil — layout 1×2 nowy, niesprawdzony fizycznie.
+- Network tab po deployu: zero 404 na `/audio/*.mp3` z diakrytykami w kluczu.
+- `session-stop-enough` i zmiana głównego przycisku na 🏠 po 2. sesji dziś — realny flow dwóch sesji tego samego dnia.
+- Paleta Okabe–Ito + podkreślenia sylab — czy odróżnialne przy różnych typach daltonizmu i przy MIN_FONT (odnotowane już w Task 3).
+
+---
+
 ## Stan po CR (2026-08-28/29) — 6 przeglądów, ~60 poprawek, live
 
 **main `9111e00`**, deploy zielony, live https://kamilmat.github.io/kid-learn/.

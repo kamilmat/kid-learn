@@ -8,6 +8,7 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
@@ -17,7 +18,7 @@ type Equation = {
   isTrue: boolean
 }
 
-export function FactFamilyTriangle({ audioBus, payload, onAnswer }: Props) {
+export function FactFamilyTriangle({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const a = clamp(payload.args[0] ?? 1, 1, 19)
   const b = clamp(payload.args[1] ?? 1, 1, 19)
   const whole = clamp(payload.args[2] ?? a + b, 2, 20)
@@ -26,8 +27,8 @@ export function FactFamilyTriangle({ audioBus, payload, onAnswer }: Props) {
   const [resolved, setResolved] = useState(false)
 
   useEffect(() => {
-    void audioBus.play('ask-build-bond')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   const equations = useMemo(() => buildEquations(a, b, whole), [a, b, whole])
   const trueIds = useMemo(

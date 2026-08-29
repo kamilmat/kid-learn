@@ -10,9 +10,10 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "audio:czytanki": "tsx scripts/czytanki-audio-source.ts",
-    "audio:build": "pnpm audio:czytanki && tsx scripts/generate-audio.ts build",
-    "audio:check": "pnpm audio:czytanki && tsx scripts/generate-audio.ts check",
-    "audio:dry": "pnpm audio:czytanki && tsx scripts/generate-audio.ts build --dry-run",
+    "audio:reading": "tsx scripts/reading-audio-source.ts",
+    "audio:build": "pnpm audio:czytanki && pnpm audio:reading && tsx scripts/generate-audio.ts build",
+    "audio:check": "pnpm audio:czytanki && pnpm audio:reading && tsx scripts/generate-audio.ts check",
+    "audio:dry": "pnpm audio:czytanki && pnpm audio:reading && tsx scripts/generate-audio.ts build --dry-run",
     "audio:convert-overrides": "tsx scripts/convert-overrides.ts",
     "dev:recorder": "echo 'Otwórz http://localhost:8080/tools/recorder/' && python3 -m http.server 8080"
   },

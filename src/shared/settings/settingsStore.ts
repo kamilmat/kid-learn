@@ -19,7 +19,17 @@ import {
   isCooldown,
   validateAnswer,
 } from './mathGate'
-import type { Level, MathGateState, MathProblem, Settings } from './types'
+import type {
+  Level,
+  MathGateState,
+  MathProblem,
+  PromptMode,
+  QuestionsPerSession,
+  Settings,
+} from './types'
+
+const VALID_PROMPT_MODES: ReadonlySet<PromptMode> = new Set(['phoneme', 'name', 'both'])
+const VALID_QUESTIONS_PER_SESSION: ReadonlySet<QuestionsPerSession> = new Set([5, 8, 12])
 
 export const STORAGE_KEY = 'iskierki-state-v1'
 export const UNLOCK_TTL_MS = 5 * 60_000 // 5 min — sekcja 13.1
@@ -124,14 +134,35 @@ export const useSettings = create<SettingsStore>()(
         mathGateState: state.mathGateState,
         parentGateUnlockedUntil: state.parentGateUnlockedUntil,
       }),
-      version: 4,
+      version: 5,
       // Bez `migrate` zustand ODRZUCA persist przy niezgodnej wersji (merge dostaje
-      // undefined) — przepuszczamy blob dalej, całą robotę robi `merge` poniżej.
-      migrate: (persisted) => persisted as PersistedShape,
+      // undefined) — przepuszczamy blob dalej, resztę roboty robi `merge` poniżej.
+      //
+      // Tutaj siedzą TYLKO kroki, które muszą być odpalone raz, przy przejściu
+      // wersji. Idempotentne guardy zostają w `merge` (biegnie przy każdym
+      // rehydrate).
+      migrate: (persisted, version) => {
+        const p = (persisted ?? {}) as PersistedShape
+        if (version < 5) {
+          const s = p.settings as unknown as Record<string, unknown> | undefined
+          const numbers = s?.numbers as Record<string, unknown> | undefined
+          // v4 → v5: `numbers.questionCount` z pola obowiązkowego stało się
+          // OVERRIDEM globalnego `questionsPerSession`. Wartość równa ówczesnemu
+          // defaultowi (8) nie była świadomym wyborem rodzica — kasujemy ją, żeby
+          // globalna kontrolka faktycznie rządziła. Inna wartość to wybór i
+          // zostaje jako override.
+          if (numbers && numbers.questionCount === 8) {
+            delete numbers.questionCount
+          }
+        }
+        return p
+      },
       // Migration:
       //   v2 → v3: `showCountdownBar` z boolean na Partial<Record<Level, boolean>>.
       //   v3 → v4: `timeLimit` z prymitywu (TimeLimit) na Partial<Record<Level, TimeLimit>>.
       //   v4: `humorMode` + `reading` (nowe pola modułu 2) — obsługiwane przez merge.
+      //   v4 → v5: `sessionLength` → globalne `questionsPerSession`;
+      //            `numbers.questionCount` staje się overridem (patrz `migrate`).
       // W obu przypadkach drop'ujemy legacy wartość — zostają per-level defaults
       // (iskierka/płomyk: timeLimit='off', ognik/pochodnia: timeLimit=15).
       //
@@ -157,6 +188,36 @@ export const useSettings = create<SettingsStore>()(
         if (!sanitizedSettings.humorMode) {
           sanitizedSettings.humorMode = 'on'
         }
+        // Druga próba po błędzie — dodana po v4, więc stary persist jej nie ma.
+        if (typeof sanitizedSettings.secondAttempt !== 'boolean') {
+          sanitizedSettings.secondAttempt = defaultSettings.secondAttempt
+        }
+        // Deep-merge modułu 1 (`letters.promptMode`) — pole dodane po v4, stary
+        // persist go nie ma; bez tego `promptMode` byłoby `undefined`.
+        const persistedLetters = sanitizedSettings.letters as Record<string, unknown> | undefined
+        const mergedLetters: Record<string, unknown> = {
+          ...defaultSettings.letters,
+          ...(persistedLetters ?? {}),
+        }
+        // Guard: `promptMode` uszkodzony/spoza unii w localStorage psułby
+        // `promptAudioKeys` switch — sanityzujemy do domyślnego `both`.
+        if (!VALID_PROMPT_MODES.has(mergedLetters.promptMode as PromptMode)) {
+          mergedLetters.promptMode = defaultSettings.letters.promptMode
+        }
+        const rawPromptModeByLevel = mergedLetters.promptModeByLevel as
+          | Record<string, unknown>
+          | undefined
+        const validPromptModeByLevel: Partial<Record<Level, PromptMode>> = {}
+        if (rawPromptModeByLevel && typeof rawPromptModeByLevel === 'object') {
+          for (const level of ALL_LEVELS) {
+            const value = rawPromptModeByLevel[level]
+            if (VALID_PROMPT_MODES.has(value as PromptMode)) {
+              validPromptModeByLevel[level] = value as PromptMode
+            }
+          }
+        }
+        mergedLetters.promptModeByLevel = validPromptModeByLevel
+        sanitizedSettings.letters = mergedLetters
         // Deep-merge: stary persist mógł zapisać `reading` bez pól dodanych później
         // (np. wildCelebrationFreq -> undefined -> NaN w useReadingSession).
         const persistedReading = sanitizedSettings.reading as Record<string, unknown> | undefined
@@ -172,6 +233,28 @@ export const useSettings = create<SettingsStore>()(
         sanitizedSettings.numbers = {
           ...defaultSettings.numbers,
           ...(persistedNumbers ?? {}),
+        }
+        // Moduł 4 (czytanki): echo/tempo dodane po v4 — deep-merge jak `reading`.
+        const persistedCzytanki = sanitizedSettings.czytanki as Record<string, unknown> | undefined
+        sanitizedSettings.czytanki = {
+          ...defaultSettings.czytanki,
+          ...(persistedCzytanki ?? {}),
+        }
+        // v4 → v5: `sessionLength` (5|10|15, tylko Litery) → globalne
+        // `questionsPerSession` (5|8|12) wspólne dla wszystkich modułów.
+        const legacyLength = sanitizedSettings.sessionLength
+        if (
+          sanitizedSettings.questionsPerSession === undefined &&
+          typeof legacyLength === 'number'
+        ) {
+          sanitizedSettings.questionsPerSession =
+            legacyLength >= 15 ? 12 : legacyLength <= 5 ? 5 : 8
+        }
+        delete sanitizedSettings.sessionLength
+        // Guard: wartość spoza unii (ręcznie zepsuty localStorage) dałaby sesję
+        // o dziwnej długości — wracamy do defaultu.
+        if (!VALID_QUESTIONS_PER_SESSION.has(sanitizedSettings.questionsPerSession as QuestionsPerSession)) {
+          delete sanitizedSettings.questionsPerSession
         }
         const mergedSettings = {
           ...defaultSettings,

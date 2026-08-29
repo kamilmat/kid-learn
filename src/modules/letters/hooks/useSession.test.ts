@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useSession } from './useSession'
+import { promptAudioKeys } from '@/modules/letters/audio/promptKeys'
 import type { UseSessionConfig } from './useSession'
 
 function makeAudioBus() {
@@ -95,7 +96,36 @@ describe('useSession — lifecycle', () => {
       result.current.start()
     })
     const target = result.current.currentQuestion!.targetLetter
-    expect(audioBus.play).toHaveBeenCalledWith(`letter-${target}`)
+    // Default promptMode = 'both': nazwa litery, potem czysty fonem.
+    for (const key of promptAudioKeys(target, 'both')) {
+      expect(audioBus.play).toHaveBeenCalledWith(key)
+    }
+  })
+
+  it('drugie wywołanie start() z tym samym niescommitowanym statusem (dubel efektu w dev/StrictMode) jest no-opem', () => {
+    // SessionView auto-startuje w useEffect; React w dev/StrictMode odpala go
+    // jako setup→cleanup→setup przy pierwszym mouncie, więc `start()` bywa
+    // wołany dwa razy zanim `status` zdąży się scommitować — bez guardu drugie
+    // wywołanie losowało DRUGIE (widmowe) pytanie i dogrywało jego audio.
+    const audioBus = makeAudioBus()
+    const cfg = makeConfig({ audioBus })
+    const { result } = renderHook(() => useSession(cfg))
+    act(() => {
+      // Obie wołane w TYM SAMYM act() — jak dwie kopie tego samego efektu
+      // widzące ten sam, jeszcze niescommitowany `status`.
+      result.current.start()
+      result.current.start()
+    })
+    // Bez guardu drugie start() losuje INNĄ literę (ten sam rng idzie dalej) i
+    // nadpisuje pytanie z pierwszego — filtrowanie po finalnym targetLetter
+    // przeoczyłoby dubel, bo audio pierwszego (już nadpisanego) pytania leci
+    // dla INNEGO klucza. Liczymy więc CAŁKOWITĄ liczbę wywołań play().
+    const target = result.current.currentQuestion!.targetLetter
+    const expectedKeys = promptAudioKeys(target, 'both')
+    expect(audioBus.play).toHaveBeenCalledTimes(expectedKeys.length)
+    for (const key of expectedKeys) {
+      expect(audioBus.play).toHaveBeenCalledWith(key)
+    }
   })
 
   it('handles correct answer: increments iskierki + records event', () => {
@@ -285,7 +315,9 @@ describe('useSession — lifecycle', () => {
     })
     const calls = audioBus.play.mock.calls.map((c) => c[0])
     expect(calls.some((k) => k.startsWith('correction-prefix-'))).toBe(true)
-    expect(calls).toContain(`letter-${q.targetLetter}`)
+    for (const key of promptAudioKeys(q.targetLetter, 'both')) {
+      expect(calls).toContain(key)
+    }
   })
 })
 

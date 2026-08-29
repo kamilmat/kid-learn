@@ -98,6 +98,32 @@ describe('generateSuggestions', () => {
     expect(isResponseTimeIncreasing(sessions)).toBe(false)
   })
 
+  it('isResponseTimeIncreasing pomija poprawki (attempt 2) w średniej', () => {
+    // Poprawki mierzą czas od ekranu retry (zawsze bardzo szybkie) — wliczone
+    // do średniej rozwadniają realny wzrost czasu odpowiedzi i maskują flagę.
+    const withRetryNoise = (startedAt: number): SessionLog => ({
+      id: `s-${startedAt}`,
+      startedAt,
+      endedAt: startedAt + 1000,
+      level: 'iskierka',
+      events: [
+        { type: 'answer', ts: startedAt, outcome: 'correct', responseMs: 2000 },
+        { type: 'answer', ts: startedAt, outcome: 'correct', responseMs: 2000 },
+        { type: 'answer', ts: startedAt, outcome: 'correct', responseMs: 100, attempt: 2 },
+        { type: 'answer', ts: startedAt, outcome: 'correct', responseMs: 100, attempt: 2 },
+        { type: 'answer', ts: startedAt, outcome: 'correct', responseMs: 100, attempt: 2 },
+      ],
+    })
+    const sessions: SessionLog[] = [
+      answersSession(0, [1000, 1000, 1000]),
+      withRetryNoise(10_000),
+    ]
+    // Wykluczając poprawki: średnia = (2000+2000)/2 = 2000 → 2000/1000 = 2.0x
+    // (>1.25x, flaguje). Wliczając je (stary błąd): średnia ≈ 860 → 0.86x
+    // (nie flagowałoby wcale) — poprawka musi być pominięta.
+    expect(isResponseTimeIncreasing(sessions)).toBe(true)
+  })
+
   it('dodaje sugestię o zmęczeniu jeśli czas rośnie', () => {
     const sessions: SessionLog[] = [
       answersSession(0, [1000, 1000, 1000]),

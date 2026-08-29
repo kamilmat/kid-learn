@@ -9,8 +9,13 @@ import { colors, radii, tapTargets } from '@/app/theme'
 import { useNumbersSession, type SessionStatus } from '../hooks/useNumbersSession'
 import { useNumbers } from '../store/numbersStore'
 import { extractCorrectValue } from '../data/correctValue'
-import { promptAudioKey, thinkingAloudKey } from '../data/promptAudio'
+import { promptAudioKeys, thinkingAloudKey } from '../data/promptAudio'
 import { NUMBERS_PRAISE_KEYS, type NumbersPraiseKey } from '../data/praise'
+import {
+  MAX_STRATEGY_CUES_PER_SESSION,
+  shouldChargeStrategyBudget,
+  strategyAudioKey,
+} from '../data/strategyAudio'
 import type { AnswerOutcome, ExerciseType, Question } from '../types'
 import { ConceptIntro } from './intros/ConceptIntro'
 import { SessionEnd } from './SessionEnd'
@@ -69,9 +74,10 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
   const session = useNumbersSession({
     level,
     audioBus,
-    questionCount: settings.numbers?.questionCount ?? 8,
-    skipCountStep: settings.numbers?.skipCountStep ?? 'mixed',
-    treeCelebrationsOn: settings.numbers?.treeCelebrationsOn ?? true,
+    questionCount: settings.numbers.questionCount ?? settings.questionsPerSession,
+    skipCountStep: settings.numbers.skipCountStep ?? 'mixed',
+    treeCelebrationsOn: settings.numbers.treeCelebrationsOn ?? true,
+    secondAttempt: settings.secondAttempt,
   })
   const seenIntros = useNumbers((s) => s.seenIntros)
   const markIntroSeen = useNumbers((s) => s.markIntroSeen)
@@ -87,7 +93,10 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
 
   // Anti-cheat: wyjście z zakładki / zablokowanie iPada → auto-pauza.
   usePageVisibility({
-    enabled: session.status === 'asking' || session.status === 'feedback',
+    enabled:
+      session.status === 'asking' ||
+      session.status === 'retry' ||
+      session.status === 'feedback',
     onHidden: () => session.pause('visibility'),
     onVisible: () => {
       // Celowo bez auto-wznowienia — dziecko musi tapnąć Wznów.
@@ -118,7 +127,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
     onExit()
   }, [flush, onExit])
 
-  const conceptsIntrosOn = settings.numbers?.conceptIntros ?? true
+  const conceptsIntrosOn = settings.numbers.conceptIntros ?? true
 
   // Intro guard — pokaż ConceptIntro jeśli nie widziano dla tego konceptu
   const showIntro = useMemo(() => {
@@ -134,14 +143,14 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
   // i nic nie tapie, a auto-pauza ucinała je w pół zdania.
   useIdleDetector({
     thresholdMs: IDLE_THRESHOLD_MS,
-    enabled: session.status === 'asking' && !showIntro,
+    enabled: (session.status === 'asking' || session.status === 'retry') && !showIntro,
     onIdle: () => session.pause('idle'),
   })
 
   // Iskra „myśli na głos" — raz na sesję per typ ćwiczenia, PO promptcie
   // (efekt rodzica leci po efekcie ćwiczenia, więc kolejka FIFO ma dobrą kolejność).
   const thinkingAloudPlayedRef = useRef<Set<string>>(new Set())
-  const thinkingAloudOn = settings.numbers?.iskraThinkingAloud ?? true
+  const thinkingAloudOn = settings.numbers.iskraThinkingAloud ?? true
   const currentExerciseType = session.currentQuestion?.exerciseType ?? null
   useEffect(() => {
     if (!thinkingAloudOn || showIntro || currentExerciseType === null) return
@@ -151,18 +160,61 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
     void audioBus.play(key)
   }, [thinkingAloudOn, showIntro, currentExerciseType, audioBus])
 
+  // Nazwanie strategii po błędzie — limit na sesję, bo częściej brzmi jak
+  // zrzędzenie. SessionView montuje się raz na sesję, więc ref startuje z zera.
+  const strategyCuesRef = useRef(0)
+  const strategyKey =
+    session.lastOutcome !== null &&
+    session.lastOutcome !== 'correct' &&
+    session.currentQuestion !== null &&
+    strategyCuesRef.current < MAX_STRATEGY_CUES_PER_SESSION
+      ? strategyAudioKey(
+          session.currentQuestion.conceptId,
+          (session.currentQuestion.payload as { op?: '+' | '-' }).op ?? '+',
+        )
+      : null
+
+  // Licznik rośnie w efekcie, nie w renderze. Klucz `questionIdx` sprawia, że
+  // podwójne wywołanie efektu w StrictMode liczy jedną podpowiedź, nie dwie.
+  // Budżet płacimy tylko za `wrong` — `dontKnow` nadal usłyszy strategię
+  // (tworzy `strategyKey` powyżej), ale się nie liczy do limitu na sesję.
+  const countedStrategyRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (session.status !== 'feedback' || strategyKey === null) return
+    const id = `${session.questionIdx}-${strategyKey}`
+    if (countedStrategyRef.current === id) return
+    countedStrategyRef.current = id
+    if (session.lastOutcome !== null && shouldChargeStrategyBudget(session.lastOutcome)) {
+      strategyCuesRef.current += 1
+    }
+  }, [session.status, session.questionIdx, strategyKey, session.lastOutcome])
+
   const handleRepeatPrompt = useCallback(() => {
-    const key = promptAudioKey(session.currentQuestion)
-    if (key === null) return
+    const keys = promptAudioKeys(session.currentQuestion)
+    if (keys.length === 0) return
     // Stop przed play — powtórka ma restartować, nie kolejkować (jak w literach).
     audioBus.stop()
-    void audioBus.play(key)
+    // Kolejka jest FIFO — klucze lecą po sobie bez `await` i bez `stop()` w środku.
+    for (const key of keys) void audioBus.play(key)
   }, [audioBus, session.currentQuestion])
 
   const handleDontKnow = useCallback(() => {
+    // 🤷 w drugiej próbie = druga pomyłka: hiperkorekcja i lecimy dalej.
+    if (session.status === 'retry') {
+      session.answer('wrong', 2)
+      return
+    }
     session.answer('dontKnow')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.answer])
+  }, [session.answer, session.status])
+
+  const handleAnswer = useCallback(
+    (outcome: AnswerOutcome, chosenValue?: number) => {
+      session.answer(outcome, session.status === 'retry' ? 2 : 1, chosenValue)
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [session.answer, session.status],
+  )
 
   if (session.status === 'ended') {
     return (
@@ -217,7 +269,10 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
         <ExerciseRouter
           question={session.currentQuestion}
           audioBus={audioBus}
-          onAnswer={session.answer}
+          onAnswer={handleAnswer}
+          {...(session.status === 'retry' && session.retryChoices !== null
+            ? { restrictChoicesTo: session.retryChoices }
+            : {})}
         />
       </div>
       {/* Overlay ZOSTAJE zamontowany pod pauzą — unmount/remount kasował
@@ -230,6 +285,8 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
           audioBus={audioBus}
           onAdvance={session.advance}
           paused={session.status === 'paused'}
+          strategyKey={session.lastAttempt === 2 ? null : strategyKey}
+          attempt={session.lastAttempt}
           {...(session.praiseKey !== null ? { praiseKey: session.praiseKey } : {})}
         />
       )}
@@ -247,22 +304,35 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
 type ExerciseProps = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
-  onAnswer: (outcome: AnswerOutcome) => void
+  /**
+   * Pełna sekwencja polecenia (liczby + operator + pytanie). Liczy ją router,
+   * bo tylko on widzi całe `Question`; ćwiczenie zna jedynie `payload`.
+   */
+  promptKeys: string[]
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 function ExerciseRouter({
   question,
   audioBus,
   onAnswer,
+  restrictChoicesTo,
 }: {
   question: Question
   audioBus: Pick<AudioBus, 'play' | 'stop'>
-  onAnswer: (outcome: AnswerOutcome) => void
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  restrictChoicesTo?: number[]
 }) {
+  // Stabilna referencja — tablica trafia do deps `useEffect` ćwiczeń.
+  const promptKeys = useMemo(() => promptAudioKeys(question), [question])
   const props: ExerciseProps = {
     audioBus,
     payload: question.payload as { args: number[] },
+    promptKeys,
     onAnswer,
+    ...(restrictChoicesTo !== undefined ? { restrictChoicesTo } : {}),
   }
   // Re-mount na zmianę question.factId — gwarantuje czysty stan ćwiczenia
   return <ExerciseSwitch key={question.factId} type={question.exerciseType} props={props} />
@@ -429,6 +499,8 @@ export function FeedbackOverlay({
   onAdvance,
   praiseKey,
   paused = false,
+  strategyKey = null,
+  attempt = 1,
 }: {
   outcome: AnswerOutcome
   correctValue: number | null
@@ -438,8 +510,16 @@ export function FeedbackOverlay({
   praiseKey?: NumbersPraiseKey
   /** Pauza — wstrzymuje odliczanie; po wznowieniu audio leci raz jeszcze. */
   paused?: boolean
+  /** Nazwa strategii grana po korekcie; null = limit sesji wyczerpany. */
+  strategyKey?: string | null
+  /** `2` = poprawka w drugiej próbie: cicha pochwała zamiast pełnej. */
+  attempt?: 1 | 2
 }) {
   const onAdvanceRef = useRef(onAdvance)
+  // Prop czytany przez ref: rodzic dobija licznik jeszcze w trakcie feedbacku,
+  // a zmiana klucza nie może przekolejkować całej ścieżki audio od nowa.
+  const strategyKeyRef = useRef(strategyKey)
+  strategyKeyRef.current = strategyKey
   useEffect(() => {
     onAdvanceRef.current = onAdvance
   }, [onAdvance])
@@ -452,35 +532,68 @@ export function FeedbackOverlay({
   useEffect(() => {
     elapsedRef.current = 0
     firstRunRef.current = true
-  }, [outcome, correctValue, praiseKey])
+  }, [outcome, correctValue, praiseKey, attempt])
+
+  // Audio już wystawione dla BIEŻĄCEGO wystąpienia feedbacku (klucz treści +
+  // lista obietnic `plays`). React w dev/StrictMode odpala ten efekt jako
+  // setup→cleanup→setup przy pierwszym mouncie — bez tej pamięci druga kopia
+  // dokładałaby DRUGI komplet `audioBus.play()` (dziecko słyszało `try-again`
+  // dwa razy). Ta sama identyczność treści == druga kopia efektu, więc
+  // ponownie wykorzystujemy JUŻ wystawione obietnice zamiast grać od nowa —
+  // to odróżnia dubel StrictMode (identyczna treść, bez przejścia przez
+  // pauzę) od prawdziwego wznowienia (identyczna treść, ale przez pauzę
+  // czyścimy ten cache poniżej, więc audio celowo leci raz jeszcze).
+  const activePlaysRef = useRef<{ identity: string; plays: Array<Promise<unknown>> } | null>(
+    null,
+  )
 
   useEffect(() => {
-    if (paused) return
+    if (paused) {
+      activePlaysRef.current = null
+      return
+    }
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
     let safetyTimer: ReturnType<typeof setTimeout> | undefined
     const startedAt = Date.now()
     const alreadyElapsed = elapsedRef.current
 
-    // stop() tylko przy pierwszym wejściu — po wznowieniu kolejka zawiera
-    // świeże `nav-resume`, którego nie wolno uciąć.
-    if (firstRunRef.current) audioBus.stop()
-    firstRunRef.current = false
-    const plays: Array<Promise<unknown>> = []
-    if (outcome === 'correct') {
-      const praise =
-        praiseKey ?? NUMBERS_PRAISE_KEYS[Math.floor(Math.random() * NUMBERS_PRAISE_KEYS.length)]!
-      plays.push(settled(audioBus.play(praise)))
+    const identity = `${outcome}|${correctValue}|${praiseKey ?? ''}|${attempt}`
+    let plays: Array<Promise<unknown>>
+
+    if (activePlaysRef.current !== null && activePlaysRef.current.identity === identity) {
+      // Dubel tej samej treści bez przejścia przez pauzę — odtwarzanie już
+      // trwa (poprzedni run tego samego efektu je wystawił).
+      plays = activePlaysRef.current.plays
     } else {
-      plays.push(
-        settled(audioBus.play(outcome === 'wrong' ? 'try-again-soft' : 'try-again')),
-      )
-      // Hypercorrection — kolejka jest FIFO, więc "tu było N" zagra zaraz po
-      // korekcie; żadnego timera nie trzeba, a przejście czeka na koniec audio.
-      if (correctValue !== null) {
-        plays.push(settled(audioBus.play(`correct-show-${correctValue}`)))
+      // stop() tylko przy pierwszym wejściu — po wznowieniu kolejka zawiera
+      // świeże `nav-resume`, którego nie wolno uciąć.
+      if (firstRunRef.current) audioBus.stop()
+      plays = []
+      if (outcome === 'correct' && attempt === 2) {
+        // Druga próba trafiona: cicha pochwała za autokorektę — bez pochwały
+        // z puli, bo iskierki za to nie ma i fanfara byłaby obietnicą nagrody.
+        plays.push(settled(audioBus.play('retry-correct')))
+      } else if (outcome === 'correct') {
+        const praise =
+          praiseKey ?? NUMBERS_PRAISE_KEYS[Math.floor(Math.random() * NUMBERS_PRAISE_KEYS.length)]!
+        plays.push(settled(audioBus.play(praise)))
+      } else {
+        plays.push(
+          settled(audioBus.play(outcome === 'wrong' ? 'try-again-soft' : 'try-again')),
+        )
+        // Hypercorrection — kolejka jest FIFO, więc "tu było N" zagra zaraz po
+        // korekcie; żadnego timera nie trzeba, a przejście czeka na koniec audio.
+        if (correctValue !== null) {
+          plays.push(settled(audioBus.play(`correct-show-${correctValue}`)))
+        }
+        // Strategia PO korekcie — najpierw wynik, potem narzędzie do liczenia.
+        const strategy = strategyKeyRef.current
+        if (strategy !== null) plays.push(settled(audioBus.play(strategy)))
       }
+      activePlaysRef.current = { identity, plays }
     }
+    firstRunRef.current = false
 
     // Bezpiecznik: gdyby audio nigdy nie zamknęło obietnicy (element bez
     // zdarzeń `ended`/`error`), sesja nie może utknąć na overlayu.
@@ -505,7 +618,7 @@ export function FeedbackOverlay({
       if (timer !== undefined) clearTimeout(timer)
       if (safetyTimer !== undefined) clearTimeout(safetyTimer)
     }
-  }, [outcome, correctValue, audioBus, praiseKey, paused])
+  }, [outcome, correctValue, audioBus, praiseKey, paused, attempt])
 
   const bg =
     outcome === 'correct' ? 'rgba(22, 163, 74, 0.85)' : 'rgba(239, 68, 68, 0.85)'

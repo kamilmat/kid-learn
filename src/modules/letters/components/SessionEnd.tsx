@@ -2,15 +2,16 @@
 // Sekcja 6.6 spec: animacja Iskry, podsumowanie, opcja powtórki/wyjścia,
 // sugestia awansu poziomu jeśli >=80% poprawnych.
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/shared/ui/Button'
-import { colors, radii } from '@/app/theme'
+import { colors, radii, tapTargets } from '@/app/theme'
 import { toUpper } from '@/modules/letters/data/alphabet'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import type { SessionEvent } from '@/modules/letters/types'
 import { IskraHero } from '@/shared/ui/IskraHero'
 import { detectPerfectSession } from '@/modules/letters/hooks/useSession.pickers'
+import { hasEnoughForToday } from '@/shared/stats/enoughForToday'
 
 export type SessionEndProps = {
   iskierki: number
@@ -92,9 +93,18 @@ function summarize(events: SessionEvent[]): {
       cur.total += 1
       stats.set(ev.targetLetter, cur)
     } else if (ev.type === 'answer' && lastTarget !== null) {
+      const target = lastTarget
+      // Pytanie skonsumowane — druga próba (poprawka po błędzie) nie ma
+      // własnego question-start, więc bez tego resetu przypisałaby się do
+      // tego samego targetu i podwoiłaby total.
+      lastTarget = null
+      // Poprawka po błędzie (attempt 2) NIE wpada do statystyk — inaczej
+      // błąd+poprawka liczyłyby się jako 2 pytania i litera wyglądałaby na
+      // "opanowaną" mimo pierwszej pomyłki.
+      if (ev.attempt === 2) continue
       counts[ev.outcome] += 1
       counts.total += 1
-      const cur = stats.get(lastTarget)
+      const cur = stats.get(target)
       if (cur && ev.outcome === 'correct') {
         cur.correct += 1
       }
@@ -134,11 +144,21 @@ export function SessionEnd({
     [events, sessionLength],
   )
 
+  // „Na dziś wystarczy" — dwie krótkie sesje biją jedną długą. Liczymy sesje ze
+  // WSZYSTKICH modułów (dziecko mogło już grać w Cyferki). Stan liczony raz na
+  // mount: log bieżącej sesji jest już zapisany, zanim ten ekran się pojawi.
+  const [enough] = useState(() => hasEnoughForToday(Date.now()))
+
   useEffect(() => {
     if (suggestLevelUp) {
       void audioBus.play('level-up-suggest')
     }
-  }, [audioBus, suggestLevelUp])
+    // Cue leci PO `session-end` z `useSession.finishSession` — AudioBus to
+    // kolejka FIFO, więc dokleja się na końcu zamiast go przerywać.
+    if (enough) {
+      void audioBus.play('session-stop-enough')
+    }
+  }, [audioBus, suggestLevelUp, enough])
 
   return (
     <div
@@ -239,27 +259,80 @@ export function SessionEnd({
           Spróbuj wyższego poziomu!
         </div>
       )}
+      {/* Koniec na dziś: 🏠 przejmuje rolę głównego przycisku, „jeszcze raz"
+          schodzi na bok. Nie blokujemy powtórki — tylko przestajemy ją
+          podpowiadać. Oba targety dalej ≥60×60. */}
       <div
+        data-testid="session-end-actions"
         style={{
           display: 'flex',
           gap: 12,
           justifyContent: 'center',
+          alignItems: 'center',
+          flexDirection: enough ? 'column' : 'row',
           marginTop: 16,
         }}
       >
         {/* NIE dodajemy nav-tap — to TTS "klik" 1.4s co miesza się
             z audio następnego ekranu (quiz-intro lub home audio). */}
-        <Button size="large" data-testid="restart-button" onClick={onRestart}>
-          Jeszcze raz
-        </Button>
-        <Button
-          size="large"
-          variant="secondary"
-          data-testid="exit-button"
-          onClick={onExit}
-        >
-          Wyjdź
-        </Button>
+        {enough ? (
+          <>
+            <button
+              type="button"
+              data-testid="exit-button"
+              aria-label="Wróć do domu"
+              onClick={onExit}
+              style={{
+                width: '100%',
+                minHeight: tapTargets.minSize,
+                borderRadius: radii.kid,
+                border: `3px solid ${colors.accentGreen}`,
+                background: colors.accentGreen,
+                color: '#ffffff',
+                fontSize: 30,
+                fontWeight: 800,
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              🏠
+            </button>
+            <button
+              type="button"
+              data-testid="restart-button"
+              aria-label="Jeszcze raz"
+              onClick={onRestart}
+              style={{
+                minWidth: tapTargets.minSize,
+                minHeight: tapTargets.minSize,
+                padding: '0 20px',
+                borderRadius: radii.kid,
+                border: '2px solid #d8d8de',
+                background: 'transparent',
+                color: '#7a7a82',
+                fontSize: 18,
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              jeszcze raz
+            </button>
+          </>
+        ) : (
+          <>
+            <Button size="large" data-testid="restart-button" onClick={onRestart}>
+              Jeszcze raz
+            </Button>
+            <Button
+              size="large"
+              variant="secondary"
+              data-testid="exit-button"
+              onClick={onExit}
+            >
+              Wyjdź
+            </Button>
+          </>
+        )}
       </div>
     </div>
   )

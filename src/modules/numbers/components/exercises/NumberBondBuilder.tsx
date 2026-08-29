@@ -11,13 +11,14 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
+  promptKeys: string[]
   onAnswer: (outcome: AnswerOutcome) => void
 }
 
 const DROP_ID_A = 'bond-slot-a'
 const DROP_ID_B = 'bond-slot-b'
 
-export function NumberBondBuilder({ audioBus, payload, onAnswer }: Props) {
+export function NumberBondBuilder({ audioBus, payload, promptKeys, onAnswer }: Props) {
   const whole = clamp(payload.args[0] ?? 5, 2, 10)
   const correctA = clamp(payload.args[1] ?? 1, 1, whole - 1)
   const correctB = clamp(payload.args[2] ?? whole - correctA, 1, whole - 1)
@@ -27,8 +28,8 @@ export function NumberBondBuilder({ audioBus, payload, onAnswer }: Props) {
   const [resolved, setResolved] = useState(false)
 
   useEffect(() => {
-    void audioBus.play('ask-build-bond')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(
     () => buildBondChoices(correctA, correctB, whole),

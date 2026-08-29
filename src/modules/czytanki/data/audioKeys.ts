@@ -1,18 +1,6 @@
-// Klucze audio muszą być lowercase ASCII — macOS APFS jest case-insensitive
-// i maskuje 404, które wychodzą dopiero na GH Pages (Linux).
-const PL_MAP: Record<string, string> = {
-  ą: 'a_', ę: 'e_', ó: 'o_', ł: 'l_', ś: 's_', ć: 'c_', ń: 'n_', ź: 'z_', ż: 'z-',
-}
+import { slugPl } from '@/shared/audio/slugPl'
 
-export const AUDIO_KEY_RE = /^[a-z0-9_-]+$/
-
-export function slugPl(text: string): string {
-  return text
-    .toLowerCase()
-    .split('')
-    .map((ch) => PL_MAP[ch] ?? ch)
-    .join('')
-}
+export { slugPl, AUDIO_KEY_RE } from '@/shared/audio/slugPl'
 
 export function syllableAudioKey(syllable: string): string {
   return `cz-syl-${slugPl(syllable)}`

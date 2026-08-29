@@ -39,5 +39,19 @@
   "start-prompt": "naciśnij start, kiedy chcesz zacząć",
   "session-end": "skończyłeś!",
   "mastery-celebration": "Iskra! Umiesz tę literkę!",
-  "level-up-suggest": "super, spróbuj wyższego poziomu!"
+  "level-up-suggest": "super, spróbuj wyższego poziomu!",
+
+  "praise-proc-1": "uważnie słuchałeś!",
+  "praise-proc-2": "nie poddałeś się!",
+  "praise-proc-3": "poprawiłeś się!",
+  "praise-proc-4": "dobrze pomyślałeś!",
+  "praise-proc-5": "słuchałeś do końca!",
+  "praise-proc-6": "próbowałeś i wyszło!",
+  "praise-proc-7": "szukałeś spokojnie!",
+  "praise-proc-8": "nie spieszyłeś się!",
+  "praise-proc-9": "skupiłeś się!",
+  "praise-proc-10": "sam to znalazłeś!",
+
+  "retry-correct": "O, teraz dobrze! Poprawiłeś się.",
+  "session-stop-enough": "Na dziś wystarczy. Wrócimy jutro!"
 }

@@ -13,13 +13,16 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
-  onAnswer: (outcome: AnswerOutcome) => void
+  promptKeys: string[]
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 const SECOND_GROUP_DELAY_MS = 1500
 const DROP_TARGET_ID = 'concrete-add-target'
 
-export function ConcreteAddExercise({ audioBus, payload, onAnswer }: Props) {
+export function ConcreteAddExercise({ audioBus, payload, promptKeys, onAnswer, restrictChoicesTo }: Props) {
   const a = clamp(payload.args[0] ?? 1, 0, 10)
   const b = clamp(payload.args[1] ?? 1, 0, 10)
   const sum = a + b
@@ -27,18 +30,18 @@ export function ConcreteAddExercise({ audioBus, payload, onAnswer }: Props) {
   const [showSecond, setShowSecond] = useState(false)
 
   useEffect(() => {
-    void audioBus.play('ask-howmany-total')
+    for (const key of promptKeys) void audioBus.play(key)
     const t = setTimeout(() => setShowSecond(true), SECOND_GROUP_DELAY_MS)
     return () => clearTimeout(t)
-  }, [audioBus])
+  }, [audioBus, promptKeys])
 
-  const choices = useMemo(() => buildChoices(sum, { min: 1, max: 10 }), [sum])
+  const choices = useMemo(() => buildChoices(sum, { restrictChoicesTo, min: 1, max: 10 }), [sum, restrictChoicesTo])
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
     const dropped = event.active.data.current?.['digit'] as number | undefined
     if (dropped === undefined) return
-    onAnswer(dropped === sum ? 'correct' : 'wrong')
+    onAnswer(dropped === sum ? 'correct' : 'wrong', dropped)
   }
 
   return (

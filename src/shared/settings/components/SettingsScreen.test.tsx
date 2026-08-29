@@ -105,8 +105,8 @@ describe('SettingsScreen', () => {
         now={() => 1_000}
       />,
     )
-    fireEvent.click(screen.getByTestId('session-length-15'))
-    expect(useSettings.getState().settings.sessionLength).toBe(15)
+    fireEvent.click(screen.getByTestId('questions-per-session-12'))
+    expect(useSettings.getState().settings.questionsPerSession).toBe(12)
 
     fireEvent.change(screen.getByTestId('celebration-tempo'), {
       target: { value: 'short' },
@@ -228,6 +228,27 @@ describe('SettingsScreen', () => {
       target: { value: 'tylko-duze' },
     })
     expect(useSettings.getState().settings.caseMode.iskierka).toBe('tylko-duze')
+  })
+
+  it('clicking "globalnie" usuwa klucz numbers.questionCount (override)', () => {
+    unlock(1_000)
+    render(
+      <SettingsScreen
+        onResetConfirmed={vi.fn()}
+        now={() => 1_000}
+      />,
+    )
+    fireEvent.click(screen.getByTestId('numbers-question-count-6'))
+    expect(useSettings.getState().settings.numbers.questionCount).toBe(6)
+
+    fireEvent.click(screen.getByTestId('numbers-question-count-global'))
+    expect(useSettings.getState().settings.numbers.questionCount).toBeUndefined()
+    expect(
+      Object.prototype.hasOwnProperty.call(
+        useSettings.getState().settings.numbers,
+        'questionCount',
+      ),
+    ).toBe(false)
   })
 
   it('navigates to ActiveLettersEditor on tile click', () => {

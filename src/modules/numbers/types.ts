@@ -83,6 +83,8 @@ export type NumbersSessionEvent = {
   outcome: AnswerOutcome
   responseMs: number
   timestamp: number
+  /** Druga próba po błędzie. Brak pola = 1 (stare logi). */
+  attempt?: 1 | 2
 }
 
 export type PauseReason = 'manual' | 'idle' | 'visibility'

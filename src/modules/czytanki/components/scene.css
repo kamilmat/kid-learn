@@ -41,3 +41,11 @@
 @media (prefers-reduced-motion: reduce) {
   .cz-syl-bounce { animation: none !important; }
 }
+
+/* Echo — sygnał "teraz twoja kolej". Pulsuje wolno, żeby nie odciągać od tekstu. */
+@keyframes cz-echo-pulse { 0%,100% { transform: scale(1); opacity: .85 } 50% { transform: scale(1.18); opacity: 1 } }
+.cz-echo-icon { animation: cz-echo-pulse 1.1s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cz-echo-icon { animation: none !important; }
+}

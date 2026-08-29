@@ -25,6 +25,10 @@ const LONG_INACTIVITY_THRESHOLD_MS = 2 * 60 * 1000
  * Analizator post-sesji — przegląda `events` i zwraca listę flag anti-cheat.
  * Reguły zgodne ze spec sekcja 14.5.
  */
+// Odpowiedzi z drugiej próby (`attempt === 2`) są pomijane we WSZYSTKICH
+// regułach: to poprawka do już policzonego pytania, nie kolejna odpowiedź.
+// Bez tego retry-wrong dokładał się do serii „nie wiem", a szybka autokorekta
+// (dwa kafelki, cel dopiero co wybrzmiał) fałszywie podbijała fast-click.
 export function analyzeSession(events: SessionEvent[]): AntiCheatFlag[] {
   const flags: AntiCheatFlag[] = []
 
@@ -33,6 +37,9 @@ export function analyzeSession(events: SessionEvent[]): AntiCheatFlag[] {
   for (let i = 0; i < events.length; i++) {
     const ev = events[i]!
     if (ev.type !== 'answer') continue
+    // Poprawka (druga próba) mierzy czas od pokazania ekranu retry, nie od
+    // pytania — zawsze szybka, więc nie liczy się do anti-cheat.
+    if (ev.attempt === 2) continue
     if (ev.responseMs < FAST_CLICK_THRESHOLD_MS) {
       fastChainIdx.push(i)
       if (fastChainIdx.length >= FAST_CLICK_REQUIRED) {
@@ -54,6 +61,9 @@ export function analyzeSession(events: SessionEvent[]): AntiCheatFlag[] {
   for (let i = 0; i < events.length; i++) {
     const ev = events[i]!
     if (ev.type !== 'answer') continue
+    // Retry ma tylko 2 kafelki (poprawny + wybrany) — pozycja jest z innej
+    // puli niż pierwsze podejście i nie powinna wpadać w streak.
+    if (ev.attempt === 2) continue
     if (ev.chosenPosition === undefined) {
       lastPosition = null
       positionStreak = []
@@ -82,7 +92,7 @@ export function analyzeSession(events: SessionEvent[]): AntiCheatFlag[] {
   let dontKnowStreak: number[] = []
   for (let i = 0; i < events.length; i++) {
     const ev = events[i]!
-    if (ev.type !== 'answer') continue
+    if (ev.type !== 'answer' || ev.attempt === 2) continue
 
     if (ev.outcome === 'timeout') {
       timeoutStreak.push(i)

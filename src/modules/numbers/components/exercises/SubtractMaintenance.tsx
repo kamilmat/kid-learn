@@ -13,7 +13,10 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
-  onAnswer: (outcome: AnswerOutcome) => void
+  promptKeys: string[]
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 const DROP_TARGET_ID = 'answer-target'
@@ -21,32 +24,32 @@ const DOT_COLOR = '#dc2626'
 const REMOVE_DELAY_MS = 1500
 const REMOVE_TRANSITION_MS = 600
 
-export function SubtractMaintenance({ audioBus, payload, onAnswer }: Props) {
+export function SubtractMaintenance({ audioBus, payload, promptKeys, onAnswer, restrictChoicesTo }: Props) {
   const a = clamp(payload.args[0] ?? 5, 0, 20)
   const b = clamp(payload.args[1] ?? 1, 0, a)
   const result = a - b
   const [removed, setRemoved] = useState(false)
 
   useEffect(() => {
-    void audioBus.play('ask-howmany-left')
+    for (const key of promptKeys) void audioBus.play(key)
     const t = setTimeout(() => setRemoved(true), REMOVE_DELAY_MS)
     return () => clearTimeout(t)
-  }, [audioBus])
+  }, [audioBus, promptKeys])
 
   const displayCount = removed ? result : a
   const highlightAfter = removed ? undefined : result
 
   const choices = useMemo(
     () =>
-      buildChoices(result, { min: 0, max: 20, offsets: NEAR_MISS_OFFSETS }),
-    [result],
+      buildChoices(result, { restrictChoicesTo, min: 0, max: 20, offsets: NEAR_MISS_OFFSETS }),
+    [result, restrictChoicesTo],
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
     const dropped = event.active.data.current?.['digit'] as number | undefined
     if (dropped === undefined) return
-    onAnswer(dropped === result ? 'correct' : 'wrong')
+    onAnswer(dropped === result ? 'correct' : 'wrong', dropped)
   }
 
   return (

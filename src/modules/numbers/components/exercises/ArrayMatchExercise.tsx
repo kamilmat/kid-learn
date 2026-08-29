@@ -12,25 +12,28 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
-  onAnswer: (outcome: AnswerOutcome) => void
+  promptKeys: string[]
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 const DROP_TARGET_ID = 'answer-target'
 const DOT_COLOR = '#dc2626'
 
-export function ArrayMatchExercise({ audioBus, payload, onAnswer }: Props) {
+export function ArrayMatchExercise({ audioBus, payload, promptKeys, onAnswer, restrictChoicesTo }: Props) {
   const rows = clamp(payload.args[0] ?? 2, 1, 6)
   const cols = clamp(payload.args[1] ?? 2, 1, 6)
   const total = rows * cols
 
   useEffect(() => {
-    void audioBus.play('ask-howmany-total')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(
     () =>
-      buildChoices(total, { min: 1, max: 36, offsets: NEAR_MISS_OFFSETS }),
-    [total],
+      buildChoices(total, { restrictChoicesTo, min: 1, max: 36, offsets: NEAR_MISS_OFFSETS }),
+    [total, restrictChoicesTo],
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -38,7 +41,7 @@ export function ArrayMatchExercise({ audioBus, payload, onAnswer }: Props) {
     const dropped = event.active.data.current?.['digit'] as number | undefined
     if (dropped === undefined) return
     // TODO commutativity bonus question — v2
-    onAnswer(dropped === total ? 'correct' : 'wrong')
+    onAnswer(dropped === total ? 'correct' : 'wrong', dropped)
   }
 
   return (

@@ -23,5 +23,14 @@
   "reading-praise-5": "Tak trzymaj!",
   "reading-praise-6": "Pięknie!",
 
-  "reading-dont-know": "Nie szkodzi, idziemy dalej."
+  "reading-dont-know": "Nie szkodzi, idziemy dalej.",
+
+  "reading-praise-proc-1": "Ładnie poskładałeś sylaby!",
+  "reading-praise-proc-2": "Słuchałeś uważnie!",
+  "reading-praise-proc-3": "Czytałeś powoli i dobrze!",
+  "reading-praise-proc-4": "Sam to rozłożyłeś!",
+  "reading-praise-proc-5": "Nie poddałeś się!",
+  "reading-praise-proc-6": "Dobrze wybrałeś!",
+
+  "reading-blend-prefix": "Składamy:"
 }

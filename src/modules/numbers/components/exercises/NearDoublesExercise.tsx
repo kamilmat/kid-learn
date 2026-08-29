@@ -13,34 +13,37 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
-  onAnswer: (outcome: AnswerOutcome) => void
+  promptKeys: string[]
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 const DROP_TARGET_ID = 'answer-target'
 const DOT_COLOR = '#dc2626'
 const HIGHLIGHT_COLOR = '#16a34a'
 
-export function NearDoublesExercise({ audioBus, payload, onAnswer }: Props) {
+export function NearDoublesExercise({ audioBus, payload, promptKeys, onAnswer, restrictChoicesTo }: Props) {
   const a = clamp(payload.args[0] ?? 1, 1, 9)
   // Wymuś b = a+1 (NearDoubles definicja)
   const b = clamp(payload.args[1] ?? a + 1, a + 1, 10)
   const correct = a + b
 
   useEffect(() => {
-    void audioBus.play('ask-howmany-total')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(
     () =>
-      buildChoices(correct, { min: 1, max: 20, offsets: NEAR_MISS_OFFSETS }),
-    [correct],
+      buildChoices(correct, { restrictChoicesTo, min: 1, max: 20, offsets: NEAR_MISS_OFFSETS }),
+    [correct, restrictChoicesTo],
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
     const dropped = event.active.data.current?.['digit'] as number | undefined
     if (dropped === undefined) return
-    onAnswer(dropped === correct ? 'correct' : 'wrong')
+    onAnswer(dropped === correct ? 'correct' : 'wrong', dropped)
   }
 
   return (

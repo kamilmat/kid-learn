@@ -2,9 +2,12 @@
 
 import type {
   CaseMode,
+  CzytankiSettings,
   HumorMode,
+  LettersSettings,
   Level,
   NumbersSettings,
+  PromptMode,
   Settings,
   StyleMode,
   TilesPerQuestion,
@@ -12,13 +15,27 @@ import type {
   WordAnimations,
 } from './types'
 
+// Moduł 1: default `both` (nazwa → fonem). Sama nazwa nie wystarcza do scalania
+// głosek, sam fonem bywa nieidentyfikowalny — para uczy obu (Piasta & Wagner 2010).
+export const LETTERS_DEFAULTS: LettersSettings = {
+  promptMode: 'both',
+  promptModeByLevel: {},
+}
+
 // Sekcja 12 spec: defaulty modułu 3 (matematyka)
+// `questionCount` celowo NIEUSTAWIONE — od v5 to override globalnego
+// `questionsPerSession`, a brak klucza znaczy „bierz globalną".
 export const NUMBERS_DEFAULTS: NumbersSettings = {
   iskraThinkingAloud: true,
-  questionCount: 8,
   treeCelebrationsOn: true,
   skipCountStep: 'mixed',
   conceptIntros: true,
+}
+
+// Sekcja modułu 4: echo i tempo włącza dziecko ikoną — tu tylko pamiętamy wybór.
+export const CZYTANKI_DEFAULTS: CzytankiSettings = {
+  echoMode: false,
+  tempo: 'normal',
 }
 
 // Lista wszystkich poziomów w kolejności rosnącej trudności. Single source of truth
@@ -114,19 +131,22 @@ export const defaultSettings: Settings = {
   activeLettersOverride: {},
   caseMode: {},
   styleMode: {},
-  sessionLength: 10,
+  questionsPerSession: 8,
   timeLimit: {},
   showCountdownBar: {},
   celebrationTempo: 'medium',
   defaultLevel: 'last-used',
   tilesPerQuestion: {},
   humorMode: 'on' as HumorMode,
+  secondAttempt: true,
+  letters: LETTERS_DEFAULTS,
   reading: {
     wordAnimations: 'on' as WordAnimations,
     wildCelebrationFreq: 8,
     questionsPerSession: {},
   },
   numbers: NUMBERS_DEFAULTS,
+  czytanki: CZYTANKI_DEFAULTS,
 }
 
 /**
@@ -139,6 +159,22 @@ export function getEffectiveTilesPerQuestion(
 ): TilesPerQuestion {
   return (
     settings.tilesPerQuestion?.[level] ?? levelDefaults[level].tilesPerQuestion
+  )
+}
+
+/**
+ * Zwraca efektywny tryb promptu litery dla poziomu — override z
+ * `settings.letters.promptModeByLevel[level]` jeśli ustawiony, inaczej globalny
+ * `settings.letters.promptMode`.
+ */
+export function getEffectivePromptMode(
+  settings: Settings,
+  level: Level,
+): PromptMode {
+  return (
+    settings.letters?.promptModeByLevel?.[level] ??
+    settings.letters?.promptMode ??
+    LETTERS_DEFAULTS.promptMode
   )
 }
 

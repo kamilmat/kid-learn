@@ -12,28 +12,31 @@ import { DropTarget } from './shared/DropTarget'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
-  onAnswer: (outcome: AnswerOutcome) => void
+  promptKeys: string[]
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 const DROP_TARGET_ID = 'rhythm-target'
 
-export function NumberRhythmExercise({ audioBus, payload, onAnswer }: Props) {
+export function NumberRhythmExercise({ audioBus, payload, promptKeys, onAnswer, restrictChoicesTo }: Props) {
   const pattern = payload.args.length > 0 ? payload.args : [1, 2]
   const expectedNext = pattern[0] ?? 1
 
   useEffect(() => {
-    void audioBus.play('ask-whats-next')
-  }, [audioBus])
+    for (const key of promptKeys) void audioBus.play(key)
+  }, [audioBus, promptKeys])
 
   // Sekwencja: pattern × 2 + slot na pytanie
   const sequence = useMemo(() => [...pattern, ...pattern], [pattern])
-  const choices = useMemo(() => buildChoices(expectedNext, { min: 1, max: 6 }), [expectedNext])
+  const choices = useMemo(() => buildChoices(expectedNext, { restrictChoicesTo, min: 1, max: 6 }), [expectedNext, restrictChoicesTo])
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
     const dropped = event.active.data.current?.['digit'] as number | undefined
     if (dropped === undefined) return
-    onAnswer(dropped === expectedNext ? 'correct' : 'wrong')
+    onAnswer(dropped === expectedNext ? 'correct' : 'wrong', dropped)
   }
 
   return (

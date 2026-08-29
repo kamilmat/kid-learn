@@ -203,6 +203,38 @@ describe('useNumbersSession', () => {
     expect(result.current.status).toBe('feedback')
   })
 
+  it('skipCountStep: 5 — pytania tylko z konceptów mających fakty (bez fallbacku na pulę poziomu)', async () => {
+    const { getLevelFacts } = await import('../data/levelFacts')
+    const { unlockedConcepts } = await import('./pickConcept')
+    const levelFacts = getLevelFacts('pochodnia', 5)
+    // Świeży postęp → otwarte są tylko skipcount-5 i equalgroups. Gdy dobór
+    // konceptu wybierze bezfaktowy skipcount-2/10, sesja spada na pulę CAŁEGO
+    // poziomu i wypuszcza koncepty jeszcze zablokowane — tego pilnuje ten test.
+    const allowed = new Set<string>([
+      ...unlockedConcepts('pochodnia', {}, levelFacts).map((c) => c.id),
+      'plomyk-addsub-10', // gałąź maintenance odejmowania (18%)
+    ])
+
+    let seed = 12345
+    const rng = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648)
+    const audioBus = { play: vi.fn(() => Promise.resolve(true)), stop: vi.fn() }
+    const { result } = renderHook(() =>
+      useNumbersSession({
+        level: 'pochodnia', audioBus, questionCount: 8, skipCountStep: 5, rng,
+      }),
+    )
+    act(() => result.current.start())
+    const seen: string[] = []
+    for (let i = 0; i < 8; i++) {
+      expect(result.current.currentQuestion).not.toBeNull()
+      seen.push(result.current.currentQuestion!.conceptId)
+      act(() => result.current.answer('correct'))
+      act(() => result.current.advance())
+    }
+    expect(seen).toHaveLength(8)
+    expect(seen.filter((id) => !allowed.has(id))).toEqual([])
+  })
+
   it('inicjalizuje całą pulę faktów jednym zapisem w start()', () => {
     const audioBus = { play: vi.fn(() => Promise.resolve(true)), stop: vi.fn() }
     let writes = 0

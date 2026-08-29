@@ -1,5 +1,6 @@
+import { StrictMode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { WordScene } from './WordScene'
 
 describe('WordScene', () => {
@@ -30,10 +31,10 @@ describe('WordScene', () => {
     vi.useRealTimers()
   })
 
-  it('plays audio sequence', () => {
+  it('plays audio sequence', async () => {
     const playMock = vi.fn().mockResolvedValue(undefined)
     render(<WordScene scene={{ ...baseScene, audio: ['word-MAMA', 'sfx-heart-beat'] }} audioBus={{ play: playMock, stop: vi.fn() }} onComplete={vi.fn()} />)
-    expect(playMock).toHaveBeenCalled()
+    await waitFor(() => expect(playMock).toHaveBeenCalled())
   })
 
   it('renders without effects when effects is undefined', () => {
@@ -53,5 +54,39 @@ describe('WordScene', () => {
     const sceneWithStars = { ...baseScene, effects: ['stars'] }
     const { container } = render(<WordScene scene={sceneWithStars} audioBus={{ play: vi.fn(), stop: vi.fn() }} onComplete={vi.fn()} />)
     expect(container.textContent).toContain('⭐')
+  })
+
+  it('plays the scene audio exactly once under StrictMode (phantom double-effect)', async () => {
+    // Regression: StrictMode's cancelled phantom first effect run used to
+    // stamp playedRef synchronously, making the real second run see
+    // alreadyPlayed=true and skip the word clip entirely.
+    const playMock = vi.fn().mockResolvedValue(undefined)
+    const scene = { ...baseScene, audio: ['word-test'] }
+    render(
+      <StrictMode>
+        <WordScene scene={scene} audioBus={{ play: playMock, stop: vi.fn() }} onComplete={vi.fn()} />
+      </StrictMode>
+    )
+    await waitFor(() => expect(playMock).toHaveBeenCalledTimes(1))
+    expect(playMock).toHaveBeenCalledWith('word-test')
+  })
+
+  it('does not replay audio on remount after the scene already completed (pause/resume)', async () => {
+    const playMock = vi.fn().mockResolvedValue(undefined)
+    const scene = { ...baseScene, audio: ['word-test'] }
+    const playedRef = { current: null as string | null }
+
+    const { unmount } = render(
+      <WordScene scene={scene} audioBus={{ play: playMock, stop: vi.fn() }} onComplete={vi.fn()} playedRef={playedRef} />
+    )
+    await waitFor(() => expect(playMock).toHaveBeenCalledTimes(1))
+    unmount()
+
+    render(
+      <WordScene scene={scene} audioBus={{ play: playMock, stop: vi.fn() }} onComplete={vi.fn()} playedRef={playedRef} />
+    )
+    // Give any (unwanted) async replay a chance to happen before asserting.
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(playMock).toHaveBeenCalledTimes(1)
   })
 })

@@ -11,6 +11,7 @@ import { usePageVisibility } from '@/shared/engagement/usePageVisibility'
 import {
   defaultSettings,
   getActiveLetterPool,
+  getEffectivePromptMode,
   getEffectiveShowCountdownBar,
   getEffectiveTilesPerQuestion,
   getEffectiveTimeLimit,
@@ -22,6 +23,7 @@ import type {
   Settings,
   StyleMode,
 } from '@/shared/settings/types'
+import { promptAudioKeys } from '@/modules/letters/audio/promptKeys'
 import { useSession } from '@/modules/letters/hooks/useSession'
 import type { LetterTileState } from './LetterTile'
 import { FeedbackOverlay } from './FeedbackOverlay'
@@ -77,17 +79,20 @@ export function SessionView({
   const activeLetters = useMemo(() => getActiveLetterPool(settings, level), [settings, level])
   const caseMode = resolveCaseMode(settings, level)
   const styleMode = resolveStyleMode(settings, level)
+  const promptMode = getEffectivePromptMode(settings, level)
 
   const session = useSession({
     level,
     activeLetters,
-    sessionLength: settings.sessionLength,
+    sessionLength: settings.questionsPerSession,
     timeLimit: getEffectiveTimeLimit(settings, level),
     showCountdownBar: getEffectiveShowCountdownBar(settings, level),
     caseMode,
     styleMode,
     celebrationTempo: settings.celebrationTempo,
     tilesPerQuestion: getEffectiveTilesPerQuestion(settings, level),
+    secondAttempt: settings.secondAttempt,
+    promptMode,
     ...(initialStates !== undefined ? { initialStates } : {}),
     ...(onSessionComplete !== undefined ? { onSessionEnd: onSessionComplete } : {}),
     audioBus,
@@ -124,13 +129,16 @@ export function SessionView({
   // Anti-cheat: idle detection — auto-pauza po 20s bez interakcji.
   useIdleDetector({
     thresholdMs: 20_000,
-    enabled: session.status === 'playing',
+    enabled: session.status === 'playing' || session.status === 'retry',
     onIdle: () => session.pause('idle'),
   })
 
   // Anti-cheat: page visibility — auto-pauza gdy dziecko opuszcza tab.
   usePageVisibility({
-    enabled: session.status === 'playing' || session.status === 'feedback',
+    enabled:
+      session.status === 'playing' ||
+      session.status === 'feedback' ||
+      session.status === 'retry',
     onHidden: () => session.pause('visibility'),
     onVisible: () => {
       // gdy wraca i jesteśmy w pause z reason='visibility' — sam zostaje
@@ -163,7 +171,7 @@ export function SessionView({
       <SessionEnd
         iskierki={session.iskierki}
         totalQuestions={session.totalQuestions}
-        sessionLength={settings.sessionLength}
+        sessionLength={settings.questionsPerSession}
         events={session.sessionEvents}
         onRestart={session.start}
         onExit={onExit}
@@ -188,7 +196,7 @@ export function SessionView({
           lastWrongSlot={session.lastFeedback?.variant === 'wrong' ? session.lastFeedback.chosenSlot ?? null : null}
           countdownMs={session.countdownMs}
           countdownTotalMs={session.countdownTotalMs}
-          interactive={session.status === 'playing'}
+          interactive={session.status === 'playing' || session.status === 'retry'}
           {...(tileState !== undefined ? { tileState } : {})}
           onTileClick={(letter, slot) => session.answer(letter, slot)}
           onPlayAudio={() => {
@@ -197,7 +205,12 @@ export function SessionView({
               // dorzucały kolejne kopie do FIFO queue, które grały sekwencyjnie
               // z opóźnieniem ("powtórz" powinno restartować, nie kolejkować).
               audioBus.stop()
-              void audioBus.play(`letter-${session.currentQuestion.targetLetter}`)
+              for (const key of promptAudioKeys(
+                session.currentQuestion.targetLetter,
+                promptMode,
+              )) {
+                void audioBus.play(key)
+              }
             }
           }}
           onDontKnow={() => session.dontKnow()}

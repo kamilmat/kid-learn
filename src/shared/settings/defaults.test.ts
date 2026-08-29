@@ -4,6 +4,7 @@ import {
   ALL_LEVELS,
   defaultSettings,
   getActiveLetterPool,
+  getEffectivePromptMode,
   getEffectiveTimeLimit,
   levelDefaults,
   levelLetterPools,
@@ -96,7 +97,7 @@ describe('levelDefaults (sekcja 10.2)', () => {
 
 describe('defaultSettings (sekcja 13.2)', () => {
   it('matches the spec defaults', () => {
-    expect(defaultSettings.sessionLength).toBe(10)
+    expect(defaultSettings.questionsPerSession).toBe(8)
     expect(defaultSettings.timeLimit).toEqual({})
     expect(defaultSettings.showCountdownBar).toEqual({})
     expect(defaultSettings.celebrationTempo).toBe('medium')
@@ -228,5 +229,24 @@ describe('getEffectiveTimeLimit', () => {
     expect(getEffectiveTimeLimit(settings, 'plomyk')).toBe('off')
     expect(getEffectiveTimeLimit(settings, 'ognik')).toBe('off')
     expect(getEffectiveTimeLimit(settings, 'pochodnia')).toBe(15)
+  })
+})
+
+describe('getEffectivePromptMode', () => {
+  it('returns default `both` when no override', () => {
+    expect(getEffectivePromptMode(defaultSettings, 'iskierka')).toBe('both')
+  })
+
+  it('returns per-level override when present, over the global default', () => {
+    const settings = {
+      ...defaultSettings,
+      letters: {
+        ...defaultSettings.letters,
+        promptMode: 'both' as const,
+        promptModeByLevel: { iskierka: 'phoneme' as const },
+      },
+    }
+    expect(getEffectivePromptMode(settings, 'iskierka')).toBe('phoneme')
+    expect(getEffectivePromptMode(settings, 'plomyk')).toBe('both')
   })
 })

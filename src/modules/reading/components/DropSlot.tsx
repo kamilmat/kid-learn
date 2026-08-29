@@ -3,7 +3,7 @@
 
 import type { CSSProperties } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { getSyllableColor } from '@/shared/ui/syllableColors'
+import { getSyllableCue } from '@/shared/ui/syllableColors'
 
 export type DropSlotState = 'empty' | 'filled' | 'wrong'
 
@@ -69,14 +69,17 @@ export function DropSlot({ index, filled = false, syllable, state = 'empty' }: D
   const { setNodeRef, isOver } = useDroppable({ id: `slot-${index}` })
 
   const resolvedState: DropSlotState = filled ? state || 'filled' : state
-  const textColor = filled && resolvedState === 'filled' ? getSyllableColor(index) : undefined
+  const cue = filled && resolvedState === 'filled' ? getSyllableCue(index) : undefined
 
   return (
     <div
       ref={setNodeRef}
       data-testid={`drop-slot-${index}`}
       aria-label={filled && syllable ? `slot ${index + 1}: ${syllable}` : `pusty slot ${index + 1}`}
-      style={{ ...slotStyle(resolvedState, isOver), ...(textColor ? { color: textColor } : {}) }}
+      style={{
+        ...slotStyle(resolvedState, isOver),
+        ...(cue ? { color: cue.color, borderBottom: `3px ${cue.underline} ${cue.color}` } : {}),
+      }}
     >
       {syllable ?? ''}
     </div>

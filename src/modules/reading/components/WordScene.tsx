@@ -2,23 +2,60 @@
 // Phase 7: wywołuje onComplete po durationMs, odgrywa sekwencję audio.
 
 import { useEffect, useRef } from 'react'
+import type { MutableRefObject } from 'react'
 import type { Scene } from '../data/scenes'
 import type { AudioBus } from '@/shared/audio/AudioBus'
+import type { BlendState } from '../hooks/useReadingSession'
+import { BlendRow } from './BlendRow'
 
 type Props = {
   scene: Scene
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   onComplete: () => void
+  /** Krok syntezy leci dalej, gdy scenka zasłania FeedbackOverlay. */
+  blend?: BlendState | null
+  /**
+   * Ref przeżywający remount: pauza chowa scenkę, wznowienie montuje ją na nowo
+   * — a wtedy klip słowa wpadał do FIFO DRUGI raz, między „Składamy:" a pierwszą
+   * sylabą. Trzyma id scenki, której audio już poszło. Bez propa scenka pilnuje
+   * się tylko w obrębie jednego mountu (własny ref).
+   */
+  playedRef?: MutableRefObject<string | null>
+  /**
+   * Oddaje obietnicę sekwencji audio scenki — `resume()` czeka na nią, zanim
+   * zacznie składanie. Przy pominiętym audio (już grało) to gotowa obietnica.
+   */
+  onAudioSequence?: (audio: Promise<void>) => void
 }
 
-export function WordScene({ scene, audioBus, onComplete }: Props) {
+export function WordScene({
+  scene,
+  audioBus,
+  onComplete,
+  blend = null,
+  playedRef,
+  onAudioSequence,
+}: Props) {
   const completedRef = useRef(false)
+  const ownPlayedRef = useRef<string | null>(null)
+  const effectivePlayedRef = playedRef ?? ownPlayedRef
 
   useEffect(() => {
     let cancelled = false
 
-    // Play audio sequence
+    const alreadyPlayed = effectivePlayedRef.current === scene.id
+
+    // Play audio sequence. Stamp playedRef only once the sequence actually
+    // completes (not cancelled) — a StrictMode phantom first run gets
+    // cancelled before it finishes, so it must NOT stamp the ref, otherwise
+    // the real second run would see `alreadyPlayed === true` and skip audio.
+    // The leading microtask yield matters too: StrictMode's mount → cleanup
+    // → remount cycle runs synchronously, so without the yield the phantom
+    // run would already call audioBus.play() before its own cleanup flips
+    // `cancelled` — this way it bails out before ever touching the bus.
     const playSeq = async () => {
+      await Promise.resolve()
+      if (cancelled) return
       for (const audioKey of scene.audio) {
         if (cancelled) break
         try {
@@ -27,8 +64,13 @@ export function WordScene({ scene, audioBus, onComplete }: Props) {
           // Missing audio file — log and continue
         }
       }
+      if (!cancelled) {
+        effectivePlayedRef.current = scene.id
+      }
     }
-    void playSeq()
+    const audioDone = alreadyPlayed ? Promise.resolve() : playSeq()
+    onAudioSequence?.(audioDone)
+    void audioDone
 
     // Auto-dismiss timer
     const timer = setTimeout(() => {
@@ -42,7 +84,7 @@ export function WordScene({ scene, audioBus, onComplete }: Props) {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [scene, audioBus, onComplete])
+  }, [scene, audioBus, onComplete, effectivePlayedRef, onAudioSequence])
 
   // Inline keyframes via <style> tag (one per scene)
   const keyframesCss = scene.keyframes.map(k => k.css).join('\n')
@@ -70,6 +112,7 @@ export function WordScene({ scene, audioBus, onComplete }: Props) {
       <div style={{ fontSize: 200, ...animationStyle }}>
         {scene.emoji}
       </div>
+      {blend !== null && <BlendRow blend={blend} />}
       {scene.effects?.map((effect, i) => (
         <SceneEffect key={i} effect={effect} />
       ))}

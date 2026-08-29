@@ -161,11 +161,11 @@ describe('LettersModule — integration', () => {
     })
     expect(screen.getByTestId('session-view')).toBeInTheDocument()
 
-    // Kończymy sesję klikając "Nie wiem" pełną liczbę pytań (default sessionLength=10)
+    // Kończymy sesję klikając "Nie wiem" pełną liczbę pytań (default questionsPerSession=8)
     // dontKnow @ medium: 6500ms feedback; non-last + 1200ms breath = 7700ms;
     // last question finishSession po 6500ms bezpośrednio.
     // Advancing 7700ms covers all cases.
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 8; i++) {
       act(() => {
         screen.getByTestId('dont-know-button').click()
       })
@@ -184,6 +184,6 @@ describe('LettersModule — integration', () => {
       (acc, st) => acc + st.totalSeen,
       0,
     )
-    expect(sumSeen).toBeGreaterThanOrEqual(10)
+    expect(sumSeen).toBeGreaterThanOrEqual(8)
   })
 })

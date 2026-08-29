@@ -13,7 +13,10 @@ import { clamp } from '../../utils/clamp'
 type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
-  onAnswer: (outcome: AnswerOutcome) => void
+  promptKeys: string[]
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 const DROP_TARGET_ID = 'answer-target'
@@ -21,7 +24,7 @@ const DOT_COLOR = '#dc2626'
 const TRANSFER_COLOR = '#16a34a'
 const ANIMATION_MS = 2500
 
-export function Make10Exercise({ audioBus, payload, onAnswer }: Props) {
+export function Make10Exercise({ audioBus, payload, promptKeys, onAnswer, restrictChoicesTo }: Props) {
   const a = clamp(payload.args[0] ?? 8, 1, 9)
   // a+b > 10, a+b ≤ 18
   const b = clamp(payload.args[1] ?? 5, Math.max(1, 11 - a), 18 - a)
@@ -35,22 +38,22 @@ export function Make10Exercise({ audioBus, payload, onAnswer }: Props) {
     void audioBus.play('correct-make10-prefix')
     const t = setTimeout(() => {
       setPhase('answer')
-      void audioBus.play('ask-howmany-total')
+      for (const key of promptKeys) void audioBus.play(key)
     }, ANIMATION_MS)
     return () => clearTimeout(t)
-  }, [audioBus])
+  }, [audioBus, promptKeys])
 
   const choices = useMemo(
     () =>
-      buildChoices(correct, { min: 1, max: 20, offsets: NEAR_MISS_OFFSETS }),
-    [correct],
+      buildChoices(correct, { restrictChoicesTo, min: 1, max: 20, offsets: NEAR_MISS_OFFSETS }),
+    [correct, restrictChoicesTo],
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
     const dropped = event.active.data.current?.['digit'] as number | undefined
     if (dropped === undefined) return
-    onAnswer(dropped === correct ? 'correct' : 'wrong')
+    onAnswer(dropped === correct ? 'correct' : 'wrong', dropped)
   }
 
   // Faza animacji: pokazujemy oryginalne TenFrame(a) i TenFrame(b), z animacją CSS

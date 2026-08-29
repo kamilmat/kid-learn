@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { act, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FeedbackOverlay } from './SessionView'
@@ -91,5 +92,76 @@ describe('FeedbackOverlay (moduł 3)', () => {
       vi.advanceTimersByTime(20_000)
     })
     expect(onAdvance).not.toHaveBeenCalled()
+  })
+
+  it('strategia gra raz: pierwsza pomyłka ją odtwarza, retry-wrong (attempt=2) ją tłumi', async () => {
+    const bus = { play: vi.fn(() => Promise.resolve(true)), stop: vi.fn() }
+    const onAdvance = vi.fn()
+
+    // SessionView gates: strategyKey={session.lastAttempt === 2 ? null : strategyKey}.
+    const { rerender } = render(
+      <FeedbackOverlay
+        outcome="wrong"
+        correctValue={9}
+        audioBus={bus}
+        onAdvance={onAdvance}
+        strategyKey="strategy-count-on"
+        attempt={1}
+      />,
+    )
+    await act(async () => {
+      vi.advanceTimersByTime(2200)
+    })
+    expect(bus.play).toHaveBeenCalledWith('strategy-count-on')
+    expect(bus.play.mock.calls.filter((c) => c[0] === 'strategy-count-on')).toHaveLength(1)
+
+    bus.play.mockClear()
+    rerender(
+      <FeedbackOverlay
+        outcome="wrong"
+        correctValue={9}
+        audioBus={bus}
+        onAdvance={onAdvance}
+        strategyKey={null}
+        attempt={2}
+      />,
+    )
+    await act(async () => {
+      vi.advanceTimersByTime(2200)
+    })
+    expect(bus.play).not.toHaveBeenCalledWith('strategy-count-on')
+  })
+
+  it('🤷 (dontKnow): "try-again" gra dokładnie raz mimo StrictMode dev-mount dubla', async () => {
+    // React w dev/StrictMode odpala KAŻDY nowy efekt jako setup→cleanup→setup
+    // przy pierwszym mouncie tego komponentu. Bez cache'a "co już gra dla tej
+    // treści" druga kopia dokłada DRUGI komplet `audioBus.play()` obok
+    // pierwszego zamiast go reużyć — dziecko słyszy `try-again` dwa razy.
+    const bus = { play: vi.fn(() => Promise.resolve(true)), stop: vi.fn() }
+    const onAdvance = vi.fn()
+
+    render(
+      <StrictMode>
+        <FeedbackOverlay
+          outcome="dontKnow"
+          correctValue={5}
+          audioBus={bus}
+          onAdvance={onAdvance}
+        />
+      </StrictMode>,
+    )
+
+    // Dokładnie jedno wywołanie na klucz — nie dwa, mimo podwójnego mountu.
+    expect(bus.play.mock.calls.filter((c) => c[0] === 'try-again')).toHaveLength(1)
+    expect(bus.play.mock.calls.filter((c) => c[0] === 'correct-show-5')).toHaveLength(1)
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(onAdvance).not.toHaveBeenCalled()
+    await act(async () => {
+      vi.advanceTimersByTime(1500)
+    })
+    expect(onAdvance).toHaveBeenCalledTimes(1)
   })
 })

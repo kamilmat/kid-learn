@@ -9,7 +9,7 @@
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { SyllableTile } from '../SyllableTile'
 import type { SyllableFillVariant } from '../../types'
-import { getSyllableColor } from '@/shared/ui/syllableColors'
+import { getSyllableCue } from '@/shared/ui/syllableColors'
 
 export type SyllableFillExerciseProps = {
   targetWord: string
@@ -144,25 +144,24 @@ export function SyllableFillExercise({
           justifyContent: 'center',
         }}
       >
-        {displaySyllables.map((syl, i) =>
-          syl === null ? (
-            <div
-              key={`gap-${i}`}
-              data-testid="gap-slot"
-              style={gapSlotStyle}
-              aria-label="brakująca sylaba"
-            >
-              ?
-            </div>
-          ) : (
+        {displaySyllables.map((syl, i) => {
+          if (syl === null) {
+            return (
+              <div key={`gap-${i}`} data-testid="gap-slot" style={gapSlotStyle} aria-label="brakująca sylaba">
+                ?
+              </div>
+            )
+          }
+          const cue = getSyllableCue(i)
+          return (
             <div
               key={`syl-${i}-${syl}`}
-              style={{ ...syllableBoxStyle, color: getSyllableColor(i) }}
+              style={{ ...syllableBoxStyle, color: cue.color, borderBottom: `3px ${cue.underline} ${cue.color}` }}
             >
               {syl}
             </div>
-          ),
-        )}
+          )
+        })}
       </div>
 
       {/* Rząd opcji sylab do wyboru */}
