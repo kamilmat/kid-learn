@@ -7,6 +7,7 @@ import type { Scene } from '../data/scenes'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import type { BlendState } from '../hooks/useReadingSession'
 import { BlendRow } from './BlendRow'
+import { useReducedMotion } from '@/shared/ui/useReducedMotion'
 
 type Props = {
   scene: Scene
@@ -39,6 +40,7 @@ export function WordScene({
   const completedRef = useRef(false)
   const ownPlayedRef = useRef<string | null>(null)
   const effectivePlayedRef = playedRef ?? ownPlayedRef
+  const reduced = useReducedMotion()
 
   useEffect(() => {
     let cancelled = false
@@ -86,12 +88,13 @@ export function WordScene({
     }
   }, [scene, audioBus, onComplete, effectivePlayedRef, onAudioSequence])
 
-  // Inline keyframes via <style> tag (one per scene)
+  // Inline keyframes via <style> tag (one per scene) — skipped entirely when
+  // reduced, so the emoji simply sits static at its resting layout position.
   const keyframesCss = scene.keyframes.map(k => k.css).join('\n')
   const animationName = scene.keyframes[0]?.name
-  const animationStyle = animationName
+  const animationStyle = !reduced && animationName
     ? { animation: `${animationName} ${scene.durationMs}ms ease-in-out` }
-    : undefined
+    : { transition: 'none' }
 
   return (
     <div
@@ -108,44 +111,44 @@ export function WordScene({
         gap: 16,
       }}
     >
-      <style>{keyframesCss}</style>
+      {!reduced && <style>{keyframesCss}</style>}
       <div style={{ fontSize: 200, ...animationStyle }}>
         {scene.emoji}
       </div>
       {blend !== null && <BlendRow blend={blend} />}
       {scene.effects?.map((effect, i) => (
-        <SceneEffect key={i} effect={effect} />
+        <SceneEffect key={i} effect={effect} reduced={reduced} />
       ))}
     </div>
   )
 }
 
-function SceneEffect({ effect }: { effect: string }) {
+function SceneEffect({ effect, reduced }: { effect: string; reduced: boolean }) {
   if (effect === 'hearts') {
     return (
       <>
-        <style>{`@keyframes floatUp { 0% { transform: translateY(20px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(-100px); opacity: 0; } }`}</style>
-        <div style={{ position: 'absolute', top: '50%', left: '40%', fontSize: 32, animation: 'floatUp 1.5s ease-out infinite' }}>💗</div>
-        <div style={{ position: 'absolute', top: '50%', left: '55%', fontSize: 32, animation: 'floatUp 1.8s ease-out infinite 0.3s' }}>❤️</div>
+        {!reduced && <style>{`@keyframes floatUp { 0% { transform: translateY(20px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(-100px); opacity: 0; } }`}</style>}
+        <div style={{ position: 'absolute', top: '50%', left: '40%', fontSize: 32, transition: 'none', ...(reduced ? {} : { animation: 'floatUp 1.5s ease-out infinite' }) }}>💗</div>
+        <div style={{ position: 'absolute', top: '50%', left: '55%', fontSize: 32, transition: 'none', ...(reduced ? {} : { animation: 'floatUp 1.8s ease-out infinite 0.3s' }) }}>❤️</div>
       </>
     )
   }
   if (effect === 'stars') {
     return (
       <>
-        <style>{`@keyframes sparkle { 0%, 100% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } }`}</style>
-        <div style={{ position: 'absolute', top: '30%', left: '30%', fontSize: 28, animation: 'sparkle 1s ease-in-out infinite' }}>⭐</div>
-        <div style={{ position: 'absolute', top: '40%', left: '70%', fontSize: 28, animation: 'sparkle 1.2s ease-in-out infinite 0.5s' }}>✨</div>
+        {!reduced && <style>{`@keyframes sparkle { 0%, 100% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } }`}</style>}
+        <div style={{ position: 'absolute', top: '30%', left: '30%', fontSize: 28, transition: 'none', ...(reduced ? {} : { animation: 'sparkle 1s ease-in-out infinite' }) }}>⭐</div>
+        <div style={{ position: 'absolute', top: '40%', left: '70%', fontSize: 28, transition: 'none', ...(reduced ? {} : { animation: 'sparkle 1.2s ease-in-out infinite 0.5s' }) }}>✨</div>
       </>
     )
   }
   if (effect === 'sparkle') {
     return (
       <>
-        <style>{`@keyframes twinkle { 0%, 100% { transform: scale(0.3) rotate(0deg); opacity: 0; } 50% { transform: scale(1) rotate(180deg); opacity: 1; } }`}</style>
-        <div style={{ position: 'absolute', top: '25%', left: '25%', fontSize: 32, animation: 'twinkle 1.2s ease-in-out infinite' }}>✨</div>
-        <div style={{ position: 'absolute', top: '35%', left: '65%', fontSize: 32, animation: 'twinkle 1.4s ease-in-out infinite 0.4s' }}>💫</div>
-        <div style={{ position: 'absolute', top: '65%', left: '45%', fontSize: 28, animation: 'twinkle 1.6s ease-in-out infinite 0.8s' }}>⭐</div>
+        {!reduced && <style>{`@keyframes twinkle { 0%, 100% { transform: scale(0.3) rotate(0deg); opacity: 0; } 50% { transform: scale(1) rotate(180deg); opacity: 1; } }`}</style>}
+        <div style={{ position: 'absolute', top: '25%', left: '25%', fontSize: 32, transition: 'none', ...(reduced ? {} : { animation: 'twinkle 1.2s ease-in-out infinite' }) }}>✨</div>
+        <div style={{ position: 'absolute', top: '35%', left: '65%', fontSize: 32, transition: 'none', ...(reduced ? {} : { animation: 'twinkle 1.4s ease-in-out infinite 0.4s' }) }}>💫</div>
+        <div style={{ position: 'absolute', top: '65%', left: '45%', fontSize: 28, transition: 'none', ...(reduced ? {} : { animation: 'twinkle 1.6s ease-in-out infinite 0.8s' }) }}>⭐</div>
       </>
     )
   }

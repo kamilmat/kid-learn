@@ -20,22 +20,27 @@ export function FallingFruits({ onComplete }: Props) {
       }}
     >
       <style>{`
-        @keyframes fallFruit {
-          0% { transform: translateY(-100px) rotate(0); opacity: 0; }
-          15% { opacity: 1; }
-          100% { transform: translateY(110vh) rotate(720deg); opacity: 1; }
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes fallFruit {
+            0% { transform: translateY(-100px) rotate(0); opacity: 0; }
+            15% { opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 1; }
+          }
+          .fall-fruit { animation: fallFruit var(--fall-duration) ease-in var(--fall-delay); }
         }
       `}</style>
       {FRUITS.map((emoji, i) => (
         <div
           key={i}
+          className="fall-fruit"
           style={{
             position: 'absolute',
             left: `${(i + 0.5) * (100 / FRUITS.length)}%`,
             top: 0,
             fontSize: 48,
-            animation: `fallFruit ${2200 + (i * 50)}ms ease-in ${i * 80}ms`,
             transform: 'translateY(-100px)',
+            ['--fall-duration' as string]: `${2200 + (i * 50)}ms`,
+            ['--fall-delay' as string]: `${i * 80}ms`,
           }}
         >
           {emoji}

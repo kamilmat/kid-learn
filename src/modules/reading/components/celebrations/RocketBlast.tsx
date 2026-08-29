@@ -19,12 +19,15 @@ export function RocketBlast({ onComplete }: Props) {
       }}
     >
       <style>{`
-        @keyframes rocketBlast {
-          0% { transform: translateY(0) scale(1); }
-          100% { transform: translateY(-100vh) scale(0.4); }
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes rocketBlast {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(-100vh) scale(0.4); }
+          }
+          .rocket-blast-emoji { animation: rocketBlast 2000ms ease-in; }
         }
       `}</style>
-      <div style={{ fontSize: 100, animation: 'rocketBlast 2000ms ease-in' }}>🚀</div>
+      <div className="rocket-blast-emoji" style={{ fontSize: 100 }}>🚀</div>
     </div>
   )
 }

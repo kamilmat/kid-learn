@@ -20,20 +20,23 @@ export function DancingAvocado({ onComplete }: Props) {
       }}
     >
       <style>{`
-        @keyframes avocadoDance {
-          0%, 100% { transform: translateY(0) rotate(0); }
-          25% { transform: translateY(-20px) rotate(-15deg); }
-          75% { transform: translateY(-20px) rotate(15deg); }
-        }
-        @keyframes avocadoBounce {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.15); }
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes avocadoDance {
+            0%, 100% { transform: translateY(0) rotate(0); }
+            25% { transform: translateY(-20px) rotate(-15deg); }
+            75% { transform: translateY(-20px) rotate(15deg); }
+          }
+          @keyframes avocadoBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+          }
+          .avocado-dance { animation: avocadoDance 600ms ease-in-out infinite; }
+          .avocado-bounce { animation: avocadoBounce 800ms ease-in-out infinite; }
         }
       `}</style>
-      <div style={{ fontSize: 160, animation: 'avocadoDance 600ms ease-in-out infinite' }}>🥑</div>
-      <div style={{
+      <div className="avocado-dance" style={{ fontSize: 160 }}>🥑</div>
+      <div className="avocado-bounce" style={{
         fontFamily: 'var(--font-handwritten)', fontSize: 48, fontWeight: 700, color: '#10b981',
-        animation: 'avocadoBounce 800ms ease-in-out infinite',
       }}>
         ŁAAŁ!
       </div>
