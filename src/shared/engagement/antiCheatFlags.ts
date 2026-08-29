@@ -169,3 +169,41 @@ export function analyzeSession(events: SessionEvent[]): AntiCheatFlag[] {
 
   return flags
 }
+
+// Opis flagi dla RODZICA, nie dla programisty — „Szybkie klikanie" brzmi jak
+// nazwa reguły, a nie jak obserwacja o dziecku. Jedna funkcja karmi UI raportu
+// i eksport markdown, więc obie ścieżki mówią dokładnie to samo.
+const FLAG_TEXT: Record<AntiCheatFlagType, { title: string; hint: string }> = {
+  'fast-click': {
+    title: 'Klika bardzo szybko, prawie bez patrzenia.',
+    hint: 'Może to zmęczenie — spróbujcie krótszej sesji.',
+  },
+  'same-position': {
+    title: 'Wybiera ciągle ten sam kafelek.',
+    hint: 'Warto usiąść obok.',
+  },
+  'no-answer': {
+    title: 'Zdarza się, że nie odpowiada wcale.',
+    hint: 'Sprawdźcie, czy zadanie nie jest za trudne.',
+  },
+  'many-dont-know': {
+    title:
+      'Często mówi »nie wiem« — to uczciwe, ale poziom może być za trudny.',
+    hint: 'Rozważcie łatwiejszy poziom.',
+  },
+  visibility: {
+    title: 'Sesja była przerwana wyjściem z aplikacji.',
+    hint: 'Krótsze sesje łatwiej dokończyć.',
+  },
+  'long-inactivity': {
+    title: 'Dłuższa przerwa w środku sesji.',
+    hint: 'Może warto zrobić przerwę świadomie i wrócić później.',
+  },
+}
+
+export function antiCheatFlagText(type: AntiCheatFlagType): {
+  title: string
+  hint: string
+} {
+  return FLAG_TEXT[type]
+}
