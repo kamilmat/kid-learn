@@ -1,5 +1,13 @@
 {
   "files": [],
+  // Aliasy dla tsx: skrypty w scripts/ importują dane z src/ (np. reading-audio-source.ts),
+  // a tsx czyta paths z TEGO pliku (root), nie z tsconfig.app.json.
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }

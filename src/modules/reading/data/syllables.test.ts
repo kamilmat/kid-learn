@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ALL_SYLLABLES, getSyllableAudioKey } from './syllables'
+import { ALL_SYLLABLES, getSyllableAudioKey, getSyllableId } from './syllables'
 import { ALL_WORDS } from './words'
 
 describe('syllables data', () => {
@@ -14,8 +14,12 @@ describe('syllables data', () => {
     }
   })
 
-  it('audio key uses syl- prefix', () => {
-    expect(getSyllableAudioKey('MA')).toBe('syl-MA')
+  // Id SRS (klucz persist) i klucz pliku audio to DWIE różne rzeczy: id zostaje
+  // w oryginalnej pisowni, klucz audio jest lowercase ASCII (APFS maskuje 404).
+  it('separates SRS id from audio key', () => {
+    expect(getSyllableId('MA')).toBe('syl-MA')
+    expect(getSyllableAudioKey('MA')).toBe('syl-ma')
+    expect(getSyllableAudioKey('GĘŚ')).toBe('syl-ge_s_')
   })
 
   it('all syllables have unique ids', () => {

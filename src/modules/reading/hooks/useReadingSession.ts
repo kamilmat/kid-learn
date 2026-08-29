@@ -24,7 +24,7 @@ import type {
 } from '../types'
 import { LEVEL_TO_EXERCISE } from '../types'
 import { getReadingPool } from '../data/levelPools'
-import { ALL_SYLLABLES, getSyllableAudioKey } from '../data/syllables'
+import { ALL_SYLLABLES, getSyllableAudioKey, getSyllableId } from '../data/syllables'
 import { ALL_WORDS, getWordById, getWordsByLevel, getWordAudioKey } from '../data/words'
 import { pickNextItem } from '@/shared/srs/select'
 import { pickRandom, shuffled } from '@/shared/srs/distractors'
@@ -180,7 +180,7 @@ function generateWordAssembly(
   if (!word) throw new Error(`generateWordAssembly: brak słowa "${targetId}"`)
 
   // 2-3 dystraktorów sylab z puli Iskierka nie już w słowie
-  const targetSyllableIds = word.syllables.map((s) => getSyllableAudioKey(s))
+  const targetSyllableIds = word.syllables.map((s) => getSyllableId(s))
   const distractorCount = 2 + (rng() < 0.5 ? 0 : 1) // 2 lub 3
   const distractors = pickRandomDistinct(ALL_SYLLABLES, distractorCount, targetSyllableIds, rng)
 
@@ -460,7 +460,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
               rng,
               nowMs,
             )
-            lastTargetRef.current = getSyllableAudioKey(q.targetSyllable)
+            lastTargetRef.current = getSyllableId(q.targetSyllable)
             question = q
             break
           }
@@ -587,7 +587,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       // Aktualizuj SRS
       let targetId: string
       if (q.type === 'syllable-match') {
-        targetId = getSyllableAudioKey(q.targetSyllable)
+        targetId = getSyllableId(q.targetSyllable)
         updateSyllableState(targetId, outcome)
       } else {
         targetId = ALL_WORDS.find((w) => w.text === q.targetWord)?.id ?? `word-${q.targetWord}`
