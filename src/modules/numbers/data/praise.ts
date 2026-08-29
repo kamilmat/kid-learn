@@ -13,4 +13,15 @@ export const NUMBERS_PRAISE_KEYS = [
   'praise-tak-jest',
 ] as const
 
-export type NumbersPraiseKey = (typeof NUMBERS_PRAISE_KEYS)[number]
+export const NUMBERS_PRAISE_PROCESS_KEYS = [
+  'praise-proc-num-1',
+  'praise-proc-num-2',
+  'praise-proc-num-3',
+  'praise-proc-num-4',
+  'praise-proc-num-5',
+  'praise-proc-num-6',
+] as const
+
+export type NumbersPraiseKey =
+  | (typeof NUMBERS_PRAISE_KEYS)[number]
+  | (typeof NUMBERS_PRAISE_PROCESS_KEYS)[number]

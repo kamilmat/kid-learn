@@ -2,7 +2,7 @@
 
 import type { SessionEvent } from '@/modules/letters/types'
 import type { IskraIntensity } from '@/shared/ui/IskraMascot'
-import { pickNoRepeat } from '@/shared/audio/pickNoRepeat'
+import { pickPraiseMixed } from '@/shared/audio/pickPraiseMixed'
 
 export const PRAISE_KEYS = [
   'praise-1',
@@ -19,17 +19,30 @@ export const PRAISE_KEYS = [
   'praise-12',
 ] as const
 
-export type PraiseKey = (typeof PRAISE_KEYS)[number]
+export const PRAISE_PROCESS_KEYS = [
+  'praise-proc-1',
+  'praise-proc-2',
+  'praise-proc-3',
+  'praise-proc-4',
+  'praise-proc-5',
+  'praise-proc-6',
+  'praise-proc-7',
+  'praise-proc-8',
+  'praise-proc-9',
+  'praise-proc-10',
+] as const
+
+export type PraiseKey = (typeof PRAISE_KEYS)[number] | (typeof PRAISE_PROCESS_KEYS)[number]
 
 /**
- * Picker pochwał no-repeat-with-last. Gdy losowanie trafi w `lastKey`, dobieramy
- * następny w kolejności (cyklicznie). Zawsze zwraca klucz != lastKey.
+ * Picker pochwał 50/50 między wynikowymi a procesowymi, no-repeat-with-last
+ * niezależnie od listy. Zawsze zwraca klucz != lastKey.
  */
 export function pickPraiseKey(
   lastKey: PraiseKey | null,
   rng: () => number,
 ): PraiseKey {
-  return pickNoRepeat(PRAISE_KEYS, lastKey, rng)
+  return pickPraiseMixed(PRAISE_KEYS, PRAISE_PROCESS_KEYS, lastKey, rng)
 }
 
 export const CORRECTION_PREFIX_KEYS = [

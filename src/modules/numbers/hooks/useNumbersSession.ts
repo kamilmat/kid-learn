@@ -3,7 +3,7 @@ import type { AudioBus } from '@/shared/audio/AudioBus'
 import { pickNextItem } from '@/shared/srs/select'
 import { nextBox, nextRecentWrong } from '@/shared/srs/update'
 import type { Level, SkipCountStep } from '@/shared/settings/types'
-import { pickNoRepeat } from '@/shared/audio/pickNoRepeat'
+import { pickPraiseMixed } from '@/shared/audio/pickPraiseMixed'
 import type {
   AnswerOutcome,
   ConceptId,
@@ -25,7 +25,7 @@ import {
   opForFact,
   POCHODNIA_SUB_MAINTENANCE_FACTS,
 } from '../data/levelFacts'
-import { NUMBERS_PRAISE_KEYS, type NumbersPraiseKey } from '../data/praise'
+import { NUMBERS_PRAISE_KEYS, NUMBERS_PRAISE_PROCESS_KEYS, type NumbersPraiseKey } from '../data/praise'
 import { exerciseTypeForFact } from './exerciseRouter'
 
 export type SessionStatus = 'asking' | 'feedback' | 'paused' | 'ended'
@@ -149,7 +149,12 @@ export function useNumbersSession({
 
       setLastOutcome(outcome)
       if (outcome === 'correct') {
-        const key = pickNoRepeat(NUMBERS_PRAISE_KEYS, lastPraiseRef.current, rng)
+        const key = pickPraiseMixed(
+          NUMBERS_PRAISE_KEYS,
+          NUMBERS_PRAISE_PROCESS_KEYS,
+          lastPraiseRef.current,
+          rng,
+        )
         lastPraiseRef.current = key
         setPraiseKey(key)
       } else {
