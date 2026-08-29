@@ -13,6 +13,13 @@ type Props = {
   onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
   /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
   restrictChoicesTo?: number[]
+  /**
+   * `false` = ekran zamrożony (pauza, feedback po drugiej pomyłce, 🤷). Głośne
+   * przeliczanie musi wtedy przestać dokładać klipy do kolejki — inaczej
+   * dziecko po wznowieniu słyszy „…cztery, pięć" bez nic na ekranie. Wznowienie
+   * NIE wznawia przeliczania: dziecko ma 🔊 do powtórki polecenia.
+   */
+  active?: boolean
 }
 
 const OBJECT_SIZE = 72
@@ -95,7 +102,13 @@ function readingOrder(positions: Pos[]): number[] {
 
 type Phase = 'counting' | 'cardinality' | 'recount'
 
-export function CountObjectsExercise({ audioBus, payload, onAnswer, restrictChoicesTo }: Props) {
+export function CountObjectsExercise({
+  audioBus,
+  payload,
+  onAnswer,
+  restrictChoicesTo,
+  active = true,
+}: Props) {
   const n = clamp(Math.round(payload.n), 1, 10)
   const positions = useMemo(() => layoutPositions(n, payload.seed), [n, payload.seed])
 
@@ -114,6 +127,12 @@ export function CountObjectsExercise({ audioBus, payload, onAnswer, restrictChoi
   const markedRef = useRef<number[]>([])
   const unlockGenRef = useRef(0)
   const unlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Czytane przez tik interwału — `active` nie może być w deps efektu
+  // przeliczania, bo restart zagrałby całą sekwencję od nowa.
+  const activeRef = useRef(active)
+  useEffect(() => {
+    activeRef.current = active
+  }, [active])
 
   const clearUnlockTimer = useCallback(() => {
     if (unlockTimerRef.current !== null) {
@@ -209,6 +228,17 @@ export function CountObjectsExercise({ audioBus, payload, onAnswer, restrictChoi
       lastPlay = audioBus.play('number-1')
     }
     const timer = setInterval(() => {
+      // Pauza / feedback: przerywamy przeliczanie i oddajemy dziecku kafelki,
+      // żeby ekran nie został zamrożony w fazie `recount` po wznowieniu.
+      if (!activeRef.current) {
+        clearInterval(timer)
+        setRecountIdx(null)
+        setPhase('cardinality')
+        clearUnlockTimer()
+        unlockGenRef.current += 1
+        setChoicesLocked(false)
+        return
+      }
       i += 1
       if (i >= n) {
         clearInterval(timer)
@@ -221,7 +251,7 @@ export function CountObjectsExercise({ audioBus, payload, onAnswer, restrictChoi
       lastPlay = audioBus.play(`number-${i + 1}`)
     }, RECOUNT_STEP_MS)
     return () => clearInterval(timer)
-  }, [audioBus, n, positions, retryKey, unlockAfter])
+  }, [audioBus, clearUnlockTimer, n, positions, retryKey, unlockAfter])
 
   const choices = useMemo(
     () =>

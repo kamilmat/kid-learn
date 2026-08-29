@@ -81,6 +81,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1_000
 const NO_ACTIVITY_DAYS = 3
 const MODULE_COLD_DAYS = 7
 const CONCEPT_STUCK_DAYS = 14
+/** Koncept „stoi w miejscu" tylko jeśli dziecko faktycznie przy nim ostatnio było. */
+const CONCEPT_STUCK_SEEN_WITHIN_DAYS = 14
+/** Krótsze okno niż to nie mówi nic o tym, czy koncept naprawdę nie idzie. */
+const CONCEPT_STUCK_MIN_OUTCOMES = 5
 const HARD_ITEM_WRONG = 2
 const HARD_ITEMS_REQUIRED = 3
 /** Tak samo jak w `todaySessions` — porzucony start to jeszcze nie nauka. */
@@ -196,6 +200,14 @@ function stuckConcept(
     if (!mastery || mastery.state !== 'learning') continue
     const days = daysAgo(mastery.firstSeenAt, now)
     if (days < CONCEPT_STUCK_DAYS) continue
+    // Sam wiek konceptu to za mało: „w nauce od 20 dni" ma też koncept
+    // porzucony (albo dopisany migracją) i taki, który idzie 7/10. Rada ma
+    // trafiać tylko tam, gdzie dziecko ostatnio ćwiczyło i faktycznie się myli.
+    if (daysAgo(mastery.lastSeenAt, now) > CONCEPT_STUCK_SEEN_WITHIN_DAYS) continue
+    const outcomes = mastery.recentOutcomes
+    if (outcomes.length < CONCEPT_STUCK_MIN_OUTCOMES) continue
+    const correct = outcomes.filter((o) => o === 'correct').length
+    if (correct * 2 >= outcomes.length) continue
     if (best === null || days > best.days) best = { id, days }
   }
   return best

@@ -270,17 +270,19 @@ describe('generateSuggestions', () => {
     expect(reading?.text).toContain('KOTEK')
   })
 
-  it('koncept w nauce od ponad 14 dni daje concept-stuck z nazwą konceptu', () => {
-    const mastery: ConceptMastery = {
-      state: 'learning',
-      firstSeenAt: NOW - 20 * DAY,
-      lastSeenAt: NOW - DAY,
-      correctStreak: 0,
-      factsTouched: [],
-      recentOutcomes: [],
-      factsCorrect: [],
-    }
-    const out = generateSuggestions(
+  const stuckMastery = (over: Partial<ConceptMastery> = {}): ConceptMastery => ({
+    state: 'learning',
+    firstSeenAt: NOW - 20 * DAY,
+    lastSeenAt: NOW - DAY,
+    correctStreak: 0,
+    factsTouched: [],
+    recentOutcomes: ['wrong', 'wrong', 'correct', 'wrong', 'wrong'],
+    factsCorrect: [],
+    ...over,
+  })
+
+  const stuckFor = (mastery: ConceptMastery) =>
+    generateSuggestions(
       base({
         allSessions: [
           session('letters', NOW - 60_000),
@@ -288,9 +290,41 @@ describe('generateSuggestions', () => {
         ],
         numbers: { facts: {}, concepts: { 'plomyk-bonds-10': mastery } },
       }),
-    )
-    const stuck = out.find((s) => s.id === 'concept-stuck')
-    expect(stuck?.text).toContain('Rozkład 6-10')
+    ).find((s) => s.id === 'concept-stuck')
+
+  it('koncept w nauce od ponad 14 dni ze słabym oknem daje concept-stuck z nazwą konceptu', () => {
+    expect(stuckFor(stuckMastery())?.text).toContain('Rozkład 6-10')
+  })
+
+  it('koncept nietknięty od miesiąca nie daje concept-stuck', () => {
+    expect(stuckFor(stuckMastery({ lastSeenAt: NOW - 30 * DAY }))).toBeUndefined()
+  })
+
+  it('koncept idący 7/10 nie daje concept-stuck', () => {
+    expect(
+      stuckFor(
+        stuckMastery({
+          recentOutcomes: [
+            'correct',
+            'correct',
+            'wrong',
+            'correct',
+            'correct',
+            'correct',
+            'wrong',
+            'correct',
+            'correct',
+            'wrong',
+          ],
+        }),
+      ),
+    ).toBeUndefined()
+  })
+
+  it('koncept z za krótkim oknem wyników nie daje concept-stuck', () => {
+    expect(
+      stuckFor(stuckMastery({ recentOutcomes: ['wrong', 'wrong', 'wrong'] })),
+    ).toBeUndefined()
   })
 
   it('otwarte czytanki bez żadnego powtórzenia dają reread', () => {

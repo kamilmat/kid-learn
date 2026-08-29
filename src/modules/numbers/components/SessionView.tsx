@@ -51,6 +51,17 @@ type Props = {
   quitRef?: RefObject<(() => void) | null>
 }
 
+/**
+ * Ćwiczenia, które renderują `revealValue` zamiast własnej liczby. Tylko dla
+ * nich pas korekty ma sens w PRZEPŁYWIE: zabiera 28% wysokości, żeby dziecko
+ * widziało pod nim odsłoniętą poprawną reprezentację. Reszta nie ma czego
+ * odsłonić, więc kurczenie zadania byłoby czystą stratą miejsca.
+ */
+const REVEAL_CAPABLE_EXERCISES: ReadonlySet<ExerciseType> = new Set<ExerciseType>([
+  'subitize-flash',
+  'ten-frame-fill',
+])
+
 // Minimalny czas overlayu feedbacku. Realne przejście następuje dopiero gdy
 // kolejka audio (pochwała / "spróbuj jeszcze raz" + "tu było N") się domknie —
 // stały timer ucinał korektę hypercorrection.
@@ -255,8 +266,12 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
   // Pas korekty siedzi w PRZEPŁYWIE nad zadaniem, więc zadanie pod nim musi
   // pokazać POPRAWNĄ liczbę — dziecko widzi reprezentację tego, co słyszy
   // („tu było N").
+  const revealCapable = REVEAL_CAPABLE_EXERCISES.has(session.currentQuestion.exerciseType)
   const revealValue =
-    feedbackActive && session.lastOutcome !== null && session.lastOutcome !== 'correct'
+    revealCapable &&
+    feedbackActive &&
+    session.lastOutcome !== null &&
+    session.lastOutcome !== 'correct'
       ? extractCorrectValue(session.currentQuestion)
       : null
 
@@ -292,6 +307,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
           paused={session.status === 'paused'}
           strategyKey={session.lastAttempt === 2 ? null : strategyKey}
           attempt={session.lastAttempt}
+          inFlow={revealCapable}
           {...(session.praiseKey !== null ? { praiseKey: session.praiseKey } : {})}
         />
       )}
@@ -305,8 +321,12 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
           audioBus={audioBus}
           onAnswer={handleAnswer}
           revealValue={revealValue}
+          active={session.status === 'retry'}
           {...((session.status === 'retry' ||
-            (session.status === 'paused' && session.pausedFrom === 'retry')) &&
+            (session.status === 'paused' && session.pausedFrom === 'retry') ||
+            // Feedback po DRUGIEJ pomyłce wciąż pokazuje ekran drugiej próby
+            // pod scrimem — bez tego kafelki przeskakują 2→4 w trakcie korekty.
+            (session.status === 'feedback' && session.lastAttempt === 2)) &&
           session.retryChoices !== null
             ? { restrictChoicesTo: session.retryChoices }
             : {})}
@@ -346,6 +366,11 @@ type ExerciseProps = {
    * nie umie samo wyprowadzić z faktu.
    */
   countObjects: { n: number; emoji: string; seed: number }
+  /**
+   * Tylko `count-objects`: `false` gdy ekran jest zamrożony (pauza, feedback)
+   * — przeliczanie na głos musi wtedy zamilknąć zamiast dokładać klipy.
+   */
+  active: boolean
 }
 
 /** Ziarno układu obiektów: stałe w obrębie pytania, różne między pytaniami. */
@@ -364,6 +389,7 @@ function ExerciseRouter({
   onAnswer,
   restrictChoicesTo,
   revealValue = null,
+  active,
 }: {
   question: Question
   questionIdx: number
@@ -371,6 +397,7 @@ function ExerciseRouter({
   onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
   restrictChoicesTo?: number[]
   revealValue?: number | null
+  active: boolean
 }) {
   // Stabilna referencja — tablica trafia do deps `useEffect` ćwiczeń.
   const promptKeys = useMemo(() => promptAudioKeys(question), [question])
@@ -382,6 +409,7 @@ function ExerciseRouter({
     promptKeys,
     onAnswer,
     revealValue,
+    active,
     countObjects: { n: args[0] ?? 1, emoji: pickIconSet(seed).emoji, seed },
     ...(restrictChoicesTo !== undefined ? { restrictChoicesTo } : {}),
   }
@@ -403,6 +431,7 @@ function ExerciseSwitch({
           audioBus={props.audioBus}
           payload={props.countObjects}
           onAnswer={props.onAnswer}
+          active={props.active}
           {...(props.restrictChoicesTo !== undefined
             ? { restrictChoicesTo: props.restrictChoicesTo }
             : {})}
@@ -563,6 +592,7 @@ export function FeedbackOverlay({
   paused = false,
   strategyKey = null,
   attempt = 1,
+  inFlow = true,
 }: {
   outcome: AnswerOutcome
   correctValue: number | null
@@ -576,6 +606,12 @@ export function FeedbackOverlay({
   strategyKey?: string | null
   /** `2` = poprawka w drugiej próbie: cicha pochwała zamiast pełnej. */
   attempt?: 1 | 2
+  /**
+   * `true` (domyślnie) = pas korekty siedzi w przepływie i skraca zadanie o
+   * 28%, bo zadanie odsłania pod nim poprawną liczbę. `false` = zadanie nie ma
+   * czego odsłonić, więc pas leży NAD nim (absolutnie), a tapy zbiera scrim.
+   */
+  inFlow?: boolean
 }) {
   const onAdvanceRef = useRef(onAdvance)
   // Prop czytany przez ref: rodzic dobija licznik jeszcze w trakcie feedbacku,
@@ -700,20 +736,35 @@ export function FeedbackOverlay({
     // bez niego dziecko dotyka zadania (brudzi jego stan) zanim feedback minie.
     pointerEvents: 'auto',
   }
+  const correctionBand: CSSProperties = {
+    ...commonStyle,
+    background: 'rgba(239, 68, 68, 0.92)',
+    gap: 24,
+    // <2000 (PauseOverlay nad pasem), > scrim.
+    zIndex: 900,
+  }
   const overlayStyle: CSSProperties = isCorrection
-    ? {
-        ...commonStyle,
-        // W PRZEPŁYWIE pod StatusBarem, nie absolutnie nad zadaniem: pas nie
-        // może zasłonić reprezentacji, którą właśnie odsłania („tu było N").
-        position: 'relative',
-        flex: '0 0 28%',
-        minHeight: 96,
-        width: '100%',
-        background: 'rgba(239, 68, 68, 0.92)',
-        gap: 24,
-        // <2000 (PauseOverlay nad pasem), > scrim.
-        zIndex: 900,
-      }
+    ? inFlow
+      ? {
+          ...correctionBand,
+          // W PRZEPŁYWIE pod StatusBarem, nie absolutnie nad zadaniem: pas nie
+          // może zasłonić reprezentacji, którą właśnie odsłania („tu było N").
+          position: 'relative',
+          flex: '0 0 28%',
+          minHeight: 96,
+          width: '100%',
+        }
+      : {
+          ...correctionBand,
+          // Zadanie nic nie odsłania, więc nie ma po co go kurczyć — pas wraca
+          // nad ekran (jak przed pasem w przepływie), a scrim blokuje resztę.
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '28%',
+          minHeight: 96,
+        }
     : {
         ...commonStyle,
         position: 'absolute',

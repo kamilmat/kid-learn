@@ -152,6 +152,39 @@ describe('CountObjectsExercise', () => {
     expect(screen.getAllByTestId('count-choice')).toHaveLength(2)
     vi.useRealTimers()
   })
+
+  it('zamrożony ekran przerywa przeliczanie i odblokowuje kafelki', () => {
+    vi.useFakeTimers()
+    const bus = makeBus()
+    const onAnswer = vi.fn()
+    const view = (active: boolean) => (
+      <CountObjectsExercise
+        audioBus={bus}
+        payload={{ n: 6, emoji: '🍎', seed: 42 }}
+        onAnswer={onAnswer}
+        restrictChoicesTo={[6, 4]}
+        active={active}
+      />
+    )
+    const { rerender } = render(view(true))
+    act(() => {
+      vi.advanceTimersByTime(700)
+    })
+    const counted = ['number-1', 'number-2']
+    expect(bus.keys().filter((k) => k.startsWith('number-'))).toEqual(counted)
+    act(() => {
+      rerender(view(false))
+    })
+    act(() => {
+      vi.advanceTimersByTime(10 * 700)
+    })
+    // Pauza w trakcie przeliczania: ani jednego klipu więcej po zamrożeniu.
+    expect(bus.keys().filter((k) => k.startsWith('number-'))).toEqual(counted)
+    // Ekran nie może zostać w fazie `recount` — dziecko dostaje kafelki.
+    expect(screen.getByTestId('count-cardinality').getAttribute('data-locked')).toBe('false')
+    expect(screen.getAllByTestId('count-choice')).toHaveLength(2)
+    vi.useRealTimers()
+  })
 })
 
 describe('exerciseTypeForFact — przeplot liczenia 1:1', () => {
