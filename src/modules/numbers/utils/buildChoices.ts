@@ -42,7 +42,16 @@ export function buildChoices(correct: number, options: BuildChoicesOptions): num
   // pozycji). Zakres [min, max] celowo NIE filtruje: wybór dziecka pokazujemy
   // zawsze, nawet gdyby wypadł poza pulę dystraktorów.
   if (options.restrictChoicesTo && options.restrictChoicesTo.length > 0) {
-    return shuffled(Array.from(new Set([correct, ...options.restrictChoicesTo])), rng)
+    // `correct` tutaj to wartość policzona LOKALNIE przez ćwiczenie (z payload.args),
+    // a `restrictChoicesTo` przychodzi z SessionView (`extractCorrectValue(question)`
+    // na poziomie sesji). Gdy `restrictChoicesTo` już zawiera `correct`, obie ścieżki
+    // się zgadzają — zwracamy dokładnie te wartości. Gdy NIE zawiera (rozjazd
+    // przez odmienne przycięcie/zaokrąglenie), doklejamy `correct` jako siatkę
+    // bezpieczeństwa, żeby retry nigdy nie zgubiło prawdziwej odpowiedzi.
+    const restrict = options.restrictChoicesTo.includes(correct)
+      ? options.restrictChoicesTo
+      : [correct, ...options.restrictChoicesTo]
+    return shuffled(Array.from(new Set(restrict)), rng)
   }
 
   const pool: number[] = []

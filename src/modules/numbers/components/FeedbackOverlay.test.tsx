@@ -92,4 +92,42 @@ describe('FeedbackOverlay (moduł 3)', () => {
     })
     expect(onAdvance).not.toHaveBeenCalled()
   })
+
+  it('strategia gra raz: pierwsza pomyłka ją odtwarza, retry-wrong (attempt=2) ją tłumi', async () => {
+    const bus = { play: vi.fn(() => Promise.resolve(true)), stop: vi.fn() }
+    const onAdvance = vi.fn()
+
+    // SessionView gates: strategyKey={session.lastAttempt === 2 ? null : strategyKey}.
+    const { rerender } = render(
+      <FeedbackOverlay
+        outcome="wrong"
+        correctValue={9}
+        audioBus={bus}
+        onAdvance={onAdvance}
+        strategyKey="strategy-count-on"
+        attempt={1}
+      />,
+    )
+    await act(async () => {
+      vi.advanceTimersByTime(2200)
+    })
+    expect(bus.play).toHaveBeenCalledWith('strategy-count-on')
+    expect(bus.play.mock.calls.filter((c) => c[0] === 'strategy-count-on')).toHaveLength(1)
+
+    bus.play.mockClear()
+    rerender(
+      <FeedbackOverlay
+        outcome="wrong"
+        correctValue={9}
+        audioBus={bus}
+        onAdvance={onAdvance}
+        strategyKey={null}
+        attempt={2}
+      />,
+    )
+    await act(async () => {
+      vi.advanceTimersByTime(2200)
+    })
+    expect(bus.play).not.toHaveBeenCalledWith('strategy-count-on')
+  })
 })

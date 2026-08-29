@@ -64,4 +64,50 @@ describe('buildChoices', () => {
     }
     expect(positions.size).toBe(4)
   })
+
+  describe('restrictChoicesTo (faza retry)', () => {
+    it('gdy restrictChoicesTo już zawiera correct, zwraca DOKŁADNIE te wartości (bez unii z lokalnym correct)', () => {
+      // correct=5 (lokalne z ćwiczenia) jest już w restrictChoicesTo — nie ma
+      // powodu doklejać nic więcej; wynik to dokładnie [5, 8] potasowane.
+      const choices = buildChoices(5, {
+        min: 1,
+        max: 10,
+        restrictChoicesTo: [5, 8],
+        rng: seededRng(1),
+      })
+      expect(choices.slice().sort((a, b) => a - b)).toEqual([5, 8])
+    })
+
+    it('gdy correct lokalny różni się od restrictChoicesTo (rozjazd), dokleja go jako siatkę bezpieczeństwa', () => {
+      // Symuluje rozjazd: lokalny correct (11) nie występuje w restrictChoicesTo
+      // (np. session policzyła correct=10, wybór dziecka=8).
+      const choices = buildChoices(11, {
+        min: 1,
+        max: 20,
+        restrictChoicesTo: [10, 8],
+        rng: seededRng(2),
+      })
+      expect(choices.slice().sort((a, b) => a - b)).toEqual([8, 10, 11])
+    })
+
+    it('deduplikuje, gdy restrictChoicesTo zawiera duplikaty lub duplikat correct', () => {
+      const choices = buildChoices(5, {
+        min: 1,
+        max: 10,
+        restrictChoicesTo: [5, 5, 8, 8],
+        rng: seededRng(3),
+      })
+      expect(choices.slice().sort((a, b) => a - b)).toEqual([5, 8])
+    })
+
+    it('nie filtruje wyboru dziecka przez [min, max] — retry pokazuje go zawsze', () => {
+      const choices = buildChoices(5, {
+        min: 1,
+        max: 10,
+        restrictChoicesTo: [5, 999],
+        rng: seededRng(4),
+      })
+      expect(choices.slice().sort((a, b) => a - b)).toEqual([5, 999])
+    })
+  })
 })

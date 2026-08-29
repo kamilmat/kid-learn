@@ -124,3 +124,64 @@ describe('useNumbersSession — druga próba po błędzie', () => {
     expect(result.current.retryChoices).toBeNull()
   })
 })
+
+describe('useNumbersSession — pauza w trakcie retry / hiperkorekcja', () => {
+  beforeEach(() => {
+    useNumbers.getState().reset()
+    localStorage.clear()
+  })
+
+  it('pauza złapana z zaplanowanym retry (status feedback) → po wznowieniu advance() nadal wchodzi w retry', () => {
+    const audioBus = makeAudioBus()
+    const { result } = renderHook(() =>
+      useNumbersSession({ level: 'iskierka', audioBus, questionCount: 2 }),
+    )
+
+    act(() => result.current.start())
+    const question = result.current.currentQuestion!
+    const correct = extractCorrectValue(question)!
+    const chosen = correct + 1
+
+    act(() => result.current.answer('wrong', 1, chosen))
+    expect(result.current.status).toBe('feedback')
+
+    // Pauza łapie ekran ZANIM overlay feedbacku wybrzmiał i zawołał advance().
+    act(() => result.current.pause('manual'))
+    expect(result.current.status).toBe('paused')
+
+    act(() => result.current.resume())
+    expect(result.current.status).toBe('feedback')
+
+    // Overlay feedbacku wybrzmiewa dopiero po wznowieniu — retry musi zostać zaplanowane.
+    act(() => result.current.advance())
+    expect(result.current.status).toBe('retry')
+    expect(result.current.retryChoices).toEqual([correct, chosen])
+  })
+
+  it('druga pomyłka w retry (hiperkorekcja) nie planuje trzeciej próby', () => {
+    const audioBus = makeAudioBus()
+    const { result } = renderHook(() =>
+      useNumbersSession({ level: 'iskierka', audioBus, questionCount: 2 }),
+    )
+
+    act(() => result.current.start())
+    const question = result.current.currentQuestion!
+    const correct = extractCorrectValue(question)!
+    const chosen = correct + 1
+
+    act(() => result.current.answer('wrong', 1, chosen))
+    act(() => result.current.advance())
+    expect(result.current.status).toBe('retry')
+
+    // Druga pomyłka: dziecko znów wybiera złą wartość w retry.
+    act(() => result.current.answer('wrong', 2, chosen))
+    expect(result.current.status).toBe('feedback')
+    expect(result.current.lastAttempt).toBe(2)
+
+    // Overlay wybrzmiewa — brak trzeciej próby, sesja idzie dalej do kolejnego pytania.
+    act(() => result.current.advance())
+    expect(result.current.status).toBe('asking')
+    expect(result.current.retryChoices).toBeNull()
+    expect(result.current.questionIdx).toBe(1)
+  })
+})
