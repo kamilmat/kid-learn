@@ -33,6 +33,8 @@ type HandwrittenLetterProps = {
   lineColor?: string
   accentColor?: string
   width?: number
+  /** Para "Bb" (caseMode `para`) — dokłada odstęp między znakami, inaczej się zlepiają. */
+  pair?: boolean
 }
 
 export function HandwrittenLetter({
@@ -41,6 +43,7 @@ export function HandwrittenLetter({
   lineColor = DEFAULT_LINE_COLOR,
   accentColor = DEFAULT_ACCENT_COLOR,
   width,
+  pair = false,
 }: HandwrittenLetterProps) {
   const height = size
   const computedWidth =
@@ -115,6 +118,7 @@ export function HandwrittenLetter({
         dominantBaseline="alphabetic"
         fontFamily={FONT_FAMILY}
         fontSize={fontSize}
+        letterSpacing={pair ? size * 0.18 : undefined}
         fill="#2d2d33"
       >
         {letter}

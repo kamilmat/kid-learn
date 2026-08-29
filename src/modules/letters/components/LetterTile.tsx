@@ -7,6 +7,7 @@ import { colors, radii } from '@/app/theme'
 import type { CaseMode, StyleMode } from '@/shared/settings/types'
 import { toUpper } from '@/modules/letters/data/alphabet'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
+import { HandwrittenLetter } from '@/shared/ui/HandwrittenLetter'
 
 export type LetterTileState =
   | 'idle'
@@ -74,23 +75,6 @@ function stateStyle(state: LetterTileState): CSSProperties {
 // Odstęp między literami w parze "Aa" — bez niego "Ll" zlepia się w jedną
 // pionową kreskę dla 7-latka. 0.18em = ok 10-12px przy fontSize 56-64.
 const PAIR_LETTER_SPACING = '0.18em'
-
-function HandwrittenLetter({ text, fontSize, pair }: { text: string; fontSize: number; pair: boolean }) {
-  return (
-    <span
-      data-testid="handwritten-letter"
-      style={{
-        fontFamily: 'var(--font-handwritten)',
-        fontStyle: 'italic',
-        fontSize,
-        lineHeight: 1,
-        letterSpacing: pair ? PAIR_LETTER_SPACING : undefined,
-      }}
-    >
-      {text}
-    </span>
-  )
-}
 
 function PrintLetter({ text, fontSize, pair }: { text: string; fontSize: number; pair: boolean }) {
   return (
@@ -203,7 +187,9 @@ export function LetterTile({
       style={{ ...baseStyle, ...stateStyle(state) }}
     >
       {showPrint && <PrintLetter text={text} fontSize={fontSize} pair={isPair} />}
-      {showHandwritten && <HandwrittenLetter text={text} fontSize={fontSize} pair={isPair} />}
+      {showHandwritten && (
+        <HandwrittenLetter letter={text} size={Math.round(fontSize / 0.7)} pair={isPair} />
+      )}
     </button>
   )
 }
