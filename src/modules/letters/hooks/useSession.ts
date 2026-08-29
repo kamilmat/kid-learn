@@ -13,7 +13,7 @@
 // Audio (wywoływane przez `audioBus.play(key)`, sekwencja FIFO):
 //   - prompt: `promptAudioKeys(<x>, promptMode)` — `phon-<slug>` i/lub
 //              `letter-name-<slug>` (default `both`: nazwa, potem fonem)
-//   - correct: `sfx-correct-ding` + pickPraiseKey z `praise-1..12` (no-repeat-with-last)
+//   - correct: `sfx-correct-ding` + pickPraiseKey (pickPraiseMixed: 50/50 praise-1..12 / praise-proc-1..10, no-repeat)
 //              + `assoc-<x>` + opcjonalnie `streak-3` / `streak-5` / `streak-7-plus`
 //   - wrong:   pickCorrectionPrefix (`correction-prefix-1..3` lub `correction-prefix-contrastive`
 //              gdy chosenLetter ∈ CONTRASTIVE_PAIRS[target]) + prompt litery

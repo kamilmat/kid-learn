@@ -109,12 +109,12 @@ public/audio/              # build artifact: mp3 (`ls public/audio/*.mp3 | wc -l
 pnpm dev              # dev server z HMR
 pnpm build            # production build (lokalnie base='/'; CI ustawia VITE_BASE=/kid-learn/)
 pnpm tsc -b           # type check
-pnpm test --run       # testy (874/874 zielone: 755 src + 119 scripts, po Fali 1)
+pnpm test --run       # testy (878/878 zielone: 759 src + 119 scripts, po Fali 1)
 pnpm audio:czytanki   # generuj czytanki-syllables.json + czytanki-words.json z data/czytanki.ts (moduł 4)
 pnpm audio:reading    # generuj syllables.json (moduł 2) z SYLLABLE_TEXTS ∪ sylab ALL_WORDS (91 kluczy)
 pnpm audio:build      # audio:czytanki + audio:reading + generuj/aktualizuj mp3 (azure-ipa wymaga .env.local)
 pnpm audio:dry        # plan buildu bez TTS: engine + tekst + IPA + akcja (nie wymaga klucza)
-pnpm audio:check      # audio:czytanki + audio:reading + sprawdź czy wszystkie klucze mają plik (1301 wymaganych; działa bez klucza Azure; `ls public/audio/*.mp3 | wc -l` = 1308 — 7 osierocone z przed Fali 1: `correction-prefix`, `feedback-correct-suffix`, `feedback-wrong-prefix`, `still-there`, `summary-intro`, `timeout-1`, `timeout-2`, nie w żadnym source, kandydaci do sprzątnięcia)
+pnpm audio:check      # audio:czytanki + audio:reading + sprawdź czy wszystkie klucze mają plik (1301 wymaganych; działa bez klucza Azure; `ls public/audio/*.mp3 | wc -l` = 1308 — 7 nadwyżka: `correction-prefix` jest używany w runtime bez wpisu w source (nie usuwać); osierocone: `feedback-correct-suffix`, `feedback-wrong-prefix`, `still-there`, `summary-intro`, `timeout-1`, `timeout-2`, nie w żadnym source, kandydaci do sprzątnięcia)
 
 # GitHub
 gh run list --repo kamilmat/kid-learn --limit 3      # status ostatnich deploy

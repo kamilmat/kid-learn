@@ -5,7 +5,7 @@
 
 ## Fala 1 (2026-08-29/30) — ukończona
 
-**Branch `feat/fala-1`** (HEAD `08e9f10` + commit dokumentacji tego taska), **jeszcze niezmergowane do `main`, niepushowane**.
+**Zmergowane do `main` i wdrożone** (2026-08-30); tag `v4.1-fala-1`. Punkt powrotu sprzed fali: `v4.0-po-cr`.
 Spec: `docs/superpowers/specs/2026-08-29-fala-1-dydaktyka-design.md`. Plan: `docs/superpowers/plans/2026-08-29-fala-1-dydaktyka.md`.
 14 tasków, subagent-driven (worktree'e równoległe + review po każdym + fix-roundy + reconcile po konfliktach mergowania).
 
@@ -28,11 +28,11 @@ Spec: `docs/superpowers/specs/2026-08-29-fala-1-dydaktyka-design.md`. Plan: `doc
 ### Liczby po implementacji (2026-08-30)
 
 - `pnpm tsc -b` — czysto.
-- `pnpm vitest run --dir src` — **755/755** zielone (93 pliki).
+- `pnpm vitest run --dir src` — **759/759** zielone (94 pliki).
 - `pnpm vitest run --dir scripts` — **119/119** zielone (4 pliki).
-- **Razem 874/874** (baseline przed Falą 1: 746).
+- **Razem 878/878** (baseline przed Falą 1: 746).
 - `pnpm build` — OK, `615.25 kB` JS (gzip `173.86 kB`), 1334 precache entries (15094.16 KiB) — rośnie głównie audio.
-- `pnpm audio:check` — **1301/1301** kluczy źródłowych na miejscu. `ls public/audio/*.mp3 | wc -l` = **1308**: 7 nadwyżka to klucze osierocone sprzed Fali 1 (`correction-prefix`, `feedback-correct-suffix`, `feedback-wrong-prefix`, `still-there`, `summary-intro`, `timeout-1`, `timeout-2`) — nie w żadnym `audio-source/*.json`, kandydaci do sprzątnięcia, nieusunięte (poza zakresem Taska 14).
+- `pnpm audio:check` — **1301/1301** kluczy źródłowych na miejscu. `ls public/audio/*.mp3 | wc -l` = **1308**: 7 nadwyżka: `correction-prefix` jest UŻYWANY w runtime (`useReadingSession` drag-drop SFX) bez wpisu w audio-source — dodać klucz źródłowy; osierocone: `feedback-correct-suffix`, `feedback-wrong-prefix`, `still-there`, `summary-intro`, `timeout-1`, `timeout-2`) — nie w żadnym `audio-source/*.json`, kandydaci do sprzątnięcia, nieusunięte (poza zakresem Taska 14).
 
 ### Do odsłuchu przez usera (Task 2 — nie zrobione, agent nie ma wyjścia audio)
 
