@@ -132,6 +132,12 @@ type Hook = {
   flush: () => void
   /** Rozwiązuje się gdy kolejka audio feedbacku bieżącego pytania wybrzmiała. */
   waitForFeedbackAudio: () => Promise<void>
+  /**
+   * Scenka słowa melduje swoją sekwencję audio. `resume()` czeka na nią przed
+   * składaniem — inaczej klip słowa ze scenki wchodziłby między „Składamy:"
+   * a pierwszą sylabę.
+   */
+  noteSceneAudio: (audio: Promise<unknown>) => void
 
   pickedScene: { wordId: string; sceneId: string } | null
 }
@@ -453,6 +459,11 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   const blendRunIdRef = useRef(0)
   const blendWordRef = useRef<string | null>(null)
 
+  // Sekwencja audio scenki słowa (`WordScene` melduje ją przez `noteSceneAudio`).
+  // `resume()` czeka na nią przed składaniem. Zawsze rozstrzygnięta obietnica
+  // jest bezpieczna: `audioBus.play()` nigdy nie wisi, a `stop()` settluje ją cicho.
+  const sceneAudioRef = useRef<Promise<unknown>>(Promise.resolve())
+
   // Per-poziom override > globalna kontrolka „Ile pytań" > stała modułu.
   const questionsPerSession =
     settings.reading.questionsPerSession[level] ??
@@ -611,6 +622,10 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     return newBox === 5 && prevBox < 5 && !current.album
   }, [now])
 
+  const noteSceneAudio = useCallback((audio: Promise<unknown>): void => {
+    sceneAudioRef.current = audio
+  }, [])
+
   /** Ubija trwającą sekwencję syntezy i chowa rząd sylab. */
   const cancelBlend = useCallback((): void => {
     blendRunIdRef.current += 1
@@ -636,11 +651,15 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       const syllables = syllablesForWord(word)
       if (syllables.length === 0) return Promise.resolve(after).then(() => undefined)
       const id = ++blendRunIdRef.current
+      // Słowo zapisujemy od razu (synchronicznie): pauza złapana jeszcze w trakcie
+      // pochwały musi wiedzieć, że po wznowieniu jest co składać.
       blendWordRef.current = word
-      setBlend({ syllables, activeIndex: null })
       return (async () => {
         await after
         if (blendRunIdRef.current !== id) return
+        // Rząd sylab pojawia się DOPIERO gdy rusza jego audio — inaczej wisiał
+        // na ekranie przez całą pochwałę i scenkę, w ciszy.
+        setBlend({ syllables, activeIndex: null })
         await audioBus.play('reading-blend-prefix')
         for (let i = 0; i < syllables.length; i++) {
           if (blendRunIdRef.current !== id) return
@@ -1120,10 +1139,12 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       return
     }
     // Poprawna odpowiedź ze słowem: `pause()` ucięło krok syntezy w środku,
-    // więc gramy go od początku i dopiero potem idziemy dalej.
+    // więc gramy go od początku i dopiero potem idziemy dalej. Czekamy na audio
+    // scenki (`WordScene` remountuje się po zdjęciu pauzy) — bez tego jej klip
+    // wchodziłby między „Składamy:" a pierwszą sylabę.
     const blendWordAfterCorrect = blendWordRef.current
     if (variant === 'correct' && blendWordAfterCorrect !== null) {
-      const replay = playBlend(blendWordAfterCorrect, Promise.resolve())
+      const replay = playBlend(blendWordAfterCorrect, sceneAudioRef.current)
       feedbackAudioRef.current = replay
       const questionIndexAtResume = currentQuestionIndexRef.current
       void replay.then(() => {
@@ -1210,6 +1231,7 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     quit: quitSession,
     flush: flushSession,
     waitForFeedbackAudio,
+    noteSceneAudio,
     pickedScene,
   }
 }

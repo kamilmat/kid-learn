@@ -2,6 +2,7 @@
 // Phase 7: wywołuje onComplete po durationMs, odgrywa sekwencję audio.
 
 import { useEffect, useRef } from 'react'
+import type { MutableRefObject } from 'react'
 import type { Scene } from '../data/scenes'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import type { BlendState } from '../hooks/useReadingSession'
@@ -13,13 +14,37 @@ type Props = {
   onComplete: () => void
   /** Krok syntezy leci dalej, gdy scenka zasłania FeedbackOverlay. */
   blend?: BlendState | null
+  /**
+   * Ref przeżywający remount: pauza chowa scenkę, wznowienie montuje ją na nowo
+   * — a wtedy klip słowa wpadał do FIFO DRUGI raz, między „Składamy:" a pierwszą
+   * sylabą. Trzyma id scenki, której audio już poszło. Bez propa scenka pilnuje
+   * się tylko w obrębie jednego mountu (własny ref).
+   */
+  playedRef?: MutableRefObject<string | null>
+  /**
+   * Oddaje obietnicę sekwencji audio scenki — `resume()` czeka na nią, zanim
+   * zacznie składanie. Przy pominiętym audio (już grało) to gotowa obietnica.
+   */
+  onAudioSequence?: (audio: Promise<void>) => void
 }
 
-export function WordScene({ scene, audioBus, onComplete, blend = null }: Props) {
+export function WordScene({
+  scene,
+  audioBus,
+  onComplete,
+  blend = null,
+  playedRef,
+  onAudioSequence,
+}: Props) {
   const completedRef = useRef(false)
+  const ownPlayedRef = useRef<string | null>(null)
+  const effectivePlayedRef = playedRef ?? ownPlayedRef
 
   useEffect(() => {
     let cancelled = false
+
+    const alreadyPlayed = effectivePlayedRef.current === scene.id
+    effectivePlayedRef.current = scene.id
 
     // Play audio sequence
     const playSeq = async () => {
@@ -32,7 +57,9 @@ export function WordScene({ scene, audioBus, onComplete, blend = null }: Props) 
         }
       }
     }
-    void playSeq()
+    const audioDone = alreadyPlayed ? Promise.resolve() : playSeq()
+    onAudioSequence?.(audioDone)
+    void audioDone
 
     // Auto-dismiss timer
     const timer = setTimeout(() => {
@@ -46,7 +73,7 @@ export function WordScene({ scene, audioBus, onComplete, blend = null }: Props) 
       cancelled = true
       clearTimeout(timer)
     }
-  }, [scene, audioBus, onComplete])
+  }, [scene, audioBus, onComplete, effectivePlayedRef, onAudioSequence])
 
   // Inline keyframes via <style> tag (one per scene)
   const keyframesCss = scene.keyframes.map(k => k.css).join('\n')
