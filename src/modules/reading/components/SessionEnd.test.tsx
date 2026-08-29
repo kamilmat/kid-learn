@@ -74,6 +74,7 @@ describe('SessionEnd — ceremonia → podsumowanie', () => {
     render(
       <SessionEnd
         results={results}
+        level="iskierka"
         onExit={vi.fn()}
         onAlbum={vi.fn()}
         audioBus={{ play, stop }}

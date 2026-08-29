@@ -249,6 +249,7 @@ export function SessionView({
     return (
       <SessionEnd
         results={session.results}
+        level={level}
         onExit={handleExit}
         onAlbum={onAlbum ?? handleExit}
         audioBus={audioBus}
