@@ -26,6 +26,7 @@ import {
   POCHODNIA_SUB_MAINTENANCE_FACTS,
 } from '../data/levelFacts'
 import { NUMBERS_PRAISE_KEYS, NUMBERS_PRAISE_PROCESS_KEYS, type NumbersPraiseKey } from '../data/praise'
+import { masteryAudioKey } from '../data/masteryAudio'
 import { extractCorrectValue } from '../data/correctValue'
 import { exerciseTypeForFact } from './exerciseRouter'
 import { pickConcept } from './pickConcept'
@@ -271,14 +272,15 @@ export function useNumbersSession({
       // „Drzewko rośnie" — cue tylko dla konceptów, które W TEJ sesji przeszły
       // z uczenia się w mastery (ustawienie rodzica może je wyłączyć). Przy
       // przerwanym flushu (quit/unmount) audio i tak by nie zdążyło zagrać
-      // sensownie — ekran znika pod dzieckiem — więc pomijamy cue.
+      // sensownie — ekran znika pod dzieckiem — więc pomijamy cue. Kolejka
+      // FIFO audioBus gwarantuje mastery-* przed tree-grow bez timerów.
       if (treeCelebrationsOn && !aborted) {
         const before = useNumbers.getState().concepts
-        const newlyMastered = Object.entries(updatedConcepts).some(
-          ([id, c]) =>
-            c?.state === 'mastered' && before[id as ConceptId]?.state !== 'mastered',
-        )
-        if (newlyMastered) void audioBus.play('tree-grow')
+        const newlyMastered = (Object.entries(updatedConcepts) as [ConceptId, ConceptMastery][])
+          .filter(([id, c]) => c.state === 'mastered' && before[id]?.state !== 'mastered')
+          .map(([id]) => id)
+        for (const id of newlyMastered) void audioBus.play(masteryAudioKey(id))
+        if (newlyMastered.length > 0) void audioBus.play('tree-grow')
       }
       applySessionResults(updatedFacts, updatedConcepts, log)
     },

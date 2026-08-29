@@ -6,7 +6,7 @@ import { TenFrame } from '../representations/TenFrame'
 import { DigitTile } from '../representations/DigitTile'
 import { colors } from '@/app/theme'
 import type { AnswerOutcome } from '../../types'
-import { buildChoices } from '../../utils/buildChoices'
+import { buildChoices, NEAR_MISS_OFFSETS } from '../../utils/buildChoices'
 import { DropTarget } from './shared/DropTarget'
 import { clamp } from '../../utils/clamp'
 
@@ -32,7 +32,13 @@ export function ConcreteAddSubtract({ audioBus, payload, promptKeys, onAnswer, r
   }, [audioBus, promptKeys])
 
   const choices = useMemo(
-    () => buildChoices(result, { restrictChoicesTo, min: 0, max: Math.max(op === '+' ? a + b : a, result + 2) }),
+    () =>
+      buildChoices(result, {
+        restrictChoicesTo,
+        min: 0,
+        max: Math.max(op === '+' ? a + b : a, result + 2),
+        offsets: NEAR_MISS_OFFSETS,
+      }),
     [result, a, b, op, restrictChoicesTo],
   )
 
