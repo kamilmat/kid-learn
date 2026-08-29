@@ -74,9 +74,9 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
   const session = useNumbersSession({
     level,
     audioBus,
-    questionCount: settings.numbers?.questionCount ?? settings.questionsPerSession,
-    skipCountStep: settings.numbers?.skipCountStep ?? 'mixed',
-    treeCelebrationsOn: settings.numbers?.treeCelebrationsOn ?? true,
+    questionCount: settings.numbers.questionCount ?? settings.questionsPerSession,
+    skipCountStep: settings.numbers.skipCountStep ?? 'mixed',
+    treeCelebrationsOn: settings.numbers.treeCelebrationsOn ?? true,
     secondAttempt: settings.secondAttempt,
   })
   const seenIntros = useNumbers((s) => s.seenIntros)
@@ -127,7 +127,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
     onExit()
   }, [flush, onExit])
 
-  const conceptsIntrosOn = settings.numbers?.conceptIntros ?? true
+  const conceptsIntrosOn = settings.numbers.conceptIntros ?? true
 
   // Intro guard — pokaż ConceptIntro jeśli nie widziano dla tego konceptu
   const showIntro = useMemo(() => {
@@ -150,7 +150,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
   // Iskra „myśli na głos" — raz na sesję per typ ćwiczenia, PO promptcie
   // (efekt rodzica leci po efekcie ćwiczenia, więc kolejka FIFO ma dobrą kolejność).
   const thinkingAloudPlayedRef = useRef<Set<string>>(new Set())
-  const thinkingAloudOn = settings.numbers?.iskraThinkingAloud ?? true
+  const thinkingAloudOn = settings.numbers.iskraThinkingAloud ?? true
   const currentExerciseType = session.currentQuestion?.exerciseType ?? null
   useEffect(() => {
     if (!thinkingAloudOn || showIntro || currentExerciseType === null) return

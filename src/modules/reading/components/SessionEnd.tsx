@@ -2,7 +2,7 @@
 // Phase 6.6.3: podsumowanie wyników + iskierki + nowe słowa w albumie.
 // Phase 9: ceremonia odblokowywania albumu co 10 kart.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { colors, radii, tapTargets } from '@/app/theme'
 import { Button } from '@/shared/ui/Button'
 import { IskraHero } from '@/shared/ui/IskraHero'
@@ -161,6 +161,15 @@ export function SessionEnd({ results, onExit, onAlbum, audioBus }: SessionEndPro
     setCeremonyDismissed(true)
   }
 
+  const correctCount = results.outcomes['correct'] ?? 0
+  const wrongCount = results.outcomes['wrong'] ?? 0
+  const dontKnowCount = results.outcomes['dontKnow'] ?? 0
+  // Prosty wyraz, nie useMemo — musi siedzieć PRZED wczesnym returnem
+  // ceremonii, żeby kolejność hooków nie zależała od tego, czy ceremonia
+  // jest aktywna (useMemo po wczesnym returnie = błąd kolejności hooków po
+  // zamknięciu ceremonii).
+  const isPerfect = wrongCount === 0 && dontKnowCount === 0 && correctCount > 0
+
   // Show ceremony overlay if milestone pending and not yet dismissed
   if (showCeremony && ceremony !== null) {
     return (
@@ -171,14 +180,6 @@ export function SessionEnd({ results, onExit, onAlbum, audioBus }: SessionEndPro
       />
     )
   }
-
-  const correctCount = results.outcomes['correct'] ?? 0
-  const wrongCount = results.outcomes['wrong'] ?? 0
-  const dontKnowCount = results.outcomes['dontKnow'] ?? 0
-  const isPerfect = useMemo(
-    () => wrongCount === 0 && dontKnowCount === 0 && correctCount > 0,
-    [correctCount, wrongCount, dontKnowCount],
-  )
 
   return (
     <div
