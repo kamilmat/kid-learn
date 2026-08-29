@@ -36,7 +36,13 @@ export type ReverseQuizCardProps = {
 
 const CANDIDATE_SIZE = 120
 const CONFIRM_SIZE = tapTargets.minSize
-const TARGET_FONT_SIZE = 160
+// Litera-cel wypełnia środek ekranu, ale w niskim viewporcie (iPad landscape,
+// split view) 160px razem z paskiem statusu i rzędem kandydatów nie mieści się
+// w flexboxie — stąd clamp do wysokości okna zamiast stałej wartości.
+const TARGET_FONT_SIZE = 'min(160px, 18vh)'
+// `oba-na-kafelku`: dwie formy jedna pod drugą muszą zmieścić się w tej samej
+// przestrzeni co jedna — stąd osobny, mniejszy clamp.
+const TARGET_FONT_SIZE_BOTH = 'min(104px, 12vh)'
 
 function letterTextFor(
   letter: string,
@@ -103,7 +109,6 @@ function Candidate({
       <button
         type="button"
         data-testid={`candidate-${slot}`}
-        data-letter={letter}
         aria-label={`Posłuchaj dźwięku ${slot + 1}`}
         {...playTap}
         disabled={!interactive}
@@ -170,7 +175,12 @@ export function ReverseQuizCard({
   const pauseTap = useTapHandler({ onTap: onPause, disabled: !interactive })
   const dontKnowTap = useTapHandler({ onTap: onDontKnow, disabled: !interactive })
 
-  const useHandwriting = styleMode === 'tylko-pisane' || styleMode === 'oba-na-kafelku'
+  // `question.bothStyles` (= styleMode `oba-na-kafelku`) pokazuje literę-cel w
+  // obu formach naraz, tak jak robi to LetterTile w wariancie podstawowym —
+  // bez tego dziecko widziało tylko pisaną i traciło połowę ćwiczenia.
+  const showHandwritten = styleMode === 'tylko-pisane' || question.bothStyles
+  const showPrint = styleMode !== 'tylko-pisane'
+  const fontSize = question.bothStyles ? TARGET_FONT_SIZE_BOTH : TARGET_FONT_SIZE
   const letterText = letterTextFor(question.targetLetter, caseMode, question.chosenCase)
 
   return (
@@ -287,22 +297,37 @@ export function ReverseQuizCard({
         data-testid="reverse-target-letter"
         style={{
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
+          gap: 4,
           flex: 1,
           minHeight: 0,
-          fontSize: TARGET_FONT_SIZE,
+          overflow: 'hidden',
           fontWeight: 800,
           lineHeight: 1,
-          fontFamily: useHandwriting ? 'var(--font-handwritten)' : 'system-ui, sans-serif',
-          fontStyle: useHandwriting ? 'italic' : 'normal',
           letterSpacing: caseMode === 'para' ? '0.18em' : undefined,
           background: '#ffffff',
           border: '1px solid #e2e2e8',
           borderRadius: radii.kid,
         }}
       >
-        {letterText}
+        {showPrint && (
+          <span
+            data-testid="reverse-target-print"
+            style={{ fontSize, fontFamily: 'system-ui, sans-serif', fontStyle: 'normal' }}
+          >
+            {letterText}
+          </span>
+        )}
+        {showHandwritten && (
+          <span
+            data-testid="reverse-target-handwritten"
+            style={{ fontSize, fontFamily: 'var(--font-handwritten)', fontStyle: 'italic' }}
+          >
+            {letterText}
+          </span>
+        )}
       </div>
 
       <div

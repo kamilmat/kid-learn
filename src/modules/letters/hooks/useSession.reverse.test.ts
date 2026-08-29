@@ -130,6 +130,73 @@ describe('useSession — wariant odwrotny „widzisz literę → wybierz dźwię
     ])
   })
 
+  it('pytanie odwrotne nie dostaje odliczania — odsłuch kandydatów nie jest timeoutem', () => {
+    const audioBus = makeAudioBus()
+    const { result } = renderHook(() =>
+      useSession(
+        makeConfig({ audioBus, timeLimit: '15s', showCountdownBar: true, sessionLength: 6 }),
+      ),
+    )
+    act(() => {
+      result.current.start()
+    })
+
+    // Pytanie podstawowe: pasek odliczania jest.
+    expect(result.current.countdownMs).not.toBeNull()
+
+    for (let i = 0; i < 4; i += 1) {
+      const q = result.current.currentQuestion!
+      act(() => {
+        result.current.answer(q.targetLetter, q.targetSlot)
+      })
+      advanceToNextQuestion()
+    }
+
+    const reverse = result.current.currentQuestion!
+    expect(reverse.kind).toBe('letter-to-sound')
+    expect(result.current.countdownMs).toBeNull()
+
+    // Dziecko słucha kandydatów dłużej niż limit — pytanie ma zostać na ekranie.
+    act(() => {
+      vi.advanceTimersByTime(30_000)
+    })
+    expect(result.current.status).toBe('playing')
+    expect(result.current.currentQuestion).toBe(reverse)
+    expect(result.current.timeoutCount).toBe(0)
+  })
+
+  it('korekta po błędzie w wariancie odwrotnym nie zdradza dźwięku litery', () => {
+    const audioBus = makeAudioBus()
+    const { result } = renderHook(() =>
+      useSession(makeConfig({ audioBus, secondAttempt: true })),
+    )
+    act(() => {
+      result.current.start()
+    })
+
+    for (let i = 0; i < 4; i += 1) {
+      const q = result.current.currentQuestion!
+      act(() => {
+        result.current.answer(q.targetLetter, q.targetSlot)
+      })
+      advanceToNextQuestion()
+    }
+
+    const reverse = result.current.currentQuestion!
+    expect(reverse.kind).toBe('letter-to-sound')
+    const wrongSlot = reverse.targetSlot === 0 ? 1 : 0
+    audioBus.play.mockClear()
+    act(() => {
+      result.current.answer(reverse.tiles[wrongSlot]!, wrongSlot)
+    })
+
+    const played = audioBus.play.mock.calls.map((c) => c[0])
+    // Dźwięk celu = odpowiedź na pytanie; w drugiej próbie (2 kafelki)
+    // wystarczyłoby dopasować to, co przed chwilą zabrzmiało.
+    expect(played).not.toContain(`letter-${reverse.targetLetter}`)
+    expect(played.length).toBeGreaterThan(0)
+  })
+
   it('`reverseEvery: 0` wyłącza wariant odwrotny', () => {
     const { result } = renderHook(() => useSession(makeConfig({ reverseEvery: 0 })))
     act(() => {

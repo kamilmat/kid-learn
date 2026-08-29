@@ -23,7 +23,7 @@ import type {
   Settings,
   StyleMode,
 } from '@/shared/settings/types'
-import { promptAudioKeys } from '@/modules/letters/audio/promptKeys'
+import { promptAudioKeys, soundKey } from '@/modules/letters/audio/promptKeys'
 import { useSession } from '@/modules/letters/hooks/useSession'
 import type { LetterTileState } from './LetterTile'
 import { FeedbackOverlay } from './FeedbackOverlay'
@@ -199,14 +199,16 @@ export function SessionView({
   // Idle-timer: tap kafelka emituje natywne `pointerdown`, które bąbelkuje do
   // `document` — tam słucha `useIdleDetector` i restartuje odliczanie. Dziecko
   // słuchające trzech kandydatów przez pół minuty nie dostanie auto-pauzy.
+  // Kandydat gra ZAWSZE sam dźwięk (`soundKey`, nagranie rodzica), niezależnie
+  // od `promptMode`: w trybie `both`/`name` prompt zaczyna się od nazwy litery
+  // („em"), a nazwa zdradza odpowiedź szybciej niż dziecko zdąży posłuchać
+  // dźwięku — cała trudność wariantu odwrotnego by wyparowała.
   const playCandidate = useCallback(
     (letter: string) => {
       audioBus.stop()
-      for (const key of promptAudioKeys(letter, promptMode)) {
-        void audioBus.play(key)
-      }
+      void audioBus.play(soundKey(letter))
     },
-    [audioBus, promptMode],
+    [audioBus],
   )
 
   if (session.status === 'finished') {
