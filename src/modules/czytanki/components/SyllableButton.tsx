@@ -1,17 +1,18 @@
 import { useCallback, useState } from 'react'
 import type { KeyboardEvent } from 'react'
+import type { SyllableCue } from '@/shared/ui/syllableColors'
 import { useSyllablePress } from '../hooks/useSyllablePress'
 import './scene.css'
 
 type Props = {
   text: string
-  color: string
+  cue: SyllableCue
   fontSize: number
   onTap: () => void
   onLongPress: () => void
 }
 
-export function SyllableButton({ text, color, fontSize, onTap, onLongPress }: Props) {
+export function SyllableButton({ text, cue, fontSize, onTap, onLongPress }: Props) {
   const [bounce, setBounce] = useState(0)
   const tapSize = Math.max(56, Math.min(60, Math.round(fontSize * 1.5)))
   const handleTap = useCallback(() => {
@@ -50,7 +51,8 @@ export function SyllableButton({ text, color, fontSize, onTap, onLongPress }: Pr
         fontWeight: 700,
         fontSize,
         lineHeight: 1.1,
-        color,
+        color: cue.color,
+        borderBottom: `3px ${cue.underline} ${cue.color}`,
         borderRadius: 12,
         background: 'transparent',
         transition: 'background 150ms',

@@ -1,7 +1,7 @@
 // SyllableText — renderuje słowo z kolorowaniem sylab wg pozycji.
 // Fallback: jeśli brak syllables albo długości się nie zgadzają — zwykły tekst.
 
-import { getSyllableColor } from '@/shared/ui/syllableColors'
+import { getSyllableCue } from '@/shared/ui/syllableColors'
 
 export type SyllableTextProps = {
   word: string
@@ -14,11 +14,14 @@ export function SyllableText({ word, syllables }: SyllableTextProps) {
   }
   return (
     <span aria-hidden="true">
-      {syllables.map((syl, i) => (
-        <span key={i} style={{ color: getSyllableColor(i) }}>
-          {syl}
-        </span>
-      ))}
+      {syllables.map((syl, i) => {
+        const cue = getSyllableCue(i)
+        return (
+          <span key={i} style={{ color: cue.color, borderBottom: `3px ${cue.underline} ${cue.color}` }}>
+            {syl}
+          </span>
+        )
+      })}
     </span>
   )
 }
