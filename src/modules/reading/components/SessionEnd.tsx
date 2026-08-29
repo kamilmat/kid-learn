@@ -11,10 +11,14 @@ import { ALL_WORDS } from '../data/words'
 import { SyllableText } from './SyllableText'
 import type { SessionResult } from '../hooks/useReadingSession'
 import type { AudioBus } from '@/shared/audio/AudioBus'
+import type { Level } from '@/shared/settings/types'
 import { hasEnoughForToday } from '@/shared/stats/enoughForToday'
+import { getReadingPool } from '../data/levelPools'
+import { suggestLevel } from '../data/levelSuggestion'
 
 export type SessionEndProps = {
   results: SessionResult
+  level: Level
   onExit: () => void
   onAlbum: () => void
   audioBus?: Pick<AudioBus, 'play' | 'stop'>
@@ -137,9 +141,12 @@ function CeremonyView({
   )
 }
 
-export function SessionEnd({ results, onExit, onAlbum, audioBus }: SessionEndProps) {
+export function SessionEnd({ results, level, onExit, onAlbum, audioBus }: SessionEndProps) {
   const ceremony = useReading(s => s.pendingCeremonyMilestone)
   const clearCeremony = useReading(s => s.clearPendingCeremony)
+  const syllableStates = useReading(s => s.syllables)
+  const wordStates = useReading(s => s.words)
+  const sessions = useReading(s => s.sessions)
   const [ceremonyDismissed, setCeremonyDismissed] = useState(false)
 
   const showCeremony = ceremony !== null && !ceremonyDismissed
@@ -169,6 +176,34 @@ export function SessionEnd({ results, onExit, onAlbum, audioBus }: SessionEndPro
   // jest aktywna (useMemo po wczesnym returnie = błąd kolejności hooków po
   // zamknięciu ceremonii).
   const isPerfect = wrongCount === 0 && dontKnowCount === 0 && correctCount > 0
+
+  // Sugestia awansu/cofnięcia poziomu — informacyjna, plain const (ten sam
+  // powód co isPerfect: musi żyć przed wczesnym returnem ceremonii, żeby
+  // kolejność hooków nad nią (useReading) zostawała niezmienna).
+  const totalAnswered = correctCount + wrongCount + dontKnowCount
+  const correctRatio = totalAnswered > 0 ? correctCount / totalAnswered : 0
+  const pool = getReadingPool(level)
+  const poolBoxes = pool.itemIds.map((id) => {
+    const state = level === 'iskierka' ? syllableStates[id] : wordStates[id]
+    return state?.box ?? 1
+  })
+  const avgBox = poolBoxes.length > 0 ? poolBoxes.reduce((a, b) => a + b, 0) / poolBoxes.length : 0
+  // Sesje tego poziomu bez bieżącej — applySessionResults dopisuje log
+  // bieżącej sesji do `sessions` PRZED ustawieniem `results`, więc ostatni
+  // wpis pasujący do poziomu to właśnie ta sesja, nie poprzednia.
+  const levelSessions = sessions.filter((log) => log.level === level)
+  const previousRatios = levelSessions.slice(0, -1).map((log) => {
+    const total = log.events.length
+    if (total === 0) return 0
+    const correct = log.events.filter((e) => e.outcome === 'correct').length
+    return correct / total
+  })
+  const levelSuggestion = suggestLevel({ correctRatio, avgBox, previousRatios })
+
+  useEffect(() => {
+    if (showCeremony || !audioBus || levelSuggestion === null) return
+    void audioBus.play(levelSuggestion === 'up' ? 'reading-level-up' : 'reading-level-down')
+  }, [audioBus, levelSuggestion, showCeremony])
 
   // Show ceremony overlay if milestone pending and not yet dismissed
   if (showCeremony && ceremony !== null) {
@@ -258,6 +293,17 @@ export function SessionEnd({ results, onExit, onAlbum, audioBus }: SessionEndPro
           testId="breakdown-dontknow"
         />
       </div>
+
+      {/* Sugestia awansu/cofnięcia poziomu — informacyjna, bez przycisku zmiany */}
+      {levelSuggestion !== null && (
+        <div
+          data-testid="level-suggestion"
+          aria-hidden="true"
+          style={{ fontSize: 72, lineHeight: 1 }}
+        >
+          {levelSuggestion === 'up' ? '⬆' : '⬇'}
+        </div>
+      )}
 
       {/* Nowe słowa odblokowane w albumie */}
       {results.newAlbumWords.length > 0 && (

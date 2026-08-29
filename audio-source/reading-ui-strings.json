@@ -32,5 +32,8 @@
   "reading-praise-proc-5": "Nie poddałeś się!",
   "reading-praise-proc-6": "Dobrze wybrałeś!",
 
-  "reading-blend-prefix": "Składamy:"
+  "reading-blend-prefix": "Składamy:",
+
+  "reading-level-up": "Umiesz już dużo! Spróbuj trudniejszego poziomu.",
+  "reading-level-down": "Wróćmy na chwilę do łatwiejszego poziomu."
 }
