@@ -45,33 +45,78 @@ function factCounts(
   return counts
 }
 
+/**
+ * Rodzina konceptu = id bez ostatniego segmentu liczbowego
+ * (`pochodnia-skipcount-2` → `pochodnia-skipcount-`). Pozwala podmienić
+ * prerekwizyt wycięty przez ustawienie rodzica na jego rodzeństwo.
+ */
+function familyOf(id: ConceptId): { prefix: string; step: number } | null {
+  const m = /^(.*[^0-9])(\d+)$/.exec(id)
+  return m ? { prefix: m[1]!, step: Number(m[2]) } : null
+}
+
+/**
+ * Prerekwizyt przełożony na koncept FAKTYCZNIE obecny w puli sesji.
+ * `null` = brak zamiennika (prerekwizyt traktujemy jako spełniony).
+ *
+ * WHY remap zamiast bezwarunkowego „spełniony": przy `skipCountStep: 5`
+ * `equalgroups` wymaga `skipcount-2`, którego w puli nie ma — ale mnożenie
+ * nadal ma stać na jakimkolwiek opanowanym skip-countcie, więc bramkujemy je
+ * najniższym obecnym krokiem (tu: `skipcount-5`) zamiast wpuszczać od razu.
+ */
+function resolvePrereq(
+  prereqId: ConceptId,
+  selfId: ConceptId,
+  effectiveIds: ReadonlySet<ConceptId>,
+): ConceptId | null {
+  if (effectiveIds.has(prereqId)) return prereqId
+  const fam = familyOf(prereqId)
+  if (!fam) return null
+  let best: { id: ConceptId; step: number } | null = null
+  for (const id of effectiveIds) {
+    // Bez samego siebie — inaczej `skipcount-5` z prerekwizytem `skipcount-2`
+    // zamknąłby się na własnym mastery i nigdy nie wystartował.
+    if (id === selfId) continue
+    const f = familyOf(id)
+    if (!f || f.prefix !== fam.prefix) continue
+    if (!best || f.step < best.step) best = { id, step: f.step }
+  }
+  return best?.id ?? null
+}
+
 function prereqSatisfied(
   prereqId: ConceptId,
+  selfId: ConceptId,
   concepts: Partial<Record<ConceptId, ConceptMastery>>,
   effectiveIds: ReadonlySet<ConceptId>,
 ): boolean {
-  // Prerekwizyt spoza efektywnej puli = rodzic świadomie go wyciął. Traktujemy
-  // jako spełniony, inaczej cała gałąź zależna byłaby nieosiągalna.
-  if (!effectiveIds.has(prereqId)) return true
-  const mastery = concepts[prereqId]
+  const resolved = resolvePrereq(prereqId, selfId, effectiveIds)
+  // Brak prerekwizytu i brak zamiennika w rodzinie = rodzic świadomie wyciął
+  // całą gałąź wejściową. Traktujemy jako spełniony, inaczej to, co od niej
+  // zależy, byłoby nieosiągalne.
+  if (!resolved) return true
+  const mastery = concepts[resolved]
   if (!mastery) return false
   if (mastery.state === 'mastered') return true
   return (
     mastery.state === 'learning' &&
-    mastery.correctStreak >= softUnlockStreak(CONCEPTS[prereqId])
+    mastery.correctStreak >= softUnlockStreak(CONCEPTS[resolved])
   )
 }
 
 /**
- * Odblokowany = każdy prerekwizyt OBECNY w efektywnej puli jest `mastered` albo
- * `learning` ze streakiem >= połowy progu mastery.
+ * Odblokowany = każdy prerekwizyt (obecny w efektywnej puli albo przełożony na
+ * rodzeństwo z tej samej rodziny) jest `mastered` albo `learning` ze streakiem
+ * >= połowy progu mastery.
  */
 export function isUnlocked(
   def: ConceptDef,
   concepts: Partial<Record<ConceptId, ConceptMastery>>,
   effectiveIds: ReadonlySet<ConceptId>,
 ): boolean {
-  return (def.prerequisites ?? []).every((p) => prereqSatisfied(p, concepts, effectiveIds))
+  return (def.prerequisites ?? []).every((p) =>
+    prereqSatisfied(p, def.id, concepts, effectiveIds),
+  )
 }
 
 /**

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { pickConcept, unlockedConcepts, effectiveConcepts } from './pickConcept'
+import { pickConcept, unlockedConcepts, effectiveConcepts, isUnlocked } from './pickConcept'
+import { CONCEPTS } from '../data/concepts'
 import { getLevelFacts } from '../data/levelFacts'
 import type { ConceptId, ConceptMastery, MathFactState } from '../types'
 
@@ -87,13 +88,6 @@ describe('pickConcept', () => {
     expect(eff).not.toContain('pochodnia-skipcount-10')
     expect(eff).toContain('pochodnia-skipcount-5')
 
-    // Wycięty prerekwizyt (`skipcount-2`) liczy się jako spełniony — inaczej cała
-    // gałąź mnożenia byłaby nieosiągalna przy stałym kroku.
-    expect(unlockedConcepts('pochodnia', {}, facts5).map((c) => c.id)).toEqual([
-      'pochodnia-skipcount-5',
-      'pochodnia-equalgroups',
-    ])
-
     // Bezfaktowy koncept nigdy nie wychodzi z losowania.
     const seen = new Set<ConceptId>()
     const rng = seeded(5)
@@ -110,6 +104,27 @@ describe('pickConcept', () => {
     expect(seen.has('pochodnia-skipcount-2')).toBe(false)
     expect(seen.has('pochodnia-skipcount-10')).toBe(false)
     expect(seen.has('pochodnia-skipcount-5')).toBe(true)
+  })
+
+  it('skipCountStep: nieobecny prerekwizyt przechodzi na rodzeństwo z tej samej rodziny', () => {
+    const facts5 = getLevelFacts('pochodnia', 5)
+    const ids = new Set(effectiveConcepts('pochodnia', facts5).map((c) => c.id))
+
+    // `skipcount-5` ma prerekwizyt `skipcount-2` — bez rodzeństwa w puli (siebie
+    // nie liczymy), więc startuje otwarty.
+    expect(isUnlocked(CONCEPTS['pochodnia-skipcount-5'], {}, ids)).toBe(true)
+    // `equalgroups` też wskazuje na `skipcount-2`, ale tu zamiennik ISTNIEJE
+    // (`skipcount-5`) — mnożenie czeka na niego zamiast wchodzić od razu.
+    expect(isUnlocked(CONCEPTS['pochodnia-equalgroups'], {}, ids)).toBe(false)
+
+    const soft: Partial<Record<ConceptId, ConceptMastery>> = {
+      'pochodnia-skipcount-5': m('learning', 4),
+    }
+    expect(isUnlocked(CONCEPTS['pochodnia-equalgroups'], soft, ids)).toBe(true)
+    expect(unlockedConcepts('pochodnia', soft, facts5).map((c) => c.id)).toEqual([
+      'pochodnia-skipcount-5',
+      'pochodnia-equalgroups',
+    ])
   })
 
   it('skipCountStep: dalsze koncepty odblokowują się po soft-unlocku obecnych prerekwizytów', () => {
