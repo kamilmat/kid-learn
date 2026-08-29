@@ -6,9 +6,9 @@ export type ConceptDef = {
   level: Level
   introAudioKey: string
   masteryAudioKey: string
-  // Mastery threshold (spec sec 14.2):
-  // correctStreak >= minStreakForMastery
-  //   + factsTouched.length >= minFacts
+  // Mastery (okno ostatnich 10 odpowiedzi, nie seria z rzędu):
+  //   correctInWindow >= min(10, max(1, minStreakForMastery)) z pełnego okna
+  //   + factsCorrect.length >= minFacts
   //   + age >= MIN_AGE_FOR_MASTERY_MS
   minFacts: number
   minStreakForMastery: number

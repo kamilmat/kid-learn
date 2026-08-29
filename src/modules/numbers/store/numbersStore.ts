@@ -129,7 +129,10 @@ export function migrateNumbersV3(persisted: unknown): unknown {
   for (const [id, c] of Object.entries(p.concepts)) {
     if (!c || typeof c !== 'object') continue
     const touched = Array.isArray(c['factsTouched']) ? (c['factsTouched'] as string[]) : []
-    concepts[id] = { ...c, factsCorrect: touched, recentOutcomes: [] }
+    // Persist v1 trzymał `count-N`; bez przepisania `factsCorrect` liczyłoby
+    // te same fakty drugi raz obok zmigrowanych `count5-N`/`count10-N`.
+    const migrated = [...new Set(touched.map(migrateLegacyFactId).filter((f) => f !== null))]
+    concepts[id] = { ...c, factsCorrect: migrated, recentOutcomes: [] }
   }
   return { ...p, concepts }
 }
