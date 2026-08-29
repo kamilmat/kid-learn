@@ -440,8 +440,9 @@ function playPromptAudio(
       void audioBus.play(getSyllableAudioKey(question.targetSyllable))
       break
     case 'word-assembly':
-      // Krótka zachęta + sekwencja sylab
-      void audioBus.play(`reading-plomyk-intro`)
+      // Krótka zachęta („Ułóż słowo:") — NIE intro poziomu, które przy każdym
+      // pytaniu opowiadało od nowa „dzisiaj będziemy układać…".
+      void audioBus.play('reading-assemble-prompt')
       void audioBus.play(getWordAudioKey(question.targetWord))
       break
     case 'word-choice':
