@@ -2,6 +2,7 @@
 
 import type {
   CaseMode,
+  CzytankiSettings,
   HumorMode,
   Level,
   NumbersSettings,
@@ -19,6 +20,12 @@ export const NUMBERS_DEFAULTS: NumbersSettings = {
   treeCelebrationsOn: true,
   skipCountStep: 'mixed',
   conceptIntros: true,
+}
+
+// Sekcja modułu 4: echo i tempo włącza dziecko ikoną — tu tylko pamiętamy wybór.
+export const CZYTANKI_DEFAULTS: CzytankiSettings = {
+  echoMode: false,
+  tempo: 'normal',
 }
 
 // Lista wszystkich poziomów w kolejności rosnącej trudności. Single source of truth
@@ -128,6 +135,7 @@ export const defaultSettings: Settings = {
     questionsPerSession: {},
   },
   numbers: NUMBERS_DEFAULTS,
+  czytanki: CZYTANKI_DEFAULTS,
 }
 
 /**

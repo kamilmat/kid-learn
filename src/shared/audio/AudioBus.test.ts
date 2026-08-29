@@ -5,6 +5,7 @@ type FakeAudio = {
   src: string
   paused: boolean
   currentTime: number
+  playbackRate: number
   listeners: Map<string, Set<EventListener>>
   play: ReturnType<typeof vi.fn>
   pause: ReturnType<typeof vi.fn>
@@ -25,6 +26,7 @@ function makeFakeAudio(src: string): FakeAudio {
     src,
     paused: true,
     currentTime: 0,
+    playbackRate: 1,
     listeners,
     play: vi.fn(() => {
       audio.paused = false
@@ -256,4 +258,32 @@ describe('AudioBus', () => {
     created[0]!.fire('ended')
     await p2
   })
+
+  it('setPlaybackRate klampuje zakres i stosuje tempo do KAŻDEGO klipu', async () => {
+    const bus = AudioBus.getInstance()
+    bus.setPlaybackRate(0.75)
+    const first = bus.play('cz-word-mama')
+    const audio = created[0]!
+    expect(audio.playbackRate).toBe(0.75)
+    audio.fire('ended')
+    await first
+    // Kolejny klip po podmianie `src` musi dostać tempo ponownie.
+    const second = bus.play('cz-word-tata')
+    expect(audio.playbackRate).toBe(0.75)
+    audio.fire('ended')
+    await second
+
+    bus.setPlaybackRate(0.1)
+    const third = bus.play('cz-word-lala')
+    expect(audio.playbackRate).toBe(0.5)
+    audio.fire('ended')
+    await third
+
+    bus.setPlaybackRate(9)
+    const fourth = bus.play('cz-word-oko')
+    expect(audio.playbackRate).toBe(2)
+    audio.fire('ended')
+    await fourth
+  })
+
 })

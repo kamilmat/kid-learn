@@ -177,6 +177,12 @@ export const useSettings = create<SettingsStore>()(
           ...defaultSettings.numbers,
           ...(persistedNumbers ?? {}),
         }
+        // Moduł 4 (czytanki): echo/tempo dodane po v4 — deep-merge jak `reading`.
+        const persistedCzytanki = sanitizedSettings.czytanki as Record<string, unknown> | undefined
+        sanitizedSettings.czytanki = {
+          ...defaultSettings.czytanki,
+          ...(persistedCzytanki ?? {}),
+        }
         const mergedSettings = {
           ...defaultSettings,
           ...sanitizedSettings,

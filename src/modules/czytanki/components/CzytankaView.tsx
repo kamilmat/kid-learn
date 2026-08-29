@@ -5,6 +5,7 @@ import { colors, radii, tapTargets } from '@/app/theme'
 import { getSyllableCue } from '@/shared/ui/syllableColors'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { usePageVisibility } from '@/shared/engagement/usePageVisibility'
+import { useSettings } from '@/shared/settings/settingsStore'
 import type { Czytanka, CzytankaGroup } from '../data/types'
 import { syllableAudioKey, wordAudioKey } from '../data/audioKeys'
 import { useCzytanki } from '../store/czytankiStore'
@@ -23,10 +24,12 @@ const SCENE_BASIS_STEP = 6
 // liniowo z fontSize (zawijanie zmienia liczbę linii skokowo).
 const FIT_SAFETY = 0.95
 const WORD_HIGHLIGHT_MS = 600
+// Zapomniana karta w tle nie może zaliczyć dziecku godzin "czytania".
+const VISIT_CAP_MS = 10 * 60_000
 
 type Props = {
   czytanka: Czytanka
-  audioBus: Pick<AudioBus, 'play' | 'stop'>
+  audioBus: Pick<AudioBus, 'play' | 'stop' | 'setPlaybackRate'>
   onPrev?: () => void
   onNext?: () => void
 }
@@ -38,16 +41,52 @@ const roundBtn = {
   WebkitTapHighlightColor: 'transparent',
 } as const
 
+const toggleBtn = {
+  width: 64, height: 64, borderRadius: 32, border: `3px solid ${colors.accentBlue}`,
+  fontSize: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  cursor: 'pointer', touchAction: 'manipulation', userSelect: 'none', WebkitUserSelect: 'none',
+  WebkitTapHighlightColor: 'transparent',
+} as const
+
 export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   const markOpened = useCzytanki((s) => s.markOpened)
   const hasSeenIntro = useCzytanki((s) => s.hasSeenIntro)
   const markIntroSeen = useCzytanki((s) => s.markIntroSeen)
+  const recordVisit = useCzytanki((s) => s.recordVisit)
+  const czytankiSettings = useSettings((s) => s.settings.czytanki)
+  const updateSetting = useSettings((s) => s.updateSetting)
+  const echoMode = czytankiSettings.echoMode
+  const tempo = czytankiSettings.tempo
   const [heldWord, setHeldWord] = useState<{ s: number; w: number } | null>(null)
-  const { activeWord, reading, toggle, stop } = useReadAloud({ czytanka, audioBus })
+  const { activeWord, reading, echoing, toggle, stop, skipEcho } = useReadAloud({
+    czytanka,
+    audioBus,
+    echoMode,
+    tempo,
+    introKey: echoMode ? 'czytanki-echo-intro' : null,
+  })
   const holdTimeoutRef = useRef<number | null>(null)
+  // Tapy zliczamy w refie i zapisujemy batch'em na wyjściu — persist to zapis
+  // do localStorage przy KAŻDYM set(), a dziecko stuka sylaby seriami.
+  const tapsRef = useRef<Record<string, number>>({})
+  const enteredAtRef = useRef(Date.now())
+
+  const flushVisit = useCallback(() => {
+    const ms = Math.min(VISIT_CAP_MS, Date.now() - enteredAtRef.current)
+    const taps = tapsRef.current
+    if (ms > 0 || Object.keys(taps).length > 0) recordVisit(czytanka.id, taps, ms)
+    tapsRef.current = {}
+    enteredAtRef.current = Date.now()
+  }, [czytanka.id, recordVisit])
+
+  const countWordTap = useCallback((syllables: readonly string[]) => {
+    const slug = wordAudioKey(syllables).replace('cz-word-', '')
+    tapsRef.current[slug] = (tapsRef.current[slug] ?? 0) + 1
+  }, [])
 
   useEffect(() => {
     markOpened(czytanka.id)
+    enteredAtRef.current = Date.now()
     audioBus.stop()
     // Odbieramy odłożone cue nawigacji (ustawione przez ekran, z którego
     // przyszliśmy — on sam zdążył się odmontować) i ew. intro w jednym
@@ -67,18 +106,33 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   // a odłożone podświetlenie słowa nie może odpalić się po unmount.
   useEffect(() => () => {
     stop()
+    flushVisit()
     if (holdTimeoutRef.current !== null) window.clearTimeout(holdTimeoutRef.current)
-  }, [stop])
+  }, [stop, flushVisit])
 
-  usePageVisibility({ onHidden: stop, onVisible: () => {}, enabled: true })
+  usePageVisibility({
+    onHidden: () => {
+      stop()
+      flushVisit()
+    },
+    // Czas spędzony w innej karcie nie jest czasem czytania — liczymy od nowa.
+    onVisible: () => {
+      enteredAtRef.current = Date.now()
+    },
+    enabled: true,
+  })
 
-  const tapSyllable = useCallback((syl: string) => {
+  // Tap w sylabę i long-press liczą się do tego samego SŁOWA — rodzic chce
+  // wiedzieć, które wyrazy sprawiają trudność, nie które sylaby zostały stuknięte.
+  const tapSyllable = useCallback((syl: string, syllables: readonly string[]) => {
     stop()
+    countWordTap(syllables)
     void audioBus.play(syllableAudioKey(syl))
-  }, [audioBus, stop])
+  }, [audioBus, countWordTap, stop])
 
   const holdWord = useCallback((s: number, w: number, syllables: readonly string[]) => {
     stop()
+    countWordTap(syllables)
     setHeldWord({ s, w })
     void audioBus.play(wordAudioKey(syllables))
     if (holdTimeoutRef.current !== null) window.clearTimeout(holdTimeoutRef.current)
@@ -86,7 +140,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
       setHeldWord(null)
       holdTimeoutRef.current = null
     }, WORD_HIGHLIGHT_MS)
-  }, [audioBus, stop])
+  }, [audioBus, countWordTap, stop])
 
   // Ten ekran znika w tym samym tick'u co nawigacja — nie może samo odtworzyć
   // cue z opóźnieniem (własny unmount wyczyściłby jego timeout). Zamiast tego
@@ -94,6 +148,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   const prevTap = useTapHandler({
     onTap: () => {
       stop()
+      flushVisit()
       setPendingCue('czytanki-ui-prev')
       onPrev?.()
     },
@@ -102,12 +157,33 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   const nextTap = useTapHandler({
     onTap: () => {
       stop()
+      flushVisit()
       setPendingCue('czytanki-ui-next')
       onNext?.()
     },
     disabled: !onNext,
   })
   const readTap = useTapHandler({ onTap: toggle })
+
+  const echoTap = useTapHandler({
+    onTap: () => {
+      const next = !echoMode
+      stop()
+      updateSetting('czytanki', { ...czytankiSettings, echoMode: next })
+      void audioBus.play(next ? 'czytanki-ui-echo-on' : 'czytanki-ui-echo-off')
+    },
+  })
+
+  const tempoTap = useTapHandler({
+    onTap: () => {
+      const next = tempo === 'turtle' ? 'normal' : 'turtle'
+      stop()
+      updateSetting('czytanki', { ...czytankiSettings, tempo: next })
+      void audioBus.play(next === 'turtle' ? 'czytanki-ui-slow' : 'czytanki-ui-normal')
+    },
+  })
+
+  const echoSkipTap = useTapHandler({ onTap: skipEcho, disabled: echoing === null })
 
   // Bez scrolla i bez przycinania: mierzymy raz przy rozmiarze bazowym grupy
   // i liczymy docelowy fontSize z proporcji dostępne/potrzebne — zamiast serii
@@ -190,13 +266,40 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
         <CzytankaScene scene={czytanka.scene} />
         {onPrev && <button type="button" aria-label="Poprzednia czytanka" {...prevTap} style={{ ...roundBtn, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)' }}>◀</button>}
         {onNext && <button type="button" aria-label="Następna czytanka" {...nextTap} style={{ ...roundBtn, position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>▶</button>}
-        <button type="button" aria-label={reading ? 'Zatrzymaj' : 'Przeczytaj całość'} data-testid="read-aloud" {...readTap}
-          style={{ ...roundBtn, position: 'absolute', left: '50%', bottom: 8, transform: 'translateX(-50%)', background: reading ? '#fde047' : '#fff', borderRadius: radii.kid }}>
-          {reading ? '⏹' : '🔊'}
-        </button>
+        <div style={{ position: 'absolute', left: '50%', bottom: 8, transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button type="button" aria-label={echoMode ? 'Wyłącz powtarzanie' : 'Włącz powtarzanie'} aria-pressed={echoMode}
+            data-testid="echo-toggle" {...echoTap}
+            style={{ ...toggleBtn, background: echoMode ? '#bbf7d0' : '#fff' }}>
+            🗣
+          </button>
+          <button type="button" aria-label={reading ? 'Zatrzymaj' : 'Przeczytaj całość'} data-testid="read-aloud" {...readTap}
+            style={{ ...roundBtn, background: reading ? '#fde047' : '#fff', borderRadius: radii.kid }}>
+            {reading ? '⏹' : '🔊'}
+          </button>
+          <button type="button" aria-label={tempo === 'turtle' ? 'Zwykłe tempo' : 'Wolne tempo'} aria-pressed={tempo === 'turtle'}
+            data-testid="tempo-toggle" {...tempoTap}
+            style={{ ...toggleBtn, background: tempo === 'turtle' ? '#bbf7d0' : '#fff' }}>
+            🐢
+          </button>
+        </div>
       </div>
 
-      <div ref={boxRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
+      <div ref={boxRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto', position: 'relative' }}>
+        {echoing !== null && (
+          // Pauza na powtórzenie — tap w tekst kończy ją natychmiast.
+          <div
+            data-testid="echo-overlay"
+            aria-label="Powtórz zdanie"
+            {...echoSkipTap}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 5, display: 'flex',
+              alignItems: 'flex-start', justifyContent: 'center', paddingTop: 4,
+              background: 'rgba(255,255,255,0.35)', cursor: 'pointer', touchAction: 'manipulation',
+            }}
+          >
+            <span className="cz-echo-icon" aria-hidden="true" style={{ fontSize: 64, lineHeight: 1 }}>🗣</span>
+          </div>
+        )}
         <div ref={textRef} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2em', fontSize, margin: 'auto 0' }}>
           {czytanka.sentences.map((sent, s) => (
             <div key={s} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.2em 0.5em' }}>
@@ -218,7 +321,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
                     >
                       {word.syllables.map((syl, i) => (
                         <SyllableButton key={i} text={syl} cue={getSyllableCue(i)} fontSize={fontSize}
-                          onTap={() => tapSyllable(syl)} onLongPress={() => holdWord(s, w, word.syllables)} />
+                          onTap={() => tapSyllable(syl, word.syllables)} onLongPress={() => holdWord(s, w, word.syllables)} />
                       ))}
                     </span>
                     {word.punct && <span aria-hidden="true" style={{ fontFamily: 'var(--font-block)', fontWeight: 700, fontSize, color: colors.text, marginLeft: '0.08em' }}>{word.punct}</span>}
