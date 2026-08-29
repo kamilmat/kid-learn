@@ -27,7 +27,7 @@ import { getReadingPool } from '../data/levelPools'
 import { syllablesForWord } from './blendSequence'
 import { ALL_SYLLABLES, getSyllableAudioKey, getSyllableId } from '../data/syllables'
 import { CONTRASTIVE_SYLLABLES } from '../data/contrastiveSyllables'
-import { ALL_WORDS, NO_MEANING_WORDS, getWordById, getWordsByLevel, getWordAudioKey } from '../data/words'
+import { ALL_WORDS, NO_MEANING_WORDS, getWordById, getWordsByLevel, getWordAudioKey, type WordData } from '../data/words'
 import { pickNextItem } from '@/shared/srs/select'
 import { pickDistractors, pickRandom, shuffled } from '@/shared/srs/distractors'
 import { nextBox, nextRecentWrong } from '@/shared/srs/update'
@@ -300,15 +300,21 @@ function generateWordMeaning(
       w.albumEmoji !== target.albumEmoji &&
       w.syllables[0] !== target.syllables[0],
   )
-  if (pool.length < CHOICE_COUNT - 1) throw new Error('word-meaning: za mała pula')
+  // Dystraktory też parami różne emoji (SAŁATA/KAPUSTA = 🥬).
+  const distractors: WordData[] = []
+  const usedEmoji = new Set([target.albumEmoji])
+  for (const w of shuffled(pool, rng)) {
+    if (usedEmoji.has(w.albumEmoji)) continue
+    usedEmoji.add(w.albumEmoji)
+    distractors.push(w)
+    if (distractors.length === CHOICE_COUNT - 1) break
+  }
+  if (distractors.length < CHOICE_COUNT - 1) throw new Error('word-meaning: za mała pula')
 
   return {
     type: 'word-meaning',
     targetWord: target.text,
-    choices: shuffled(
-      [target.text, ...shuffled(pool, rng).slice(0, CHOICE_COUNT - 1).map((w) => w.text)],
-      rng,
-    ),
+    choices: shuffled([target.text, ...distractors.map((w) => w.text)], rng),
   }
 }
 
