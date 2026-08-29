@@ -24,6 +24,8 @@ type Props = {
    * przez wywołującego tuż przed tapem zostałby wyrzucony z kolejki.
    */
   introKey?: string | null
+  /** Wołane tylko gdy przebieg dobiegł końca sam — nie po `stop()` ani po zmianie czytanki. */
+  onFinished?: () => void
 }
 
 export function useReadAloud({
@@ -32,11 +34,14 @@ export function useReadAloud({
   echoMode = false,
   tempo = 'normal',
   introKey = null,
+  onFinished,
 }: Props) {
   const [activeWord, setActiveWord] = useState<WordPos | null>(null)
   // Indeks zdania, po którym trwa pauza na powtórzenie; null = nie czekamy.
   const [echoing, setEchoing] = useState<number | null>(null)
   const runId = useRef(0)
+  const onFinishedRef = useRef(onFinished)
+  onFinishedRef.current = onFinished
   // Timer pauzy trzymany w refie, żeby `stop()` mógł go anulować — gołe
   // `await new Promise(setTimeout)` grałoby dalej po wyjściu z ekranu.
   const pauseTimerRef = useRef<number | null>(null)
@@ -122,6 +127,7 @@ export function useReadAloud({
         setActiveWord(null)
         setEchoing(null)
         audioBus.setPlaybackRate(1)
+        onFinishedRef.current?.()
       }
     })()
   }, [audioBus, czytanka, echoMode, introKey, stop, tempo, wait])

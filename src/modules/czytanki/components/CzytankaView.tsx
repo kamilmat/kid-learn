@@ -12,6 +12,7 @@ import { useCzytanki } from '../store/czytankiStore'
 import { setPendingCue, takePendingCue } from '../audio/pendingCue'
 import { SyllableButton } from './SyllableButton'
 import { CzytankaScene } from './CzytankaScene'
+import { ComprehensionQuestion } from './ComprehensionQuestion'
 import { useReadAloud } from '../hooks/useReadAloud'
 
 const FONT_BY_GROUP: Record<CzytankaGroup, number> = { 1: 64, 2: 54, 3: 46, 4: 40 }
@@ -26,6 +27,15 @@ const FIT_SAFETY = 0.95
 const WORD_HIGHLIGHT_MS = 600
 // Zapomniana karta w tle nie może zaliczyć dziecku godzin "czytania".
 const VISIT_CAP_MS = 10 * 60_000
+// ❓ pojawia się dopiero, gdy dziecko naprawdę przeszło przez tekst: całe ▶
+// albo tyle dotkniętych sylab. Pytanie po dwóch tapach byłoby zgadywanką.
+const SYLLABLES_SEEN_RATIO = 0.6
+
+function countSyllables(czytanka: Czytanka): number {
+  let n = 0
+  for (const sent of czytanka.sentences) for (const word of sent) n += word.syllables.length
+  return n
+}
 
 type Props = {
   czytanka: Czytanka
@@ -58,13 +68,19 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   const echoMode = czytankiSettings.echoMode
   const tempo = czytankiSettings.tempo
   const merged = czytankiSettings.mergedSyllables
+  const answeredQuestionIds = useCzytanki((s) => s.answeredQuestionIds)
   const [heldWord, setHeldWord] = useState<{ s: number; w: number } | null>(null)
+  // Sylaby dotknięte w TEJ wizycie — po wyjściu i powrocie dziecko przechodzi tekst od nowa.
+  const [seenSyllables, setSeenSyllables] = useState<Set<string>>(() => new Set())
+  const [readFinished, setReadFinished] = useState(false)
+  const [questionOpen, setQuestionOpen] = useState(false)
   const { activeWord, reading, echoing, toggle, stop, skipEcho } = useReadAloud({
     czytanka,
     audioBus,
     echoMode,
     tempo,
     introKey: echoMode ? 'czytanki-echo-intro' : null,
+    onFinished: () => setReadFinished(true),
   })
   const holdTimeoutRef = useRef<number | null>(null)
   // Tapy zliczamy w refie i zapisujemy batch'em na wyjściu — persist to zapis
@@ -87,6 +103,9 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
 
   useEffect(() => {
     markOpened(czytanka.id)
+    setSeenSyllables(new Set())
+    setReadFinished(false)
+    setQuestionOpen(false)
     enteredAtRef.current = Date.now()
     audioBus.stop()
     // Odbieramy odłożone cue nawigacji (ustawione przez ekran, z którego
@@ -125,9 +144,10 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
 
   // Tap w sylabę i long-press liczą się do tego samego SŁOWA — rodzic chce
   // wiedzieć, które wyrazy sprawiają trudność, nie które sylaby zostały stuknięte.
-  const tapSyllable = useCallback((syl: string, syllables: readonly string[]) => {
+  const tapSyllable = useCallback((syl: string, syllables: readonly string[], key: string) => {
     stop()
     countWordTap(syllables)
+    setSeenSyllables((prev) => (prev.has(key) ? prev : new Set(prev).add(key)))
     void audioBus.play(syllableAudioKey(syl))
   }, [audioBus, countWordTap, stop])
 
@@ -195,6 +215,20 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   })
 
   const echoSkipTap = useTapHandler({ onTap: skipEcho, disabled: echoing === null })
+
+  const comprehension = czytanka.comprehension
+  const syllablesThreshold = Math.ceil(SYLLABLES_SEEN_RATIO * countSyllables(czytanka))
+  const questionReady =
+    comprehension !== undefined && (readFinished || seenSyllables.size >= syllablesThreshold)
+  const questionAnswered = answeredQuestionIds.includes(czytanka.id)
+
+  const questionTap = useTapHandler({
+    onTap: () => {
+      stop()
+      setQuestionOpen(true)
+    },
+    disabled: !questionReady,
+  })
 
   // Bez scrolla i bez przycinania: mierzymy raz przy rozmiarze bazowym grupy
   // i liczymy docelowy fontSize z proporcji dostępne/potrzebne — zamiast serii
@@ -299,6 +333,12 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
             style={{ ...toggleBtn, fontFamily: 'var(--font-block)', fontWeight: 700, fontSize: 14, letterSpacing: '0.02em', color: colors.text, background: merged ? '#bbf7d0' : '#fff' }}>
             {merged ? 'KOTA' : 'KO|TA'}
           </button>
+          {questionReady && (
+            <button type="button" aria-label="Pytanie o czytankę" data-testid="comprehension-open" {...questionTap}
+              style={{ ...roundBtn, background: questionAnswered ? '#bbf7d0' : '#fff' }}>
+              {questionAnswered ? '✔' : '❓'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -339,7 +379,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
                     >
                       {word.syllables.map((syl, i) => (
                         <SyllableButton key={i} text={syl} cue={getSyllableCue(i)} fontSize={fontSize} merged={merged}
-                          onTap={() => tapSyllable(syl, word.syllables)} onLongPress={() => holdWord(s, w, word.syllables)} />
+                          onTap={() => tapSyllable(syl, word.syllables, `${s}-${w}-${i}`)} onLongPress={() => holdWord(s, w, word.syllables)} />
                       ))}
                     </span>
                     {word.punct && <span aria-hidden="true" style={{ fontFamily: 'var(--font-block)', fontWeight: 700, fontSize, color: colors.text, marginLeft: '0.08em' }}>{word.punct}</span>}
@@ -350,6 +390,15 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
           ))}
         </div>
       </div>
+
+      {questionOpen && comprehension && (
+        <ComprehensionQuestion
+          czytankaId={czytanka.id}
+          comprehension={comprehension}
+          audioBus={audioBus}
+          onClose={() => setQuestionOpen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -9,17 +9,19 @@ import { existsSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { CZYTANKI } from '../src/modules/czytanki/data/czytanki'
-import { syllableAudioKey, wordAudioKey } from '../src/modules/czytanki/data/audioKeys'
+import { questionAudioKey, syllableAudioKey, wordAudioKey } from '../src/modules/czytanki/data/audioKeys'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const AUDIO_SOURCE_DIR = join(ROOT, 'audio-source')
 const SYLLABLES_OUT = join(AUDIO_SOURCE_DIR, 'czytanki-syllables.json')
 const WORDS_OUT = join(AUDIO_SOURCE_DIR, 'czytanki-words.json')
+const QUESTIONS_OUT = join(AUDIO_SOURCE_DIR, 'czytanki-questions.json')
 const LEGACY_OUT = join(AUDIO_SOURCE_DIR, 'czytanki.json')
 
 export type CzytankiSources = {
   syllables: Record<string, string>
   words: Record<string, string>
+  questions: Record<string, string>
 }
 
 export function buildCzytankiSource(): CzytankiSources {
@@ -37,18 +39,23 @@ export function buildCzytankiSource(): CzytankiSources {
   for (const [k, v] of [...syl.entries()].sort()) syllables[k] = v
   const wordMap: Record<string, string> = { _voice: 'agnieszka', _engine: 'azure' }
   for (const [k, v] of [...words.entries()].sort()) wordMap[k] = v
-  return { syllables, words: wordMap }
+  // Pytania to pełne zdania — Azure wymawia je poprawnie z ortografii, więc plain SSML.
+  const questions: Record<string, string> = { _voice: 'agnieszka', _engine: 'azure' }
+  for (const c of CZYTANKI) if (c.comprehension) questions[questionAudioKey(c.id)] = c.comprehension.question
+  return { syllables, words: wordMap, questions }
 }
 
 function countKeys(map: Record<string, string>): number {
   return Object.keys(map).filter((k) => !k.startsWith('_')).length
 }
 
-const { syllables, words } = buildCzytankiSource()
+const { syllables, words, questions } = buildCzytankiSource()
 writeFileSync(SYLLABLES_OUT, JSON.stringify(syllables, null, 2) + '\n', 'utf8')
 writeFileSync(WORDS_OUT, JSON.stringify(words, null, 2) + '\n', 'utf8')
+writeFileSync(QUESTIONS_OUT, JSON.stringify(questions, null, 2) + '\n', 'utf8')
 if (existsSync(LEGACY_OUT)) rmSync(LEGACY_OUT)
 console.log(
   `czytanki-syllables.json: ${countKeys(syllables)} kluczy (azure-ipa), ` +
-    `czytanki-words.json: ${countKeys(words)} kluczy (azure)`,
+    `czytanki-words.json: ${countKeys(words)} kluczy (azure), ` +
+    `czytanki-questions.json: ${countKeys(questions)} kluczy (azure)`,
 )
