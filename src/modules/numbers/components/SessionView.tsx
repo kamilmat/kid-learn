@@ -11,6 +11,7 @@ import { useNumbers } from '../store/numbersStore'
 import { extractCorrectValue } from '../data/correctValue'
 import { promptAudioKeys, thinkingAloudKey } from '../data/promptAudio'
 import { NUMBERS_PRAISE_KEYS, type NumbersPraiseKey } from '../data/praise'
+import { MAX_STRATEGY_CUES_PER_SESSION, strategyAudioKey } from '../data/strategyAudio'
 import type { AnswerOutcome, ExerciseType, Question } from '../types'
 import { ConceptIntro } from './intros/ConceptIntro'
 import { SessionEnd } from './SessionEnd'
@@ -151,6 +152,31 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
     void audioBus.play(key)
   }, [thinkingAloudOn, showIntro, currentExerciseType, audioBus])
 
+  // Nazwanie strategii po błędzie — limit na sesję, bo częściej brzmi jak
+  // zrzędzenie. SessionView montuje się raz na sesję, więc ref startuje z zera.
+  const strategyCuesRef = useRef(0)
+  const strategyKey =
+    session.lastOutcome !== null &&
+    session.lastOutcome !== 'correct' &&
+    session.currentQuestion !== null &&
+    strategyCuesRef.current < MAX_STRATEGY_CUES_PER_SESSION
+      ? strategyAudioKey(
+          session.currentQuestion.conceptId,
+          (session.currentQuestion.payload as { op?: '+' | '-' }).op ?? '+',
+        )
+      : null
+
+  // Licznik rośnie w efekcie, nie w renderze. Klucz `questionIdx` sprawia, że
+  // podwójne wywołanie efektu w StrictMode liczy jedną podpowiedź, nie dwie.
+  const countedStrategyRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (session.status !== 'feedback' || strategyKey === null) return
+    const id = `${session.questionIdx}-${strategyKey}`
+    if (countedStrategyRef.current === id) return
+    countedStrategyRef.current = id
+    strategyCuesRef.current += 1
+  }, [session.status, session.questionIdx, strategyKey])
+
   const handleRepeatPrompt = useCallback(() => {
     const keys = promptAudioKeys(session.currentQuestion)
     if (keys.length === 0) return
@@ -231,6 +257,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
           audioBus={audioBus}
           onAdvance={session.advance}
           paused={session.status === 'paused'}
+          strategyKey={strategyKey}
           {...(session.praiseKey !== null ? { praiseKey: session.praiseKey } : {})}
         />
       )}
@@ -438,6 +465,7 @@ export function FeedbackOverlay({
   onAdvance,
   praiseKey,
   paused = false,
+  strategyKey = null,
 }: {
   outcome: AnswerOutcome
   correctValue: number | null
@@ -447,8 +475,14 @@ export function FeedbackOverlay({
   praiseKey?: NumbersPraiseKey
   /** Pauza — wstrzymuje odliczanie; po wznowieniu audio leci raz jeszcze. */
   paused?: boolean
+  /** Nazwa strategii grana po korekcie; null = limit sesji wyczerpany. */
+  strategyKey?: string | null
 }) {
   const onAdvanceRef = useRef(onAdvance)
+  // Prop czytany przez ref: rodzic dobija licznik jeszcze w trakcie feedbacku,
+  // a zmiana klucza nie może przekolejkować całej ścieżki audio od nowa.
+  const strategyKeyRef = useRef(strategyKey)
+  strategyKeyRef.current = strategyKey
   useEffect(() => {
     onAdvanceRef.current = onAdvance
   }, [onAdvance])
@@ -489,6 +523,9 @@ export function FeedbackOverlay({
       if (correctValue !== null) {
         plays.push(settled(audioBus.play(`correct-show-${correctValue}`)))
       }
+      // Strategia PO korekcie — najpierw wynik, potem narzędzie do liczenia.
+      const strategy = strategyKeyRef.current
+      if (strategy !== null) plays.push(settled(audioBus.play(strategy)))
     }
 
     // Bezpiecznik: gdyby audio nigdy nie zamknęło obietnicy (element bez
