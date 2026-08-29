@@ -88,7 +88,7 @@ describe('numbersStore', () => {
         'add-1-1': { id: 'add-1-1', conceptId: 'plomyk-addsub-10', box: 2, lastSeen: 100, recentWrong: 0 },
       },
       {
-        'plomyk-addsub-10': { state: 'learning', firstSeenAt: 50, lastSeenAt: 100, correctStreak: 1, factsTouched: ['add-1-1'] },
+        'plomyk-addsub-10': { state: 'learning', firstSeenAt: 50, lastSeenAt: 100, correctStreak: 1, factsTouched: ['add-1-1'], recentOutcomes: [], factsCorrect: ['add-1-1'] },
       },
       { startedAt: 50, endedAt: 100, level: 'plomyk', events: [] },
     )

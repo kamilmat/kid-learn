@@ -5,6 +5,7 @@
 import type { CSSProperties } from 'react'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { SyllableText } from './SyllableText'
+import type { Box } from '@/shared/srs/types'
 
 export type WordTileState = 'idle' | 'correct' | 'wrong' | 'highlighted'
 
@@ -12,6 +13,7 @@ export type WordTileProps = {
   word: string
   syllables?: string[]
   state?: WordTileState
+  box?: Box | undefined
   onTap?: () => void
 }
 
@@ -32,7 +34,7 @@ function fontSizeForWord(word: string): number {
   return word.length > 5 ? 28 : 32
 }
 
-export function WordTile({ word, syllables, state = 'idle', onTap }: WordTileProps) {
+export function WordTile({ word, syllables, state = 'idle', box, onTap }: WordTileProps) {
   const handlers = useTapHandler({ onTap: onTap ?? (() => undefined) })
 
   const baseStyle: CSSProperties = {
@@ -68,7 +70,7 @@ export function WordTile({ word, syllables, state = 'idle', onTap }: WordTilePro
       style={{ ...baseStyle, ...stateStyle(state) }}
       {...(onTap ? handlers : {})}
     >
-      {showSyllableColors ? <SyllableText word={word} syllables={syllables} /> : word}
+      {showSyllableColors ? <SyllableText word={word} syllables={syllables} box={box} /> : word}
     </button>
   )
 }

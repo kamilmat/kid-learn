@@ -18,6 +18,7 @@ import { SyllableMatchExercise } from './exercises/SyllableMatchExercise'
 import { WordAssemblyExercise } from './exercises/WordAssemblyExercise'
 import { WordChoiceExercise } from './exercises/WordChoiceExercise'
 import { SyllableFillExercise } from './exercises/SyllableFillExercise'
+import { WordMeaningExercise } from './exercises/WordMeaningExercise'
 import { FeedbackOverlay } from './FeedbackOverlay'
 import { PauseOverlay } from '@/shared/ui/PauseOverlay'
 import { SessionEnd } from './SessionEnd'
@@ -70,6 +71,10 @@ export function SessionView({
   const session = useReadingSession({ level, audioBus, settings })
   const seenVariants = useReading(s => s.seenSceneVariants)
   const markSceneSeen = useReading(s => s.markSceneSeen)
+  // Box celu — rusztowanie koloru sylab gaśnie wraz z opanowaniem (Task 6).
+  const targetWordText =
+    session.currentQuestion?.type === 'syllable-fill' ? session.currentQuestion.targetWord : null
+  const targetWordBox = useReading(s => (targetWordText ? s.words[`word-${targetWordText}`]?.box : undefined))
   const [activeScene, setActiveScene] = useState<Scene | null>(null)
   const [activeWildCelebration, setActiveWildCelebration] = useState<WildCelebrationDef | null>(null)
   const iskra = useIskraReactions()
@@ -245,6 +250,7 @@ export function SessionView({
     return (
       <SessionEnd
         results={session.results}
+        level={level}
         onExit={handleExit}
         onAlbum={onAlbum ?? handleExit}
         audioBus={audioBus}
@@ -343,6 +349,15 @@ export function SessionView({
             onAudioRepeat={session.repeatAudio}
           />
         )}
+        {q && q.type === 'word-meaning' && (
+          <WordMeaningExercise
+            targetWord={q.targetWord}
+            choices={q.choices}
+            onAnswer={session.submitAnswer}
+            onDontKnow={session.submitDontKnow}
+            onAudioRepeat={session.repeatAudio}
+          />
+        )}
         {q && exerciseType === 'word-choice' && q.type === 'word-choice' && (
           <WordChoiceExercise
             targetWord={q.targetWord}
@@ -359,6 +374,7 @@ export function SessionView({
             missingPosition={q.missingPosition}
             missingSyllable={q.missingSyllable}
             choices={q.choices}
+            box={targetWordBox}
             onAnswer={session.submitAnswer}
             onDontKnow={session.submitDontKnow}
             onAudioRepeat={session.repeatAudio}

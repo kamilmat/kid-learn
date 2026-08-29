@@ -6,6 +6,7 @@
 
 import type { LetterState } from '@/shared/srs/types'
 import type { SessionLog, SessionEvent } from '@/shared/stats/types'
+import type { Suggestion } from '@/shared/stats/suggestions'
 import { POLISH_ALPHABET, toUpper } from '@/modules/letters/data/alphabet'
 
 const SUGGESTIONS_COLOR_TEXT = '#2d2d33'
@@ -13,8 +14,11 @@ const SUGGESTIONS_COLOR_TEXT = '#2d2d33'
 export type SuggestionsSectionProps = {
   letters: Record<string, LetterState>
   sessions: SessionLog[]
-  /** Sesje ukończone dziś we wszystkich modułach — patrz `completedSessionsToday`. */
-  sessionsToday?: number
+  /**
+   * Dane do „Więcej sugestii" (silnik `stats/suggestions.ts`, wszystkie moduły).
+   * Bez nich sekcja pokazuje wyłącznie heurystyki liter — tak jak przed Falą 2.
+   */
+  nextSteps?: Suggestion[]
 }
 
 /**
@@ -91,15 +95,13 @@ export function isResponseTimeIncreasing(sessions: SessionLog[]): boolean {
 export function generateSuggestions(
   letters: Record<string, LetterState>,
   sessions: SessionLog[],
-  sessionsToday?: number,
 ): string[] {
   const out: string[] = []
 
-  // Nudge na dziś — dwie krótkie sesje konsolidują lepiej niż jedna długa.
-  // Pokazujemy go NA GÓRZE, bo to jedyna sugestia „do zrobienia jeszcze dziś".
-  if (sessionsToday === 1) {
-    out.push('Dziś była jedna sesja; druga wieczorem działa lepiej niż jedna długa.')
-  }
+  // Nudge „druga sesja wieczorem" NIE jest tutaj: liczy go reguła
+  // `two-sessions` w `stats/suggestions.ts` (wszystkie moduły, nie same
+  // Litery), a dwie implementacje tego samego kazałyby rodzicowi przeczytać
+  // ten sam nudge dwa razy.
 
   // Najsłabsze 3
   const weakest = topNLetters(letters, letterWeaknessScore, 3)
@@ -133,9 +135,12 @@ export { POLISH_ALPHABET }
 export function SuggestionsSection({
   letters,
   sessions,
-  sessionsToday,
+  nextSteps,
 }: SuggestionsSectionProps) {
-  const suggestions = generateSuggestions(letters, sessions, sessionsToday)
+  const suggestions = generateSuggestions(letters, sessions)
+  // `nextSteps[0]` jest już na karcie „Następny krok" na górze raportu —
+  // powtarzanie go tutaj kazałoby rodzicowi czytać to samo dwa razy.
+  const more = (nextSteps ?? []).slice(1)
 
   return (
     <section
@@ -150,6 +155,19 @@ export function SuggestionsSection({
     >
       {/* Heurystyki są policzone wyłącznie ze stanu liter (moduł 1) — etykieta
           mówi to wprost, żeby rodzic nie czytał ich jako oceny całej apki. */}
+      {more.length > 0 && (
+        <div data-testid="more-suggestions" style={{ marginBottom: 16 }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: 18 }}>Więcej sugestii</h3>
+          <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.5 }}>
+            {more.map((s, i) => (
+              <li key={`${s.id}-${i}`} data-testid="next-step-item">
+                {s.text}
+                <span style={{ color: '#6b7280' }}> — {s.why}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <h2 style={{ margin: '0 0 12px', fontSize: 22 }}>Sugestie (Litery)</h2>
       <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.6 }}>
         {suggestions.map((s, i) => (

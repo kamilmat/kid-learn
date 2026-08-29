@@ -25,10 +25,40 @@ const { useReading } = await import('../store/readingStore')
 
 import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { ALL_SYLLABLES } from '../data/syllables'
+import { CONTRASTIVE_SYLLABLES } from '../data/contrastiveSyllables'
+import type { SyllableState } from '../types'
 
 // play() zwraca Promise<boolean> (true = klip dograł do końca) — patrz AudioBus
 const mockAudioBus = { play: vi.fn().mockResolvedValue(true), stop: vi.fn() }
 const mockSettings = { reading: { wildCelebrationFreq: 8, questionsPerSession: {} } } as any
+
+function makeRng(seed: number): () => number {
+  let state = seed >>> 0
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0
+    return state / 0x1_0000_0000
+  }
+}
+
+// Seeduje wszystkie 24 sylaby identycznym stanem — target wybrany przez pickNextItem
+// jest wtedy nieprzewidywalny, ale zawsze ma ten sam box/totalSeen co reszta puli.
+function seedAllSyllables(box: SyllableState['box'], totalSeen: number): void {
+  const seeded: Record<string, SyllableState> = {}
+  for (const syl of ALL_SYLLABLES) {
+    seeded[syl.id] = {
+      id: syl.id,
+      syllable: syl.text,
+      box,
+      lastSeen: 0,
+      recentWrong: 0,
+      totalSeen,
+      totalCorrect: totalSeen,
+      totalWrong: 0,
+    }
+  }
+  useReading.setState({ syllables: seeded })
+}
 
 describe('useReadingSession', () => {
   beforeEach(() => {
@@ -66,6 +96,46 @@ describe('useReadingSession', () => {
     if (result.current.currentQuestion?.type === 'syllable-match') {
       const q = result.current.currentQuestion
       expect(q.choices).toContain(q.targetSyllable)
+    }
+  })
+
+  it('syllable-match dystraktory czasem zawierają kontrastywnego partnera targetu (box wysoki, poza errorless)', () => {
+    let sawPartner = false
+    for (let seed = 0; seed < 80; seed++) {
+      useReading.getState().reset()
+      seedAllSyllables(3, 9)
+      const { result } = renderHook(() =>
+        useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings, rng: makeRng(seed) }),
+      )
+      act(() => result.current.start())
+      const q = result.current.currentQuestion
+      if (q?.type === 'syllable-match') {
+        const partners = CONTRASTIVE_SYLLABLES[q.targetSyllable] ?? []
+        if (q.choices.some((c) => partners.includes(c))) {
+          sawPartner = true
+          break
+        }
+      }
+    }
+    expect(sawPartner).toBe(true)
+  })
+
+  it('syllable-match errorless (box 1, totalSeen<=2) nigdy nie daje kontrastywnego partnera jako dystraktora', () => {
+    for (let seed = 0; seed < 80; seed++) {
+      useReading.getState().reset()
+      seedAllSyllables(1, 1)
+      const { result } = renderHook(() =>
+        useReadingSession({ level: 'iskierka', audioBus: mockAudioBus, settings: mockSettings, rng: makeRng(seed) }),
+      )
+      act(() => result.current.start())
+      const q = result.current.currentQuestion
+      if (q?.type === 'syllable-match') {
+        const partners = CONTRASTIVE_SYLLABLES[q.targetSyllable] ?? []
+        for (const choice of q.choices) {
+          if (choice === q.targetSyllable) continue
+          expect(partners.includes(choice)).toBe(false)
+        }
+      }
     }
   })
 

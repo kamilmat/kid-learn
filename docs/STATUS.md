@@ -3,6 +3,124 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
+## Fala 2 (2026-08-29) — ukończona (branch `feat/fala-2`, tip `1a25b8b`)
+
+Spec: `docs/superpowers/specs/2026-08-29-fala-2-dydaktyka-design.md`. Plan: `docs/superpowers/plans/2026-08-29-fala-2-dydaktyka.md`.
+Ledger tasków (briefy + raporty + review): `.superpowers/sdd/2026-08-29-fala-2-dydaktyka/`.
+16 tasków, subagent-driven (worktree'e równoległe, review po każdym, fix-roundy: T4, T9, T10, T12, T14, T15).
+Punkt powrotu sprzed fali: tag `v4.1-fala-1` (Fala 1), `v4.0-po-cr` (przed falami).
+
+**Cel:** dołożyć **akt liczenia** (zamiast samego rozpoznawania liczebności), **rozumienie** (zamiast samego dekodowania) i **pętlę rodzica z jedną akcją**.
+
+### Co wdrożone — per moduł
+
+**Litery (moduł 1)**
+- **Czterolinia w kafelkach pisanych** (A-9) — lokalny `HandwrittenLetter` z `LetterTile` zastąpiony przez `@/shared/ui/HandwrittenLetter` (SVG, 4 linie, `size = fontSize / 0.7`), nowy prop `pair` (letterSpacing dla „Bb").
+- **Wariant odwrotny „widzisz literę → wybierz dźwięk"** (A-13) — `Question.kind: 'sound-to-letter' | 'letter-to-sound'`, co 5. pytanie (`reverseEvery`, default 5, `0` wyłącza) + `forceReverseIndices`. `ReverseQuizCard`: wielka litera + 3 kafelki 🔊 (odsłuch) z osobnym ✔ pod każdym. Prompt `letters-reverse-prompt` nie zdradza dźwięku.
+- **„Trudne literki"** — route `/letters/hard` + kafelek 🔁 na `LevelSelect`. Pula: `totalSeen > 0 && (recentWrong > 0 || box ≤ 2)`, sort po `scoreItem`, cap 8; sesja = `min(8, pula)`. Config (case/style/tiles) z najwyższego poziomu z historii, fallback `iskierka`. Dystraktory z pełnej puli poziomu. Pula < 3 → kafelek wyszarzony + `letters-hard-empty`, wejście z URL-a redirectuje.
+- **„Literka dnia"** — route `/letters/daily` + pasek pod siatką 2×2 na Home. Litera zamrożona na dobę (`lettersStore.dailyLetter: { letter, dayKey }`, doba lokalna). Przebieg: `letters-daily-intro` → 4 ekspozycje (w tym jedna odwrotna, `forceReverseIndices: [1]`) → kotwica słowna z `associations.ts` → `letters-daily-end` → Home. Bez `SessionEnd`, bez sugestii poziomu. Po ukończeniu ✔ + `letters-daily-done`.
+
+**Czytanie (moduł 2)**
+- **Dystraktory kontrastywne dla sylab** (#14) — `data/contrastiveSyllables.ts` (mapa symetryczna: samogłoska / dźwięczność / miejsce artykulacji, tylko na 24 sylabach z `syllables.ts`); `generateSyllableMatch` woła `pickDistractors(..., useShapeGroups: false)` z fallbackiem na `pickRandomDistinct` przy puli < 4.
+- **Wygaszanie koloru sylab wraz z boxem** (B-7) — `syllableColorForBox(index, box)` w `shared/ui/syllableColors.ts`: box 1-2 → pełny kolor + podkreślenie, 3-4 → `opacity: 0.55`, 5 → `colors.text` bez podkreślenia. Kolor to rusztowanie, nie format docelowy. Album zawsze czarny.
+- **Sprawdzian rozumienia obrazek → słowo** (#18) — wariant `word-meaning` + `WordMeaningExercise` (emoji 200 px, 4 `WordTile`). Ognik/Pochodnia, pytania o indeksach **2 i 5**. Prompt `reading-meaning-prompt` nie wypowiada słowa. `NO_MEANING_WORDS` (16 pozycji) blokuje bycie targetem.
+- **Sugestia poziomu na `SessionEnd`** (B-10) — ⬆ przy `correctRatio ≥ 0.8` **i** średnim `box` puli ≥ 3,5; ⬇ przy `correctRatio ≤ 0.4` w dwóch kolejnych sesjach tego poziomu. Sugestia niczego nie blokuje.
+- **`prefers-reduced-motion`** (#20) — `shared/ui/useReducedMotion.ts`; `WildCelebration` renderuje wariant statyczny (to samo audio, ta sama długość, `onComplete` po `durationMs`), `WordScene` bez keyframe'ów; keyframes w `celebrations/*` dodatkowo w `@media (prefers-reduced-motion: no-preference)`.
+
+**Cyferki (moduł 3)**
+- **`CountObjectsExercise` — liczenie 1:1** (#13) — trzy fazy `counting → cardinality → recount`. N emoji na siatce 110×130 px (≥96 px między środkami, kolejność slotów losowa), tap → trwały znacznik + `number-<k>`; po ostatnim `count-objects-howmany` + 4 kafelki (`buildChoices` z `NEAR_MISS_OFFSETS`). Do SRS idzie **wyłącznie** odpowiedź o kardynalność. Router: oba koncepty liczenia co drugie pytanie (parzystość `questionIdx`).
+- **Struktura 5 w `TenFrame`** (#15) — kropki 6-10 w jaśniejszym odcieniu (`dotColorSecond`, default `lighten(dotColor, 0.25)`) + separator; `fiveStructure` (default `true`), wyłączone w `TenFrameFill`.
+- **Feedback nie zasłania zadania** (#15) — przy `wrong`/`dontKnow` overlay to **pas 28% w przepływie** (`position: relative`, `zIndex: 900`) + przezroczysty scrim `zIndex: 899` pochłaniający tapy; zadanie pod spodem przerysowuje się na poprawną liczbę (`revealValue` → `SubitizeFlash`, `TenFrameFill`). `correct` zostaje pełnoekranowy.
+- **Mastery jako okno 8/10** (#15) — `recentOutcomes` (cap 10) + `factsCorrect`; `factsTouched` zdegradowane do pola migracyjnego. `dontKnow` liczy się jak błąd. Mastery nie cofa się.
+- **`NEAR_MISS_OFFSETS` wszędzie** (C-20) — dołożone w `MatchDigitDots`, `ConcreteAdd`, `ConcreteAddSubtract`, `TenFrameFill`, `SubitizeFlash`, `CountObjects`.
+- **Odpalenie martwych `mastery-*`** (C-14) — `data/masteryAudio.ts` mapuje 20 `ConceptId` → 19 kluczy; grane w `persistResults` przed `tree-grow`.
+
+**Czytanki (moduł 4)**
+- **Mini-pytanie o rozumienie** (#17) — `Comprehension { question, options: [3× emoji], answer }` w 59 z 60 czytanek. ❓ (72 px) widoczne po zakończeniu ▶ **albo** dotknięciu ≥60% sylab. Overlay `ComprehensionQuestion` (`zIndex: 1500`, pod `PauseOverlay`): auto-play `czytanki-q-intro` + `cz-q-NN`, 🔊 do powtórzenia, ✋ do wyjścia. Poprawnie → 👏 + `czytanki-q-praise`; źle → `czytanki-q-again` + powtórka pytania, zły kafelek znika (zostają 2). Druga pomyłka → `czytanki-q-miss` + krótkie podświetlenie poprawnego, bez ✔. Bez punktów i SRS — `answeredQuestionIds` dla ✔ (tylko trafione za 1./2. razem) + `comprehensionResults: Record<id,'first'|'second'|'miss'>` → raport rodzica („Pytania o rozumienie: X za 1. razem, Y za 2., Z nietrafione") i eksport MD. ✋ (`czytanki-q-close`) widoczne także w trakcie pochwały.
+- **„Scal sylaby"** (#19) — przycisk `KO|TA` ↔ `KOTA` obok ▶; `settings.czytanki.mergedSyllables` (globalne). Scalone: odstęp 0, jeden kolor, bez podkreśleń; obwolutka słowa zostaje, tap/long-press bez zmian. Auto-fit przelicza się po zmianie trybu.
+- **Licznik przeczytań** (#19) — `readCounts` + `lastCountedAt` z guardem 60 s; od CR fali zaliczane przez `markRead` dopiero z tym samym dowodem co ❓ (▶ do końca albo ≥60% sylab), `markOpened` na mouncie ustawia tylko `openedIds` (`timeMs` liczy się od mountu). Kafelek: ⭐ przy 1, ⭐ + 2-3 kropki przy ≥2 (kropki, nie cyfra — zasada no-text). Raport: „Przeczytane ≥2×: N" + lista tytułów, także w eksporcie MD.
+
+**Raport rodzica** (#12)
+- `NextStepCard` na samej górze: jedno zdanie akcji + linijka „dlaczego"; zawsze dokładnie jedna sugestia (fallback gdy brak danych).
+- `shared/stats/suggestions.ts` — `generateSuggestions` po wszystkich modułach: `no-activity` (6) > `module-cold` (5) > `hard-items` (4) > `concept-stuck` (3) > `reread` (2) > `two-sessions` (1). Najwyższy priorytet → karta, reszta → „Więcej sugestii".
+- `CollapsibleSection` — wszystkie 8 sekcji **zwinięte domyślnie**, nagłówek ≥44 px z `aria-expanded` i jednolinijkowym podsumowaniem. Stan w `useState`, nie w persist.
+- `antiCheatFlagText(type)` — flagi po ludzku („Klika bardzo szybko, prawie bez patrzenia…") zamiast żargonu; ten sam tekst w UI i w eksporcie MD.
+- `exportReportToMarkdown` dostał `## Następny krok` na początku (kontrakt: treść UI ≡ markdown).
+
+### Migracje persist (WSZYSTKIE cztery bumpnięte w tej fali)
+
+| store | klucz | było → jest | nowe pola |
+|---|---|---|---|
+| `settingsStore` | `iskierki-state-v1` | 5 → **6** | `czytanki.mergedSyllables`; `migrate` v5→v6 mapuje `promptMode: 'both'` → `'phoneme'` |
+| `lettersStore` | `iskierki-letters-v1` | 1 → **2** | `dailyLetter: { letter, dayKey } \| null`, `dailyDoneDayKey` |
+| `numbersStore` | `iskierki-numbers-v1` | 2 → **3** | `factsCorrect` (kopiowane z `factsTouched`), `recentOutcomes: []` |
+| `czytankiStore` | `iskierki-czytanki-v1` | 2 → **3** | `readCounts`, `lastCountedAt`, `answeredQuestionIds` |
+
+`readingStore` bez zmian (`version: 1`). Każdy store ma `migrate` **i** default w `merge` — bez obu bump kasuje postęp.
+
+### Liczby po implementacji
+
+- `pnpm tsc -b` — czysto.
+- `pnpm vitest run --dir src` — **943/943** zielone (po CR fali).
+- `pnpm test --run` — **1062/1062** zielone (943 src + 119 scripts). `vitest.config.ts` wyklucza teraz `**/.claude/**` (bez tego zbierał testy ze starych worktree'ów agentów).
+- `pnpm build` — OK, `669 kB` JS, 1411 precache entries (16491,43 KiB).
+- `pnpm audio:check` — **1380/1380** kluczy źródłowych (po CR: +`czytanki-q-miss`, `czytanki-q-close`). `ls public/audio/*.mp3 | wc -l` = **1387** (te same 7 nadwyżkowych co po Fali 1: `correction-prefix` używany w runtime + 6 osieroconych).
+- **+77 nowych kluczy audio**: 59 `cz-q-*` (Agnieszka/azure, generowane) + 3 `czytanki-q-*` + 2 `czytanki-ui-merge-*` (Agnieszka/azure) + 6 liter (`letters-hard-intro/-empty`, `letters-daily-intro/-end/-done`, `home-daily-letter`) + 1 `letters-reverse-prompt` + 2 `reading-level-up/-down` + 1 `reading-meaning-prompt` + 3 `count-objects-*` (Zofia/edge).
+
+### CR całej fali (3 obszary, po T16) — poprawione
+
+- **Litery:** biały ekran w Trudnych literkach/Literce dnia (50 sesji `hard`/`daily` wypychało poziomowe z historii → `configLevelForHard` spadał na Iskierkę, `targetPool` z Pochodni bez przecięcia z `activeLetters` → `pickNextItem` rzucał). Teraz `targetPool ∩ activeLetters` (fallback: cała pula), `configLevelForHard(sessions, lastUsedLevel)`, zamrożona `dailyLetter` walidowana względem puli, `src/app/ErrorBoundary.tsx` (↻/🏠, bez tekstu) wokół `Routes`. Wariant odwrotny: dźwięk celu pomijany TYLKO gdy faktycznie będzie retry (`willRetry`), nie przy `attempt 2`/`dontKnow`/`timeout`. ⬅ z Literki dnia = 🏠. Pasek Literki dnia na Home przelicza `dayKey` co 60 s + na `visibilitychange`/`focus`.
+- **Czytanie:** `previousRatios` w sugestii poziomu pomija `attempt: 2` (wcześniej ⬇ było praktycznie nieosiągalne przy włączonej drugiej próbie).
+- **Czytanki:** ⭐/`readCounts` za dowód przeczytania, nie za wejście; druga pomyłka w ❓ nie jest chwalona; `comprehensionResults` w raporcie.
+- **Cyferki:** odliczanie recountu w `count-objects` gaśnie po pauzie/🤷 (prop `active`); pas korekty 28% w przepływie tylko dla ćwiczeń z reveal (`subitize-flash`, `ten-frame-fill`), reszta ma pełnoekranowy overlay + scrim; `restrictChoicesTo` trzymane też w `feedback` po 2. próbie (kafelki nie skaczą 2→4).
+- **Raport:** `stuck-concept` wymaga `lastSeenAt` ≤14 dni i ≥5 ostatnich wyników z <50% poprawnych; memoizacja flag.
+- **Odłożone z CR:** czterolinia w `ReverseQuizCard` (litera-cel gołym spanem), pomiar wysokości Home na iPadzie w landscape (arytmetyka na styk, ~6-10 px), `revealValue` dla ćwiczeń konkretnych (dziś tylko 2 z 15).
+
+### Odstępstwa od speca / planu (świadome, zaakceptowane w review)
+
+- **Próg mastery = 8/10, nie 7/10.** Wzór z planu `ceil((minStreakForMastery / 10) * 8)` przy realnym `minStreakForMastery: 8` dawał 7/10, sprzecznie z testami („7 poprawnych → learning"). Zastosowano `min(10, max(1, minStreakForMastery))` — czytamy próg jako „tyle poprawnych z ostatnich dziesięciu".
+- **Miękkie odblokowanie prerekwizytu = 40%** — `ceil(minStreakForMastery / 2)` spełniane ALBO przez `correctStreak`, ALBO przez liczbę poprawnych w oknie (przy domyślnych 8 → 4/10). Decyzja produktowa: skoro mastery nie wymaga już serii, sam streak przestał być wiarygodną miarą postępu; bez tego dziecko z 6/10 poprawnych bez serii utknęłoby na koncepcie wejściowym.
+- **Separator piątki w `TenFrame` jest poziomy, nie pionowy** — ramka to 5 kolumn × 2 rzędy, więc pierwsza piątka to GÓRNY rząd; pionowa kreska w komórce 5 nie oznaczałaby niczego.
+- **`iskierka-counting-10` routuje na `match-digit-dots`**, więc gałąź `maxN = 10` w `SubitizeFlashExercise` jest dziś nieosiągalna — zostawiona jako gotowość na zmianę routingu.
+- **`LEVEL_LABEL` NIE zostało poszerzone o `hard`/`daily`** — zostaje `Record<Level, string>` (indeksuje UI ustawień, `ActiveLettersEditor`, `exporter`); rozszerzenie żyje lokalnie jako `SESSION_MODE_LABEL` w `LiveSessionSection.tsx`.
+- **`SyllableButton` dostał flagę `merged`, nie `color` + `underline`** — po Fali 1 komponent bierze `cue: SyllableCue`, a `SyllableUnderline` to unia bez `'none'`; rozszerzanie jej wykraczało poza zakres. Kontrakt wizualny identyczny.
+- **⭐ na kafelku czytanki pokazuje się przy `opened || readCount ≥ 1`** — po migracji v2→v3 `openedIds` są pełne, a `readCounts` puste; sam `readCount ≥ 1` skasowałby gwiazdki na wszystkich przeczytanych.
+- **Przykłady pytań ze speca #17 przeniesione do innych czytanek** — treść przykładów nie zgadzała się z faktycznymi tekstami (`cz-03` to balony, `cz-14` to kot, `cz-22` to koń, przykład `cz-22` był wewnętrznie sprzeczny). Reguła „odpowiedź stoi wprost w tekście" jest wiążąca, więc pytania trafiły do `cz-01`/`cz-16`/`cz-38`/`cz-46`/`cz-51`.
+- **`cz-12` („Pada i pada.") świadomie BEZ pytania** — zdanie nie zawiera żadnego rzeczownika, więc literalne pytanie jest niemożliwe. Stąd **59 pytań, nie 60**. Alternatywa (zmiana `sentences`) odrzucona — inne taski fali stoją na tych danych. Do decyzji usera.
+- **Zakaz three-cueing egzekwowany jako „≥1 dystraktor widoczny w scenie"** — dosłowna reguła jest niewykonalna przy scenach z 2-4 aktorami jednej kategorii. Test `comprehension.test.ts` pilnuje wersji wykonalnej; 0 naruszeń po fix-roundzie T14.
+- **Brak kroku syntezy (`playBlend`) po `word-meaning`** — to zadanie o znaczenie, nie o dekodowanie. `playCorrectionAudio` nadal gra `word-<target>` przy błędzie (feedback, nie prompt).
+- **`NO_MEANING_WORDS` rozszerzone z 7 do 16** — doszły m.in. `AUTO` + `SAMOCHÓD` (🚗/🚙 to ten sam desygnat, a filtr `albumEmoji !== target.albumEmoji` ich nie rozdziela → pytanie z dwiema poprawnymi odpowiedziami).
+- **`no-activity` NIE odpala się, gdy dziś była sesja** — brief przewidywał inaczej, ale karta „Wróćcie do nauki" dziecku, które właśnie ćwiczyło, byłaby błędem. Reguła liczy dni od OSTATNIEJ sesji.
+- **Box 5 bez podkreślenia** — celowe wygaszenie rusztowania (jak album), nie przeoczenie.
+- **Wyjście przez pauzę → „Zakończ" w „Literce dnia" liczy dobę jako zrobioną** — `quit()` idzie tą samą ścieżką co normalny koniec. Świadome uproszczenie.
+
+### Odłożone drobiazgi (deferred, poza zakresem Fali 2)
+
+- **Dev-only podwójne cue w StrictMode** — `reading-level-up`/`reading-level-down` i `session-stop-enough` w `reading/SessionEnd` nie mają guardu `playedRef` (jak istniejący `level-up-suggest`). Tylko w dev, kosmetyczne.
+- **`phon-*` (32 klucze Azure, moduł 1) nie grają** — hotfix `90b7e90` ustawił domyślny tryb promptu na `phoneme` = nagrania rodzica `letter-*`. Pliki i źródło zostają w repo na wypadek powrotu do fonemów. **Dług z Fali 1 („usuń klucze `letter-*`") jest tym samym zamknięty w drugą stronę: `letters.json` NIE jest martwe.**
+- **Brak dedykowanego `mastery-ognik-factfamily-20`** — koncept dzieli klucz z `plomyk-factfamily`.
+- **Podwójna prezentacja litery w wariancie odwrotnym** (pytanie + feedback) — do oceny na iPadzie, czy nie nudzi.
+- **`CountObjectsExercise` nie powtarza promptu po `resume`** — wymagałoby haka na `resume` w `useNumbersSession`, czyli zmiany zachowania wszystkich 16 ćwiczeń. Dziecko ma 🔊 w `StatusBar`.
+- **Board `CountObjects` ma stałą szerokość 900 px** (`max-width: 100%`, ale absolutnie pozycjonowane obiekty się nie skalują) — może wyjść poza kadr na telefonie w portrait. Wzorzec zgodny z resztą modułu.
+- **`Question.kind` jest wymagane** — `QuizCard.test.tsx` konstruuje literał bez tego pola; testy nie są typecheckowane (`.test.ts*` poza `tsconfig.app.json`), więc przechodzi. Do uzupełnienia gdyby ktoś włączył typecheck testów.
+- **`module-cold` może wyemitować kilka pozycji** (po jednej na zimny moduł), wszystkie z `priority: 5` i tym samym `id` — sortowanie stabilne, kolejność deterministyczna.
+
+### Do odsłuchu przez usera (agent nie ma wyjścia audio)
+
+64 nowe nagrania Agnieszki (Azure — 59 `cz-q-*`, 3 `czytanki-q-*`, 2 `czytanki-ui-merge-*`) nie były odsłuchane. Priorytet: **`cz-q-60`** („Wielki Wóz" — nazwa własna), **`cz-q-47`** („na ścieżce"), **`cz-q-54`** („długą trąbę"). Zły klucz → `audio-source/pronunciation-overrides.json` (`{"text": "…"}`) + `pnpm audio:build` (regeneruje tylko zmieniony klucz).
+
+### Do sprawdzenia w przeglądarce / na iPadzie (runda wizualna NIE wykonana)
+
+Agenci nie mieli dostępu do GUI; poniższe przeszło tylko testy jednostkowe i rachunek na sucho:
+- **T4 (Cyferki)** — czy pas 28% nie zasłania górnej części zadania w najgęstszych ćwiczeniach (Make10 z dwiema ramkami); czy `PauseOverlay` faktycznie kryje pas; czytelność dwóch odcieni kropek przy `size={36}`.
+- **T2 (Litery)** — czterolinia w kafelku 120 px, para „Bb" bez zlepienia (`styleMode: tylko-pisane`).
+- **T9 (Home)** — wysokość zmierzona w Chrome (**813,7 px** w 1180×820, pasek kosztował ~92 px, zostało ~6 px luzu), ale sam przebieg mikrosesji nie. Kolejny element na Home wymaga realnego cięcia kafelków.
+- **T10 (wariant odwrotny)** — layout `ReverseQuizCard` w 1180×820 (rachunek się mieści, przeglądarka nie sprawdzona).
+- **T12 (`CountObjects`)** — board 900×400 + rząd kafelków 88 px; portrait telefonu.
+- **T14 (❓ w czytankach)** — rząd 🗣 ▶ 🐢 KO|TA ❓ (~376 px) vs absolutnie pozycjonowane ◀ ▶.
+- **T15 (`/report`)** — karta na górze, sekcje zwinięte, przejście przez math gate.
+- **`prefers-reduced-motion: reduce`** — celebracje statyczne w module 2 i w overlayu ❓.
+
 ## Fala 1 (2026-08-29/30) — ukończona
 
 **Zmergowane do `main` i wdrożone** (2026-08-30); tag `v4.1-fala-1`. Punkt powrotu sprzed fali: `v4.0-po-cr`.

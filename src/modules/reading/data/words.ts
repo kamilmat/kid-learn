@@ -8,6 +8,15 @@ export type WordData = {
   albumEmoji: string          // fallback emoji w albumie
 }
 
+// Emoji abstrakcyjne albo dwuznaczne — dobre w albumie, złe jako pytanie o
+// znaczenie (💧 to równie dobrze WODA jak ROSA, 🚗 i 🚙 to to samo auto).
+// Blokuje bycie targetem `word-meaning`, nie dystraktorem.
+export const NO_MEANING_WORDS: readonly string[] = [
+  'ROSA', 'KOSA', 'TAMA', 'DUDA', 'NORA', 'RAMA', 'KORA',
+  'SZAFA', 'MASZYNA', 'MUSZKA', 'ZABAWKA', 'AUTO', 'SAMOCHÓD',
+  'SIANO', 'ŚLIWKA', 'CZWARTEK',
+]
+
 export const ALL_WORDS: readonly WordData[] = [
   // ===== PŁOMYK (20 słów, 2-sylabowe) =====
   { id: 'word-MAMA', text: 'MAMA', level: 'plomyk', syllables: ['MA', 'MA'], albumEmoji: '👩‍👧' },

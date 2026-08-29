@@ -23,13 +23,15 @@ import type {
   Settings,
   StyleMode,
 } from '@/shared/settings/types'
-import { promptAudioKeys } from '@/modules/letters/audio/promptKeys'
+import { promptAudioKeys, soundKey } from '@/modules/letters/audio/promptKeys'
 import { useSession } from '@/modules/letters/hooks/useSession'
 import type { LetterTileState } from './LetterTile'
 import { FeedbackOverlay } from './FeedbackOverlay'
 import { PauseOverlay } from '@/shared/ui/PauseOverlay'
 import { QuizCard } from './QuizCard'
+import { ReverseQuizCard } from './ReverseQuizCard'
 import { SessionEnd } from './SessionEnd'
+import type { SessionMode } from '@/shared/stats/types'
 import type {
   LetterState,
   SessionLog,
@@ -37,7 +39,17 @@ import type {
 } from '@/modules/letters/types'
 
 export type SessionViewProps = {
+  /** Poziom, z którego bierzemy pulę liter i config (case/style/kafelki). */
   level: Level
+  /**
+   * Czym była sesja w logu — domyślnie `level`. Tryby powtórki (`hard`)
+   * używają configu poziomu, ale muszą zapisać się w raporcie pod swoją nazwą.
+   */
+  mode?: SessionMode
+  /** Pula celów pytań (powtórka). Brak → cała pula poziomu. */
+  targetPool?: string[]
+  /** Nadpisanie `settings.questionsPerSession` (powtórka ma tyle pytań ile liter). */
+  sessionLength?: number
   /** Override settings (np. z store). Domyślnie defaults. */
   settings?: Settings
   /** Inicjalne LetterState'y z lettersStore. */
@@ -51,6 +63,10 @@ export type SessionViewProps = {
   audioBus?: Pick<AudioBus, 'play' | 'stop'>
   /** Jeśli `true`, sesja sama się startuje przy mounto. */
   autoStart?: boolean
+  /** Co które pytanie jest wariantem odwrotnym (`letter-to-sound`). Default 5. */
+  reverseEvery?: number
+  /** Indeksy pytań wymuszone jako odwrotne (mikrosesje o własnej długości). */
+  forceReverseIndices?: number[]
   /**
    * Ref, do którego sesja wpina „zapisz częściowy postęp". KidNav w routingu
    * modułu woła go zanim odejdzie z ekranu — ⬅️/🏠 nie mogą gubić SRS.
@@ -68,12 +84,17 @@ function resolveStyleMode(settings: Settings, level: Level): StyleMode {
 
 export function SessionView({
   level,
+  mode,
+  targetPool,
+  sessionLength,
   settings = defaultSettings,
   initialStates,
   onExit,
   onSessionComplete,
   audioBus = defaultAudioBus,
   autoStart = true,
+  reverseEvery,
+  forceReverseIndices,
   quitRef,
 }: SessionViewProps) {
   const activeLetters = useMemo(() => getActiveLetterPool(settings, level), [settings, level])
@@ -81,10 +102,13 @@ export function SessionView({
   const styleMode = resolveStyleMode(settings, level)
   const promptMode = getEffectivePromptMode(settings, level)
 
+  const effectiveSessionLength = sessionLength ?? settings.questionsPerSession
+
   const session = useSession({
-    level,
+    level: mode ?? level,
     activeLetters,
-    sessionLength: settings.questionsPerSession,
+    ...(targetPool !== undefined ? { targetPool } : {}),
+    sessionLength: effectiveSessionLength,
     timeLimit: getEffectiveTimeLimit(settings, level),
     showCountdownBar: getEffectiveShowCountdownBar(settings, level),
     caseMode,
@@ -92,6 +116,8 @@ export function SessionView({
     celebrationTempo: settings.celebrationTempo,
     tilesPerQuestion: getEffectiveTilesPerQuestion(settings, level),
     secondAttempt: settings.secondAttempt,
+    ...(reverseEvery !== undefined ? { reverseEvery } : {}),
+    ...(forceReverseIndices !== undefined ? { forceReverseIndices } : {}),
     promptMode,
     ...(initialStates !== undefined ? { initialStates } : {}),
     ...(onSessionComplete !== undefined ? { onSessionEnd: onSessionComplete } : {}),
@@ -166,12 +192,31 @@ export function SessionView({
     return out
   }, [session.status, session.lastFeedback, session.currentQuestion])
 
+  // Wariant odwrotny: odsłuch kandydata NIE jest odpowiedzią, tylko podglądem
+  // dźwięku. `stop()` przed play — dziecko przeskakuje między kandydatami
+  // szybciej niż trwa klip, kolejkowanie dałoby kakofonię z opóźnieniem.
+  //
+  // Idle-timer: tap kafelka emituje natywne `pointerdown`, które bąbelkuje do
+  // `document` — tam słucha `useIdleDetector` i restartuje odliczanie. Dziecko
+  // słuchające trzech kandydatów przez pół minuty nie dostanie auto-pauzy.
+  // Kandydat gra ZAWSZE sam dźwięk (`soundKey`, nagranie rodzica), niezależnie
+  // od `promptMode`: w trybie `both`/`name` prompt zaczyna się od nazwy litery
+  // („em"), a nazwa zdradza odpowiedź szybciej niż dziecko zdąży posłuchać
+  // dźwięku — cała trudność wariantu odwrotnego by wyparowała.
+  const playCandidate = useCallback(
+    (letter: string) => {
+      audioBus.stop()
+      void audioBus.play(soundKey(letter))
+    },
+    [audioBus],
+  )
+
   if (session.status === 'finished') {
     return (
       <SessionEnd
         iskierki={session.iskierki}
         totalQuestions={session.totalQuestions}
-        sessionLength={settings.questionsPerSession}
+        sessionLength={effectiveSessionLength}
         events={session.sessionEvents}
         onRestart={session.start}
         onExit={onExit}
@@ -180,9 +225,30 @@ export function SessionView({
     )
   }
 
+  const isReverse = session.currentQuestion?.kind === 'letter-to-sound'
+
   return (
     <div data-testid="session-view">
-      {session.currentQuestion !== null && (
+      {session.currentQuestion !== null && isReverse && (
+        <ReverseQuizCard
+          question={session.currentQuestion}
+          caseMode={caseMode}
+          styleMode={styleMode}
+          questionNumber={session.questionNumber}
+          totalQuestions={session.totalQuestions}
+          iskierki={session.iskierki}
+          wrongCount={session.wrongCount}
+          dontKnowCount={session.dontKnowCount + session.timeoutCount}
+          mascotIntensity={session.mascotIntensity}
+          interactive={session.status === 'playing' || session.status === 'retry'}
+          {...(tileState !== undefined ? { tileState } : {})}
+          onPlayCandidate={playCandidate}
+          onTileClick={(letter, slot) => session.answer(letter, slot)}
+          onDontKnow={() => session.dontKnow()}
+          onPause={() => session.pause('manual')}
+        />
+      )}
+      {session.currentQuestion !== null && !isReverse && (
         <QuizCard
           question={session.currentQuestion}
           caseMode={caseMode}

@@ -250,3 +250,114 @@ describe('useNumbersSession', () => {
     expect(writes).toBe(1)
   })
 })
+
+const { computeMasteryProgress } = await import('./useNumbersSession')
+const { MIN_AGE_FOR_MASTERY_MS } = await import('../data/concepts')
+
+describe('computeMasteryProgress — okno 8/10 zamiast serii z rzędu', () => {
+  const CONCEPT = 'iskierka-counting-5' as const
+  // minFacts=5 dla tego konceptu — 10 odpowiedzi rozkładamy na 5 różnych faktów.
+  const FACT_IDS = ['count5-1', 'count5-2', 'count5-3', 'count5-4', 'count5-5']
+
+  function events(outcomes: Array<'correct' | 'wrong'>) {
+    return outcomes.map((outcome, i) => ({
+      factId: FACT_IDS[i % FACT_IDS.length]!,
+      conceptId: CONCEPT,
+      exerciseType: 'subitize-flash' as const,
+      outcome,
+      responseMs: 1000,
+      timestamp: i,
+    }))
+  }
+
+  // Koncept „stary" — MIN_AGE_FOR_MASTERY_MS to 2 doby, inaczej nic nie dojrzeje.
+  const endedAt = MIN_AGE_FOR_MASTERY_MS + 1000
+  const prev = {
+    [CONCEPT]: {
+      state: 'learning' as const,
+      firstSeenAt: 1,
+      lastSeenAt: 1,
+      correctStreak: 0,
+      factsTouched: [],
+      recentOutcomes: [],
+      factsCorrect: [],
+    },
+  }
+
+  const withWrongAt = (wrongIdx: number[]) =>
+    Array.from({ length: 10 }, (_, i) =>
+      wrongIdx.includes(i) ? ('wrong' as const) : ('correct' as const),
+    )
+
+  function run(outcomes: Array<'correct' | 'wrong'>) {
+    return computeMasteryProgress(prev, events(outcomes), endedAt)[CONCEPT]!
+  }
+
+  it('8 poprawnych + 2 błędy w oknie 10 → mastered', () => {
+    const c = run(withWrongAt([3, 7]))
+    expect(c.recentOutcomes).toHaveLength(10)
+    expect(c.state).toBe('mastered')
+  })
+
+  it('7 poprawnych + 3 błędy → wciąż learning', () => {
+    expect(run(withWrongAt([1, 4, 8])).state).toBe('learning')
+  })
+
+  it('2 błędy na starcie + 8 poprawnych → mastered (seria by się wyzerowała)', () => {
+    const c = run(withWrongAt([0, 1]))
+    expect(c.state).toBe('mastered')
+    expect(c.correctStreak).toBe(8)
+  })
+
+  it('okno przycięte do 10 ostatnich; „nie wiem" liczy się jak błąd', () => {
+    const evs = [
+      ...events(Array.from({ length: 10 }, () => 'wrong' as const)),
+      ...events(Array.from({ length: 10 }, () => 'correct' as const)),
+    ]
+    const c = computeMasteryProgress(prev, evs, endedAt)[CONCEPT]!
+    expect(c.recentOutcomes).toEqual(Array.from({ length: 10 }, () => 'correct'))
+    expect([...c.factsCorrect].sort()).toEqual([...FACT_IDS].sort())
+
+    const dontKnow = computeMasteryProgress(
+      prev,
+      [
+        ...events(Array.from({ length: 9 }, () => 'correct' as const)),
+        {
+          factId: FACT_IDS[0]!,
+          conceptId: CONCEPT,
+          exerciseType: 'subitize-flash' as const,
+          outcome: 'dontKnow' as const,
+          responseMs: 1000,
+          timestamp: 99,
+        },
+      ],
+      endedAt,
+    )[CONCEPT]!
+    expect(dontKnow.recentOutcomes[9]).toBe('wrong')
+  })
+
+  it('mastery nie cofa się przez słabsze okno', () => {
+    const mastered = {
+      [CONCEPT]: { ...prev[CONCEPT], state: 'mastered' as const },
+    }
+    const c = computeMasteryProgress(
+      mastered,
+      events(Array.from({ length: 10 }, () => 'wrong' as const)),
+      endedAt,
+    )[CONCEPT]!
+    expect(c.state).toBe('mastered')
+  })
+
+  it('samo dotknięcie faktu nie wystarcza — liczy się factsCorrect', () => {
+    // 10 poprawnych, ale tylko 2 różne fakty → minFacts=5 niespełnione.
+    const evs = Array.from({ length: 10 }, (_, i) => ({
+      factId: FACT_IDS[i % 2]!,
+      conceptId: CONCEPT,
+      exerciseType: 'subitize-flash' as const,
+      outcome: 'correct' as const,
+      responseMs: 1000,
+      timestamp: i,
+    }))
+    expect(computeMasteryProgress(prev, evs, endedAt)[CONCEPT]!.state).toBe('learning')
+  })
+})

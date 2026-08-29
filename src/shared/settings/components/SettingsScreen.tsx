@@ -1037,6 +1037,20 @@ export function SettingsScreen({
         </div>
       </section>
 
+      {/* Czytanki (moduł 4) */}
+      <section style={sectionStyle} data-testid="section-czytanki">
+        <div style={labelStyle}>Czytanki (moduł 4)</div>
+        <ToggleField
+          label="Sylaby scalone"
+          description="Słowa bez kolorowych sylab — krok w stronę czytania całościowego. Dziecko przełącza to też ikoną KO|TA w czytance."
+          value={settings.czytanki.mergedSyllables}
+          onChange={(v) =>
+            updateSetting('czytanki', { ...settings.czytanki, mergedSyllables: v })
+          }
+          testId="czytanki-merged-syllables"
+        />
+      </section>
+
       {/* Reset postępów */}
       <section style={sectionStyle} data-testid="section-reset">
         <div style={labelStyle}>Reset postępów</div>

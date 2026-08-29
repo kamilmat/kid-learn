@@ -161,7 +161,7 @@ describe('exportReportToMarkdown', () => {
       }),
     ]
     const md = exportReportToMarkdown({}, sessions, defaultSettings, NOW)
-    expect(md).toContain('Szybkie klikanie')
+    expect(md).toContain('Klika bardzo szybko, prawie bez patrzenia.')
   })
 
   it('sekcja Aktywność pokazuje sesję czytania z etykietą modułu i policzoną dzisiaj', () => {
@@ -222,7 +222,7 @@ describe('exportReportToMarkdown', () => {
     const sessions: UnifiedSession[] = [fromNumbersLog(numbersLog, 0)]
     const md = exportReportToMarkdown({}, sessions, defaultSettings, NOW)
     expect(md).toContain('## Flagi zaangażowania')
-    expect(md).toContain('Szybkie klikanie')
+    expect(md).toContain('Klika bardzo szybko, prawie bez patrzenia.')
     expect(md).toContain('Cyferki')
   })
 

@@ -11,6 +11,7 @@ export function extractCorrectValue(question: {
 }): number | null {
   const args = (question.payload as { args: number[] }).args
   switch (question.exerciseType) {
+    case 'count-objects':
     case 'subitize-flash':
     case 'match-digit-dots':
       return args[0] ?? null

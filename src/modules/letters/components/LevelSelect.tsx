@@ -16,10 +16,16 @@ import { LevelIconView, LevelStars, LEVEL_TILE_BG, LEVEL_TILE_BORDER } from '@/s
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { LevelHeader } from '@/shared/ui/LevelHeader'
 import { toUpper } from '@/modules/letters/data/alphabet'
+import {
+  HARD_LETTERS_MIN_POOL,
+  selectHardLetters,
+} from '@/modules/letters/data/hardLetters'
 import { selectMasteredLetters, useLetters } from '@/modules/letters/store/lettersStore'
 
 export type LevelSelectProps = {
   onSelect: (level: Level) => void
+  /** Wejście w tryb „Trudne literki". Brak → kafelek 🔁 się nie renderuje. */
+  onSelectHard?: () => void
   /** Wstrzykiwany audioBus — dla testów. Default: singleton. */
   audioBus?: Pick<AudioBus, 'play'>
 }
@@ -37,6 +43,7 @@ const LEVEL_META: LevelMeta[] = [
 ]
 
 const LEVEL_SELECT_INTRO_KEY = 'level-select-intro'
+const HARD_EMPTY_KEY = 'letters-hard-empty'
 
 const tileStyleBase: React.CSSProperties = {
   padding: 12,
@@ -85,6 +92,72 @@ function LevelTile({
       </span>
       <span style={{ fontSize: 22, fontFamily: 'var(--font-handwritten)' }}>{meta.label}</span>
       <LevelStars level={meta.level} size={18} />
+    </button>
+  )
+}
+
+// Kafelek „Trudne literki" — powtórka celowana. Kropki = ile liter w puli
+// (dziecko nie czyta, więc licznik musi być wizualny).
+function HardLettersTile({
+  count,
+  onEnter,
+  audioBus,
+}: {
+  count: number
+  onEnter: () => void
+  audioBus: Pick<AudioBus, 'play'>
+}) {
+  const enabled = count >= HARD_LETTERS_MIN_POOL
+  const tap = useTapHandler({
+    onTap: () => {
+      if (!enabled) {
+        void audioBus.play(HARD_EMPTY_KEY)
+        return
+      }
+      // Ten sam unlock audio co w LevelTile — patrz komentarz w handleTileClick.
+      void audioBus.play('nav-tap')
+      onEnter()
+    },
+  })
+  return (
+    <button
+      type="button"
+      data-testid="hard-letters-tile"
+      data-enabled={enabled ? 'true' : 'false'}
+      aria-label={
+        enabled
+          ? `Trudne literki, ${count} do powtórki`
+          : 'Trudne literki — na razie nie ma czego powtarzać'
+      }
+      style={{
+        ...tileStyleBase,
+        flexDirection: 'row',
+        gap: 12,
+        minHeight: 60,
+        padding: '8px 16px',
+        flexShrink: 0,
+        background: '#ffffff',
+        border: `3px solid ${colors.accentBlue}`,
+        opacity: enabled ? 1 : 0.4,
+      }}
+      {...tap}
+    >
+      <span style={{ fontSize: 30, lineHeight: 1 }} aria-hidden="true">
+        🔁
+      </span>
+      <span style={{ display: 'flex', gap: 5 }} aria-hidden="true">
+        {Array.from({ length: count }, (_, i) => (
+          <span
+            key={i}
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: colors.accentOrange,
+            }}
+          />
+        ))}
+      </span>
     </button>
   )
 }
@@ -175,6 +248,7 @@ const masteryCellDim: React.CSSProperties = {
 
 export function LevelSelect({
   onSelect,
+  onSelectHard,
   audioBus = defaultAudioBus,
 }: LevelSelectProps) {
   // Selektory zamiast całego store'u — ekran nie rerenderuje się przy zapisie
@@ -183,6 +257,10 @@ export function LevelSelect({
   const persistedLastUsedLevel = useLetters((s) => s.lastUsedLevel)
   const masteredSet = useMemo<Set<string>>(
     () => new Set(selectMasteredLetters({ letters })),
+    [letters],
+  )
+  const hardCount = useMemo(
+    () => selectHardLetters(letters, Date.now()).length,
     [letters],
   )
 
@@ -280,6 +358,10 @@ export function LevelSelect({
           <LevelTile key={meta.level} meta={meta} onSelect={handleTileClick} />
         ))}
       </div>
+
+      {onSelectHard !== undefined && (
+        <HardLettersTile count={hardCount} onEnter={onSelectHard} audioBus={audioBus} />
+      )}
 
       <section
         data-testid="mastery-wall"

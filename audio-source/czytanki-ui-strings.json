@@ -12,5 +12,14 @@
   "czytanki-ui-echo-on": "Będę czekać, aż powtórzysz.",
   "czytanki-ui-echo-off": "Czytam bez przerw.",
   "czytanki-ui-slow": "Czytam wolniej.",
-  "czytanki-ui-normal": "Czytam normalnie."
+  "czytanki-ui-normal": "Czytam normalnie.",
+
+  "czytanki-ui-merge-on": "Teraz sylaby są razem.",
+  "czytanki-ui-merge-off": "Teraz widzisz sylaby osobno.",
+
+  "czytanki-q-intro": "Mam do ciebie pytanie o tę czytankę.",
+  "czytanki-q-praise": "Tak! Dobrze przeczytałeś.",
+  "czytanki-q-again": "Nie to. Posłuchaj jeszcze raz.",
+  "czytanki-q-miss": "Nie szkodzi. To było to.",
+  "czytanki-q-close": "Dobrze, wracamy."
 }

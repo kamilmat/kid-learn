@@ -42,12 +42,23 @@ export type ConceptMastery = {
   state: ConceptMasteryState
   firstSeenAt: number
   lastSeenAt: number
+  /**
+   * Seria poprawnych z rzędu. Nie decyduje już o mastery (robi to okno
+   * `recentOutcomes`), ale zostaje jako miękki próg odblokowania prerekwizytu
+   * w `pickConcept`.
+   */
   correctStreak: number
+  /** @deprecated Zostaje wyłącznie dla migracji v2→v3 — mastery liczy `factsCorrect`. */
   factsTouched: string[]
+  /** Ostatnie <=10 wyników konceptu; mastery = wystarczająco dużo `correct` w tym oknie. */
+  recentOutcomes: ('correct' | 'wrong')[]
+  /** Fakty konceptu odpowiedziane KIEDYKOLWIEK poprawnie (dotknięcie nie wystarcza). */
+  factsCorrect: string[]
 }
 
 export type ExerciseType =
   // Iskierka
+  | 'count-objects'
   | 'subitize-flash'
   | 'match-digit-dots'
   | 'number-rhythm'

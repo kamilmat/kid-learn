@@ -20,11 +20,16 @@ import {
   streakDays,
 } from './components/ActivitySection'
 import { generateSuggestions } from './components/SuggestionsSection'
-import { completedSessionsToday } from './todaySessions'
+import { collectFlagsForRecentSessions } from './components/AntiCheatSection'
 import {
-  collectFlagsForRecentSessions,
-  FLAG_LABEL,
-} from './components/AntiCheatSection'
+  antiCheatFlagText,
+  type AntiCheatFlag,
+} from '@/shared/engagement/antiCheatFlags'
+import {
+  FALLBACK_SUGGESTION,
+  generateSuggestions as generateNextSteps,
+  type SuggestionReadingSnapshot,
+} from './suggestions'
 import {
   STATS_MODULE_LABEL,
   type StatsModuleId,
@@ -40,6 +45,7 @@ import type {
 } from '@/modules/numbers/types'
 import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '@/modules/czytanki/data/czytanki'
 import { wordAudioKey } from '@/modules/czytanki/data/audioKeys'
+import type { ComprehensionResult } from '@/modules/czytanki/store/czytankiStore'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1_000
 
@@ -77,6 +83,28 @@ export type CzytankiSnapshot = {
   openedIds: string[]
   wordTaps?: Record<string, Record<string, number>>
   timeMs?: Record<string, number>
+  /** id czytanki → ile razy przeczytana (wejścia na ekran). */
+  readCounts?: Record<string, number>
+  /** id czytanki → timestamp ostatniego zaliczonego przeczytania. */
+  lastCountedAt?: Record<string, number>
+  /** id czytanki → 'first' | 'second' | 'miss' (pytanie o rozumienie). */
+  comprehensionResults?: Record<string, ComprehensionResult>
+}
+
+/** Zliczenie wyników pytań o rozumienie — wspólne dla UI raportu i eksportu MD. */
+export function countComprehension(
+  results: Record<string, ComprehensionResult> | undefined,
+): { first: number; second: number; miss: number; total: number } {
+  const values = Object.values(results ?? {})
+  const first = values.filter((r) => r === 'first').length
+  const second = values.filter((r) => r === 'second').length
+  const miss = values.filter((r) => r === 'miss').length
+  return { first, second, miss, total: values.length }
+}
+
+const SEVERITY_LABEL: Record<AntiCheatFlag['severity'], string> = {
+  warning: 'ostrzeżenie',
+  alert: 'alarm',
 }
 
 
@@ -131,6 +159,7 @@ export function exportReportToMarkdown(
   now: number,
   numbersSnapshot?: NumbersSnapshot,
   czytankiSnapshot?: CzytankiSnapshot,
+  readingSnapshot?: SuggestionReadingSnapshot,
 ): string {
   // Sugestie działają wyłącznie na SRS liter — filtrujemy sesje modułu 1,
   // reszta sekcji (Aktywność, Flagi) używa scalonej listy ze wszystkich modułów.
@@ -139,6 +168,32 @@ export function exportReportToMarkdown(
   lines.push('# Raport Iskierki')
   lines.push('')
   lines.push(`Wygenerowano: ${fmtDate(now)}`)
+  lines.push('')
+
+  // ---- Następny krok ----
+  // Ten sam silnik co karta w UI — kontrakt „treść UI ≡ markdown".
+  const nextSteps = generateNextSteps({
+    now,
+    letters,
+    allSessions,
+    ...(readingSnapshot ? { reading: readingSnapshot } : {}),
+    ...(numbersSnapshot ? { numbers: numbersSnapshot } : {}),
+    ...(czytankiSnapshot
+      ? {
+          czytanki: {
+            openedIds: czytankiSnapshot.openedIds,
+            readCounts: czytankiSnapshot.readCounts ?? {},
+            lastCountedAt: czytankiSnapshot.lastCountedAt ?? {},
+          },
+        }
+      : {}),
+  })
+  const nextStep = nextSteps[0] ?? FALLBACK_SUGGESTION
+  lines.push('## Następny krok')
+  lines.push('')
+  lines.push(`**${nextStep.text}**`)
+  lines.push('')
+  lines.push(nextStep.why)
   lines.push('')
 
   // ---- Litery ----
@@ -262,13 +317,12 @@ export function exportReportToMarkdown(
   // ---- Sugestie ----
   lines.push('## Sugestie')
   lines.push('')
-  // Ta sama funkcja karmi UI i markdown — treść musi być identyczna, więc
-  // nudge „druga sesja wieczorem" liczymy tu tak samo jak w `ReportScreen`.
-  for (const s of generateSuggestions(
-    letters,
-    sessions,
-    completedSessionsToday(allSessions, now),
-  )) {
+  // Te same pozycje co „Więcej sugestii" w UI — karta (`[0]`) już wyżej.
+  for (const s of nextSteps.slice(1)) {
+    lines.push(`- ${s.text} — ${s.why}`)
+  }
+  // Ta sama funkcja karmi UI i markdown — treść musi być identyczna.
+  for (const s of generateSuggestions(letters, sessions)) {
     lines.push(`- ${s}`)
   }
   lines.push('')
@@ -284,8 +338,12 @@ export function exportReportToMarkdown(
     for (const fws of flags) {
       const icon = fws.flag.severity === 'alert' ? '🚨' : '⚠'
       const moduleLabel = sessionById.get(fws.sessionId)?.moduleLabel ?? ''
+      const { title, hint } = antiCheatFlagText(fws.flag.type)
+      // Tytuł pogrubiony, a `hint` po nim: bez tego oba zdania zlewały się
+      // w jedną linię i nie było widać, gdzie kończy się obserwacja,
+      // a zaczyna rada.
       lines.push(
-        `- ${icon} ${FLAG_LABEL[fws.flag.type]} — ${fws.flag.severity === 'alert' ? 'alert' : 'ostrzeżenie'} · ${moduleLabel} · sesja ${fmtDate(fws.sessionStartedAt)}`,
+        `- ${icon} **${title}** ${hint} — ${SEVERITY_LABEL[fws.flag.severity]} · ${moduleLabel} · sesja ${fmtDate(fws.sessionStartedAt)}`,
       )
     }
   }
@@ -359,10 +417,23 @@ export function exportReportToMarkdown(
       const n = inGroup.filter((c) => czytankiSnapshot.openedIds.includes(c.id)).length
       lines.push(`  - Grupa ${g}: ${n}/${inGroup.length}`)
     }
+    // Kontrakt: te dwie linie muszą mówić to samo co sekcja Czytanki w UI raportu.
+    const readCounts = czytankiSnapshot.readCounts ?? {}
+    const repeats = CZYTANKI.filter((c) => (readCounts[c.id] ?? 0) >= 2)
+    lines.push(`- **Przeczytane ≥2×**: ${repeats.length}`)
+    if (repeats.length > 0) {
+      lines.push(`  - ${repeats.map((c) => `${c.emoji} ${c.title}`).join(', ')}`)
+    }
     const topTaps = topTappedWords(czytankiSnapshot.wordTaps ?? {})
     if (topTaps.length > 0) {
       lines.push(
         `- **Najczęściej dotykane**: ${topTaps.map((t) => `${t.label} — ${t.count}×`).join(', ')}`,
+      )
+    }
+    const comp = countComprehension(czytankiSnapshot.comprehensionResults)
+    if (comp.total > 0) {
+      lines.push(
+        `- **Pytania o rozumienie**: ${comp.first} za 1. razem, ${comp.second} za 2., ${comp.miss} nietrafione`,
       )
     }
     const totalMs = Object.values(czytankiSnapshot.timeMs ?? {}).reduce((a, b) => a + b, 0)

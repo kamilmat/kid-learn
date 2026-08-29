@@ -40,6 +40,10 @@ export type CzytankiSettings = {
   echoMode: boolean
   // Tempo czytania całości: 'turtle' = 0.75× rate. Default 'normal'.
   tempo: CzytankiTempo
+  // Sylaby scalone w jedno słowo (bez kolorów i podkreśleń) — krok w stronę
+  // czytania całościowego, gdy dziecko nie potrzebuje już podpory sylabowej.
+  // Default false.
+  mergedSyllables: boolean
 }
 
 // Moduł 1: jak brzmi prompt litery. `phoneme` = sam dźwięk („b"), `name` =

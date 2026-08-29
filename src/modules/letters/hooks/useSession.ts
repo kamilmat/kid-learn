@@ -32,7 +32,6 @@ import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import type {
   CaseMode,
   CelebrationTempo,
-  Level,
   PromptMode,
   StyleMode,
   TimeLimit,
@@ -53,6 +52,7 @@ import { createInitialLetterState } from '@/shared/srs/createInitialLetterState'
 import { pickDistractors, pickRandom, shuffled } from '@/shared/srs/distractors'
 import { pickNextLetter } from '@/shared/srs/select'
 import { updateLetterState } from '@/shared/srs/update'
+import type { SessionMode } from '@/shared/stats/types'
 import type {
   DisplayCase,
   DisplayStyle,
@@ -69,8 +69,15 @@ import type {
 
 /** Konfiguracja wejściowa hooka — sesja zna swoje parametry "od strzału". */
 export type UseSessionConfig = {
-  level: Level
+  /** Trafia wprost do `SessionLog.level` — poziom albo tryb powtórki. */
+  level: SessionMode
   activeLetters: string[]
+  /**
+   * Pula, z której losujemy CEL pytania. Pusta/brak → `activeLetters`.
+   * Dystraktory zawsze lecą z `activeLetters`, żeby powtórka trudnych liter
+   * nie zwężała wyboru do samych trudnych (to byłaby inna, łatwiejsza gra).
+   */
+  targetPool?: string[]
   sessionLength: number
   timeLimit: TimeLimit
   showCountdownBar: boolean
@@ -84,6 +91,16 @@ export type UseSessionConfig = {
    * Pierwsza pomyłka i tak aktualizuje SRS — retry uczy autokorekty.
    */
   secondAttempt?: boolean
+  /**
+   * Co które pytanie ma być wariantem odwrotnym (`letter-to-sound`).
+   * Default 5 → indeksy 4, 9, 14… `0` wyłącza wariant odwrotny.
+   */
+  reverseEvery?: number
+  /**
+   * Indeksy pytań wymuszone jako odwrotne, niezależnie od `reverseEvery`
+   * (Literka dnia ma 4 pytania i chce dokładnie jedno odwrotne).
+   */
+  forceReverseIndices?: number[]
   /**
    * Jak brzmi prompt litery: `phoneme` („b"), `name` („be"), `both` („be… b").
    * Default `both` — nazwa identyfikuje literę, fonem jest potrzebny do scalania.
@@ -143,6 +160,13 @@ export type UseSessionApi = {
 }
 
 const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
+
+/** Co które pytanie jest wariantem odwrotnym „widzisz literę → wybierz dźwięk". */
+const REVERSE_EVERY_DEFAULT = 5
+/** Wariant odwrotny ma 3 kafelki — odsłuch kandydatów jest kosztowny czasowo. */
+const REVERSE_TILES = 3
+/** „Widzisz literkę. Posłuchaj i wybierz, jak brzmi." */
+export const REVERSE_PROMPT_KEY = 'letters-reverse-prompt'
 
 // Czas trzymania feedback overlay — pokrywa audio sequence + ~1s buffer "po-audio".
 // Wartości audio zmierzone afinfo na public/audio/*.mp3 (Edge TTS PL Zofia).
@@ -273,6 +297,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   const {
     level,
     activeLetters,
+    targetPool,
     sessionLength,
     timeLimit,
     showCountdownBar,
@@ -281,6 +306,8 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     celebrationTempo,
     tilesPerQuestion = 4,
     secondAttempt = true,
+    reverseEvery = REVERSE_EVERY_DEFAULT,
+    forceReverseIndices,
     promptMode = 'both',
     initialStates,
     onSessionEnd,
@@ -294,6 +321,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   // dependencji równej wszystkim polom.
   const cfgRef = useRef({
     activeLetters,
+    targetPool,
     sessionLength,
     timeLimit,
     showCountdownBar,
@@ -302,6 +330,8 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     celebrationTempo,
     tilesPerQuestion,
     secondAttempt,
+    reverseEvery,
+    forceReverseIndices,
     promptMode,
     rng,
     now,
@@ -311,6 +341,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   })
   cfgRef.current = {
     activeLetters,
+    targetPool,
     sessionLength,
     timeLimit,
     showCountdownBar,
@@ -319,6 +350,8 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     celebrationTempo,
     tilesPerQuestion,
     secondAttempt,
+    reverseEvery,
+    forceReverseIndices,
     promptMode,
     rng,
     now,
@@ -488,9 +521,19 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     // pomylić późniejszy `resume()`/`skipFeedback()` co do tego, gdzie jesteśmy.
     retryPendingRef.current = false
     const states = Object.values(statesRef.current)
+    // Cel z puli powtórki (jeśli podana), dystraktory dalej z pełnej puli poziomu.
+    // Przecięcie z `activeLetters` jest obowiązkowe: `targetPool` („Trudne
+    // literki", „Literka dnia") liczy się z CAŁEGO postępu, a config poziomu może
+    // być niższy — bez przecięcia `pickNextLetter` zwracał literę spoza puli,
+    // dla której nie ma `LetterState`, i sesja padała białym ekranem.
+    const requested =
+      cfg.targetPool && cfg.targetPool.length > 0 ? cfg.targetPool : cfg.activeLetters
+    const active = new Set(cfg.activeLetters)
+    const intersected = requested.filter((l) => active.has(l))
+    const pool = intersected.length > 0 ? intersected : cfg.activeLetters
     const target = pickNextLetter(
       states,
-      cfg.activeLetters,
+      pool,
       lastTargetRef.current,
       cfg.now(),
       cfg.rng,
@@ -499,11 +542,18 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     if (!targetState) {
       throw new Error(`useSession: brak state dla litery "${target}"`)
     }
+    const reverseEvery = cfg.reverseEvery ?? REVERSE_EVERY_DEFAULT
+    const forced = cfg.forceReverseIndices ?? []
+    // Indeksy 4, 9, … — wariant trudniejszy nie zaczyna sesji.
+    const kind: Question['kind'] =
+      forced.includes(num) || (reverseEvery > 0 && (num + 1) % reverseEvery === 0)
+        ? 'letter-to-sound'
+        : 'sound-to-letter'
     // Clamp tilesPerQuestion do rozmiaru aktywnej puli — gdy user ma override
     // puli mniejszy niż wybrane tilesPerQuestion (np. pula = 4 a setting = 6),
     // używamy tylu kafelków ile pula pozwala (target + reszta jako dystraktory).
     const safeTilesPerQuestion = Math.min(
-      cfg.tilesPerQuestion,
+      kind === 'letter-to-sound' ? REVERSE_TILES : cfg.tilesPerQuestion,
       cfg.activeLetters.length,
     )
     const distractorCount = Math.max(1, safeTilesPerQuestion - 1)
@@ -529,6 +579,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
 
     const question: Question = {
       index: num,
+      kind,
       targetLetter: target,
       tiles,
       targetSlot,
@@ -555,12 +606,21 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     // Audio: prompt litery wg `promptMode` — kolejka AudioBus naturalnie
     // poczeka aż poprzedni feedback ("X jak Y") się skończy. NIE wołamy
     // stop() bo to obcięłoby końcówkę asocjacji.
-    for (const key of promptAudioKeys(target, cfg.promptMode)) {
-      void cfg.audioBus.play(key)
+    // Wariant odwrotny NIE zdradza dźwięku litery — to jest pytanie.
+    if (kind === 'letter-to-sound') {
+      void cfg.audioBus.play(REVERSE_PROMPT_KEY)
+    } else {
+      for (const key of promptAudioKeys(target, cfg.promptMode)) {
+        void cfg.audioBus.play(key)
+      }
     }
 
-    // Timer
-    startCountdown()
+    // Timer — wariant odwrotny go NIE dostaje (jak retry). ReverseQuizCard nie
+    // rysuje paska odliczania, a odsłuch kilku kandydatów po kolei trwa ~10s;
+    // ukryty timer zamieniałby normalne słuchanie w timeout bijący w SRS.
+    if (kind !== 'letter-to-sound') {
+      startCountdown()
+    }
   }, [pushEvent, startCountdown])
 
   const finishSession = useCallback(() => {
@@ -570,8 +630,15 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     clearFeedbackTimer()
     setStatus('finished')
     setCurrentQuestion(null)
-    const isPerfect = detectPerfectSession(eventsRef.current, cfgRef.current.sessionLength)
-    void cfgRef.current.audioBus.play(isPerfect ? 'session-end-perfect' : 'session-end')
+    // „Literka dnia" ma własne pożegnanie (kotwica słowna + `letters-daily-end`)
+    // — fanfara sesji tylko wydłużyłaby przed nim kolejkę AudioBus.
+    if (cfgRef.current.level !== 'daily') {
+      const isPerfect = detectPerfectSession(
+        eventsRef.current,
+        cfgRef.current.sessionLength,
+      )
+      void cfgRef.current.audioBus.play(isPerfect ? 'session-end-perfect' : 'session-end')
+    }
 
     const log: SessionLog = {
       id: sessionIdRef.current,
@@ -597,9 +664,25 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       chosenLetter: string | undefined,
       newStreak: number,
       attempt: 1 | 2 = 1,
+      willRetry = false,
     ): number => {
       const cfg = cfgRef.current
       let extraDurationMs = 0
+      // Dźwięk celu pomijamy TYLKO gdy zaraz będzie druga próba wariantu
+      // odwrotnego — tam dźwięk litery JEST odpowiedzią i zagranie go
+      // rozwiązywałoby retry za dziecko (2 kafelki, wystarczy dopasować to, co
+      // przed chwilą zabrzmiało). Gdy retry nie będzie (druga próba, „nie
+      // wiem", timeout, `secondAttempt` off), dziecko MUSI usłyszeć literę —
+      // inaczej wychodzi z pytania bez poprawnej odpowiedzi.
+      // `FEEDBACK_DURATION_BASE_MS` zostaje bez zmian — jest stałą per wariant,
+      // nie sumą kolejki, więc krótsza kolejka to tylko odrobina ciszy przed
+      // przejściem dalej (bezpieczny kierunek).
+      const playTargetPrompt = () => {
+        if (willRetry) return
+        for (const key of promptAudioKeys(target, cfg.promptMode)) {
+          void cfg.audioBus.play(key)
+        }
+      }
 
       switch (variant) {
         case 'correct': {
@@ -634,9 +717,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
             cfg.rng,
           )
           void cfg.audioBus.play(prefixKey)
-          for (const key of promptAudioKeys(target, cfg.promptMode)) {
-            void cfg.audioBus.play(key)
-          }
+          playTargetPrompt()
           break
         }
         case 'dontKnow':
@@ -648,9 +729,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
           // do błędu). Dziecko nie pomyliło się, świadomie/biernie nie
           // odpowiedziało.
           void cfg.audioBus.play(pickRandom(DONTKNOW_KEYS, cfg.rng))
-          for (const key of promptAudioKeys(target, cfg.promptMode)) {
-            void cfg.audioBus.play(key)
-          }
+          playTargetPrompt()
           try {
             const assoc = getAssociation(target)
             void cfg.audioBus.play(assoc.audioKey)
@@ -809,26 +888,29 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
         setCurrentStreak(newStreak)
       }
 
+      // Pierwsza pomyłka z wyborem kafelka → druga próba zamiast przejścia
+      // dalej. „Nie wiem"/timeout retry NIE dostają: dziecko nie postawiło
+      // hipotezy, więc nie ma czego korygować. Liczone PRZED audio, bo tylko
+      // zapowiedziana retry uzasadnia przemilczenie dźwięku celu.
+      const goesToRetry =
+        outcome === 'wrong' &&
+        attempt === 1 &&
+        cfg.secondAttempt &&
+        chosenLetter !== undefined
+
       const extraDurationMs = playFeedbackAudio(
         variant,
         target,
         chosenLetter,
         newStreak,
         attempt,
+        goesToRetry && q.kind === 'letter-to-sound',
       )
       const effectiveMs = durationMs + extraDurationMs
       lastFeedbackEffectiveMsRef.current = effectiveMs
       lastFeedbackAttemptRef.current = attempt
 
-      // Pierwsza pomyłka z wyborem kafelka → druga próba zamiast przejścia
-      // dalej. „Nie wiem"/timeout retry NIE dostają: dziecko nie postawiło
-      // hipotezy, więc nie ma czego korygować.
-      if (
-        outcome === 'wrong' &&
-        attempt === 1 &&
-        cfg.secondAttempt &&
-        chosenLetter !== undefined
-      ) {
+      if (goesToRetry && chosenLetter !== undefined) {
         scheduleRetry(q, chosenLetter, effectiveMs)
         return
       }
@@ -1008,6 +1090,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
           fb.chosenLetter,
           currentStreakRef.current,
           lastFeedbackAttemptRef.current,
+          currentQuestionRef.current?.kind === 'letter-to-sound',
         )
         // Pauza złapana między błędem a drugą próbą — wznawiamy tę samą
         // ścieżkę, inaczej retry przepadłby i sesja przeskoczyłaby dalej.
@@ -1037,7 +1120,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     // restart timer dla bieżącego pytania od pełnej długości — uczciwie wobec dziecka
     if (currentQuestionRef.current) {
       questionStartedAtRef.current = cfgRef.current.now()
-      startCountdown()
+      if (currentQuestionRef.current.kind !== 'letter-to-sound') {
+        startCountdown()
+      }
     }
   }, [
     playFeedbackAudio,

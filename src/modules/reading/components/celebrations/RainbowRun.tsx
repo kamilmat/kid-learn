@@ -20,13 +20,16 @@ export function RainbowRun({ onComplete }: Props) {
       }}
     >
       <style>{`
-        @keyframes rainbowRun {
-          0% { transform: translateX(-200px) scale(0.8); }
-          50% { transform: translateX(50vw) translateY(-30px) scale(1.2); }
-          100% { transform: translateX(calc(100vw + 200px)) scale(0.8); }
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes rainbowRun {
+            0% { transform: translateX(-200px) scale(0.8); }
+            50% { transform: translateX(50vw) translateY(-30px) scale(1.2); }
+            100% { transform: translateX(calc(100vw + 200px)) scale(0.8); }
+          }
+          .rainbow-run-emoji { animation: rainbowRun 2500ms ease-in-out; }
         }
       `}</style>
-      <div style={{ fontSize: 100, animation: 'rainbowRun 2500ms ease-in-out' }}>🔥</div>
+      <div className="rainbow-run-emoji" style={{ fontSize: 100 }}>🔥</div>
     </div>
   )
 }

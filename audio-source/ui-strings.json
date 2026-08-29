@@ -53,5 +53,13 @@
   "praise-proc-10": "sam to znalazłeś!",
 
   "retry-correct": "O, teraz dobrze! Poprawiłeś się.",
-  "session-stop-enough": "Na dziś wystarczy. Wrócimy jutro!"
+  "session-stop-enough": "Na dziś wystarczy. Wrócimy jutro!",
+
+  "letters-hard-intro": "Poćwiczymy literki, które są trudne.",
+  "letters-hard-empty": "Nie ma dziś trudnych literek. Brawo!",
+  "letters-daily-intro": "Literka dnia! Posłuchaj i popatrz.",
+  "letters-daily-end": "To była literka dnia. Do jutra!",
+  "letters-daily-done": "Literkę dnia już znasz. Wróć jutro.",
+  "home-daily-letter": "Tu jest literka dnia — jedna literka, króciutko.",
+  "letters-reverse-prompt": "Widzisz literkę. Posłuchaj i wybierz, jak brzmi."
 }

@@ -19,7 +19,9 @@ export const CZYTANKI: readonly Czytanka[] = [
     scene: { bg: 'room', actors: [
       { emoji: '🧔', x: 35, y: 60, size: 110, anim: 'bob' },
       { emoji: '🐱', x: 65, y: 70, size: 90, anim: 'wiggle', delay: 0.5 },
+      { emoji: '👩', x: 85, y: 62, size: 96, anim: 'sway', delay: 1 },
     ] },
+    comprehension: { question: 'Kto ma kota?', options: ['🧔', '👩', '👵'], answer: 0 },
   },
   {
     id: 'cz-02', group: 1, title: 'Mama myje buty', emoji: '👟',
@@ -28,7 +30,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '👩', x: 30, y: 55, size: 110, anim: 'sway' },
       { emoji: '👟', x: 60, y: 72, size: 80, anim: 'wiggle', delay: 0.4 },
       { emoji: '🧼', x: 85, y: 68, size: 66, anim: 'pulse', delay: 0.9 },
+      { emoji: '🧦', x: 44, y: 80, size: 62, anim: 'bob', delay: 1.3 },
     ] },
+    comprehension: { question: 'Co myje mama?', options: ['🧦', '🧤', '👟'], answer: 2 },
   },
   {
     id: 'cz-03', group: 1, title: 'Balony Oli', emoji: '🎈',
@@ -37,7 +41,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '👧', x: 30, y: 72, size: 105, anim: 'bob' },
       { emoji: '🎈', x: 55, y: 40, size: 80, anim: 'float', delay: 0.2 },
       { emoji: '🎈', x: 80, y: 50, size: 70, anim: 'float', delay: 0.8 },
+      { emoji: '🧸', x: 15, y: 78, size: 70, anim: 'bob', delay: 1.2 },
     ] },
+    comprehension: { question: 'Co ma Ola?', options: ['🧸', '🎈', '🍭'], answer: 1 },
   },
   {
     id: 'cz-04', group: 1, title: 'Koza i maliny', emoji: '🐐',
@@ -45,7 +51,9 @@ export const CZYTANKI: readonly Czytanka[] = [
     scene: { bg: 'meadow', actors: [
       { emoji: '🐐', x: 32, y: 65, size: 110, anim: 'bob' },
       { emoji: '🫐', x: 70, y: 72, size: 70, anim: 'pulse', delay: 0.6 },
+      { emoji: '🐔', x: 85, y: 55, size: 72, anim: 'wiggle', delay: 1.1 },
     ] },
+    comprehension: { question: 'Kto je maliny?', options: ['🐮', '🐔', '🐐'], answer: 2 },
   },
   {
     id: 'cz-05', group: 1, title: 'Kakao', emoji: '☕',
@@ -54,7 +62,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '👩', x: 30, y: 55, size: 110, anim: 'sway' },
       { emoji: '🍫', x: 58, y: 70, size: 66, anim: 'none' },
       { emoji: '☕', x: 82, y: 62, size: 84, anim: 'pulse', delay: 0.7 },
+      { emoji: '👵', x: 15, y: 72, size: 92, anim: 'bob', delay: 1.2 },
     ] },
+    comprehension: { question: 'Kto gotuje kakao?', options: ['👩', '🧔', '👵'], answer: 0 },
   },
   {
     id: 'cz-06', group: 1, title: 'Tata rysuje koty', emoji: '✏️',
@@ -63,7 +73,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🧔', x: 28, y: 58, size: 110, anim: 'bob' },
       { emoji: '✏️', x: 55, y: 70, size: 70, anim: 'wiggle', delay: 0.3 },
       { emoji: '🐈', x: 82, y: 62, size: 80, anim: 'pulse', delay: 1 },
+      { emoji: '🐟', x: 15, y: 78, size: 62, anim: 'float', delay: 1.4 },
     ] },
+    comprehension: { question: 'Co rysuje tata?', options: ['🐟', '🐈', '🐦'], answer: 1 },
   },
   {
     id: 'cz-07', group: 1, title: 'Sok Uli', emoji: '🧃',
@@ -71,7 +83,9 @@ export const CZYTANKI: readonly Czytanka[] = [
     scene: { bg: 'kitchen', actors: [
       { emoji: '👧', x: 35, y: 60, size: 105, anim: 'bob' },
       { emoji: '🧃', x: 70, y: 68, size: 80, anim: 'sway', delay: 0.5 },
+      { emoji: '🥛', x: 88, y: 70, size: 70, anim: 'pulse', delay: 1 },
     ] },
+    comprehension: { question: 'Co pije Ula?', options: ['🥛', '🧃', '☕'], answer: 1 },
   },
   {
     id: 'cz-08', group: 1, title: 'Sowa i lato', emoji: '🦉',
@@ -80,7 +94,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🦉', x: 30, y: 45, size: 100, anim: 'bob' },
       { emoji: '🌳', x: 62, y: 60, size: 120, anim: 'sway', delay: 0.6 },
       { emoji: '☀️', x: 88, y: 36, size: 72, anim: 'pulse', delay: 1.2 },
+      { emoji: '🐿️', x: 15, y: 72, size: 66, anim: 'wiggle', delay: 0.9 },
     ] },
+    comprehension: { question: 'Kto lubi lato?', options: ['🦉', '🐿️', '🐌'], answer: 0 },
   },
   {
     id: 'cz-09', group: 1, title: 'Ada wozi lale', emoji: '🪆',
@@ -89,7 +105,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '👧', x: 30, y: 60, size: 105, anim: 'sway' },
       { emoji: '🪆', x: 58, y: 72, size: 78, anim: 'wiggle', delay: 0.4 },
       { emoji: '🛒', x: 85, y: 70, size: 70, anim: 'bob', delay: 0.9 },
+      { emoji: '⚽', x: 15, y: 80, size: 64, anim: 'bob', delay: 1.2 },
     ] },
+    comprehension: { question: 'Co wozi Ada?', options: ['⚽', '🧩', '🪆'], answer: 2 },
   },
   {
     id: 'cz-10', group: 1, title: 'Tola maluje domy', emoji: '🎨',
@@ -98,7 +116,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '👧', x: 28, y: 58, size: 105, anim: 'bob' },
       { emoji: '🎨', x: 55, y: 72, size: 74, anim: 'wiggle', delay: 0.5 },
       { emoji: '🏡', x: 82, y: 55, size: 90, anim: 'none' },
+      { emoji: '🚗', x: 15, y: 80, size: 64, anim: 'bob', delay: 1.1 },
     ] },
+    comprehension: { question: 'Co maluje Tola?', options: ['🏡', '🚗', '⛵'], answer: 0 },
   },
   {
     id: 'cz-11', group: 1, title: 'Lody w przedszkolu', emoji: '🍦',
@@ -107,7 +127,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '👩‍🏫', x: 30, y: 58, size: 110, anim: 'sway' },
       { emoji: '🍦', x: 58, y: 66, size: 76, anim: 'pulse', delay: 0.3 },
       { emoji: '🧒', x: 85, y: 68, size: 92, anim: 'bob', delay: 0.8 },
+      { emoji: '🍎', x: 15, y: 76, size: 62, anim: 'pulse', delay: 1.2 },
     ] },
+    comprehension: { question: 'Co daje pani?', options: ['🍎', '🍪', '🍦'], answer: 2 },
   },
   {
     id: 'cz-12', group: 1, title: 'Pada i pada', emoji: '❄️',
@@ -126,6 +148,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🌊', x: 62, y: 74, size: 100, anim: 'sway', delay: 0.4 },
       { emoji: '🐚', x: 88, y: 78, size: 64, anim: 'pulse', delay: 1 },
     ] },
+    comprehension: { question: 'Co lubi Ola?', options: ['🌊', '🐚', '⛰️'], answer: 0 },
   },
   {
     id: 'cz-14', group: 1, title: 'Dobranoc', emoji: '🌙',
@@ -134,7 +157,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🌙', x: 25, y: 38, size: 80, anim: 'float' },
       { emoji: '👧', x: 55, y: 65, size: 105, anim: 'sway', delay: 0.5 },
       { emoji: '🐱', x: 80, y: 72, size: 76, anim: 'pulse', delay: 1 },
+      { emoji: '🐶', x: 15, y: 76, size: 70, anim: 'bob', delay: 1.4 },
     ] },
+    comprehension: { question: 'Kogo tuli Lola?', options: ['🐶', '🐴', '🐱'], answer: 2 },
   },
   {
     id: 'cz-15', group: 1, title: 'Banany Eli', emoji: '🍌',
@@ -142,7 +167,9 @@ export const CZYTANKI: readonly Czytanka[] = [
     scene: { bg: 'kitchen', actors: [
       { emoji: '👧', x: 32, y: 60, size: 105, anim: 'bob' },
       { emoji: '🍌', x: 68, y: 70, size: 80, anim: 'wiggle', delay: 0.6 },
+      { emoji: '🍎', x: 88, y: 72, size: 66, anim: 'pulse', delay: 1.1 },
     ] },
+    comprehension: { question: 'Co je Ela?', options: ['🍎', '🍌', '🥕'], answer: 1 },
   },
   // — grupa 2: 2 zdania po 3–4 słowa, sylaby zamknięte dozwolone —
   {
@@ -154,7 +181,9 @@ export const CZYTANKI: readonly Czytanka[] = [
     scene: { bg: 'meadow', actors: [
       { emoji: '🏠', x: 40, y: 55, size: 120, anim: 'none' },
       { emoji: '🐶', x: 70, y: 72, size: 90, anim: 'bob', delay: 0.3 },
+      { emoji: '🌳', x: 15, y: 60, size: 100, anim: 'sway', delay: 0.8 },
     ] },
+    comprehension: { question: 'Gdzie jest pies?', options: ['🏠', '🌳', '🚗'], answer: 0 },
   },
   {
     id: 'cz-17', group: 2, title: 'Kot na oknie', emoji: '🐱',
@@ -166,7 +195,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🪟', x: 32, y: 50, size: 110, anim: 'none' },
       { emoji: '🐱', x: 62, y: 62, size: 90, anim: 'pulse', delay: 0.5 },
       { emoji: '☀️', x: 88, y: 40, size: 68, anim: 'pulse', delay: 1.1 },
+      { emoji: '🐶', x: 15, y: 74, size: 78, anim: 'bob', delay: 1.4 },
     ] },
+    comprehension: { question: 'Kto śpi na oknie?', options: ['🐶', '🐭', '🐱'], answer: 2 },
   },
   {
     id: 'cz-18', group: 2, title: 'Las i lis', emoji: '🦊',
@@ -178,7 +209,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🌲', x: 25, y: 55, size: 120, anim: 'sway' },
       { emoji: '🦊', x: 58, y: 70, size: 95, anim: 'wiggle', delay: 0.4 },
       { emoji: '🌲', x: 85, y: 58, size: 100, anim: 'sway', delay: 1 },
+      { emoji: '🐻', x: 15, y: 74, size: 80, anim: 'bob', delay: 1.3 },
     ] },
+    comprehension: { question: 'Kto ma rudy ogon?', options: ['🐻', '🦊', '🐗'], answer: 1 },
   },
   {
     id: 'cz-19', group: 2, title: 'Ola w parku', emoji: '🛝',
@@ -191,6 +224,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🛝', x: 58, y: 60, size: 110, anim: 'none' },
       { emoji: '🧔', x: 85, y: 65, size: 105, anim: 'sway', delay: 0.7 },
     ] },
+    comprehension: { question: 'Kto biega po parku?', options: ['🧔', '👧', '👵'], answer: 1 },
   },
   {
     id: 'cz-20', group: 2, title: 'Kubek mleka', emoji: '🥛',
@@ -201,7 +235,9 @@ export const CZYTANKI: readonly Czytanka[] = [
     scene: { bg: 'kitchen', actors: [
       { emoji: '🥛', x: 35, y: 62, size: 100, anim: 'pulse' },
       { emoji: '🍪', x: 70, y: 70, size: 72, anim: 'wiggle', delay: 0.6 },
+      { emoji: '🧃', x: 88, y: 60, size: 70, anim: 'sway', delay: 1.1 },
     ] },
+    comprehension: { question: 'Co jest w kubku?', options: ['🥛', '🧃', '☕'], answer: 0 },
   },
   {
     id: 'cz-21', group: 2, title: 'Nowy rower', emoji: '🚲',
@@ -212,7 +248,9 @@ export const CZYTANKI: readonly Czytanka[] = [
     scene: { bg: 'meadow', actors: [
       { emoji: '🚲', x: 35, y: 68, size: 115, anim: 'bob' },
       { emoji: '🧒', x: 70, y: 60, size: 100, anim: 'sway', delay: 0.5 },
+      { emoji: '🛴', x: 15, y: 74, size: 78, anim: 'sway', delay: 1 },
     ] },
+    comprehension: { question: 'Co jest nowe?', options: ['🚗', '🛴', '🚲'], answer: 2 },
   },
   {
     id: 'cz-22', group: 2, title: 'Koń na polu', emoji: '🐴',
@@ -223,7 +261,9 @@ export const CZYTANKI: readonly Czytanka[] = [
     scene: { bg: 'meadow', actors: [
       { emoji: '🐴', x: 35, y: 62, size: 120, anim: 'sway' },
       { emoji: '🌾', x: 72, y: 76, size: 76, anim: 'wiggle', delay: 0.8 },
+      { emoji: '🐮', x: 15, y: 70, size: 90, anim: 'bob', delay: 1.2 },
     ] },
+    comprehension: { question: 'Kto jest na polu?', options: ['🐮', '🐴', '🐷'], answer: 1 },
   },
   {
     id: 'cz-23', group: 2, title: 'Bałwan', emoji: '⛄',
@@ -236,6 +276,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '⛄', x: 62, y: 68, size: 115, anim: 'pulse', delay: 0.5 },
       { emoji: '❄️', x: 88, y: 42, size: 66, anim: 'float', delay: 1.2 },
     ] },
+    comprehension: { question: 'Co lepi Ola?', options: ['⛄', '❄️', '🏰'], answer: 0 },
   },
   {
     id: 'cz-24', group: 2, title: 'Klocki', emoji: '🧱',
@@ -247,7 +288,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '👧', x: 30, y: 62, size: 100, anim: 'sway' },
       { emoji: '🧱', x: 60, y: 74, size: 78, anim: 'wiggle', delay: 0.4 },
       { emoji: '🏠', x: 85, y: 60, size: 88, anim: 'none' },
+      { emoji: '🚗', x: 15, y: 78, size: 66, anim: 'bob', delay: 1.2 },
     ] },
+    comprehension: { question: 'Co robi z klocków?', options: ['🚗', '🏰', '🏠'], answer: 2 },
   },
   {
     id: 'cz-25', group: 2, title: 'Na plaży', emoji: '🏖️',
@@ -260,6 +303,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '👧', x: 58, y: 68, size: 100, anim: 'bob', delay: 0.4 },
       { emoji: '🪣', x: 85, y: 76, size: 70, anim: 'pulse', delay: 1 },
     ] },
+    comprehension: { question: 'Co ma Ola?', options: ['🪣', '⛱️', '🎈'], answer: 0 },
   },
   {
     id: 'cz-26', group: 2, title: 'Noc', emoji: '🌙',
@@ -271,7 +315,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🌙', x: 25, y: 38, size: 78, anim: 'float' },
       { emoji: '🛏️', x: 60, y: 68, size: 115, anim: 'none' },
       { emoji: '😴', x: 88, y: 55, size: 70, anim: 'pulse', delay: 0.9 },
+      { emoji: '🪑', x: 15, y: 72, size: 80, anim: 'none' },
     ] },
+    comprehension: { question: 'Gdzie śpi Ola?', options: ['🛋️', '🛏️', '🪑'], answer: 1 },
   },
   {
     id: 'cz-27', group: 2, title: 'Auto taty', emoji: '🚗',
@@ -282,7 +328,9 @@ export const CZYTANKI: readonly Czytanka[] = [
     scene: { bg: 'room', actors: [
       { emoji: '🚗', x: 35, y: 68, size: 118, anim: 'bob' },
       { emoji: '🧔', x: 72, y: 60, size: 105, anim: 'sway', delay: 0.6 },
+      { emoji: '👩', x: 15, y: 62, size: 96, anim: 'bob', delay: 1.1 },
     ] },
+    comprehension: { question: 'Kto ma auto?', options: ['👩', '👵', '🧔'], answer: 2 },
   },
   {
     id: 'cz-28', group: 2, title: 'Pomidory', emoji: '🍅',
@@ -294,7 +342,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '👩', x: 28, y: 58, size: 108, anim: 'sway' },
       { emoji: '🍅', x: 58, y: 72, size: 76, anim: 'pulse', delay: 0.5 },
       { emoji: '👧', x: 85, y: 62, size: 96, anim: 'bob', delay: 1 },
+      { emoji: '🥒', x: 15, y: 76, size: 64, anim: 'wiggle', delay: 1.3 },
     ] },
+    comprehension: { question: 'Co kupiła mama?', options: ['🍅', '🥒', '🍆'], answer: 0 },
   },
   {
     id: 'cz-29', group: 2, title: 'Mój miś', emoji: '🧸',
@@ -305,7 +355,9 @@ export const CZYTANKI: readonly Czytanka[] = [
     scene: { bg: 'room', actors: [
       { emoji: '🧸', x: 38, y: 62, size: 118, anim: 'bob' },
       { emoji: '🧒', x: 72, y: 66, size: 100, anim: 'sway', delay: 0.7 },
+      { emoji: '⚽', x: 15, y: 78, size: 64, anim: 'bob', delay: 1.2 },
     ] },
+    comprehension: { question: 'Co ma mały nos?', options: ['🪆', '🧸', '⚽'], answer: 1 },
   },
   {
     id: 'cz-30', group: 2, title: 'Babcia piecze', emoji: '🍰',
@@ -317,7 +369,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '👵', x: 30, y: 58, size: 110, anim: 'sway' },
       { emoji: '🍰', x: 62, y: 70, size: 80, anim: 'pulse', delay: 0.5 },
       { emoji: '👧', x: 88, y: 64, size: 92, anim: 'bob', delay: 1.1 },
+      { emoji: '🍪', x: 15, y: 74, size: 62, anim: 'pulse', delay: 1.4 },
     ] },
+    comprehension: { question: 'Co robi babcia?', options: ['🍪', '🍦', '🍰'], answer: 2 },
   },
   // — grupa 3: 3–4 zdania po 3–5 słów, dwuznaki i ę/ą/ó —
   {
@@ -332,6 +386,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🛋️', x: 65, y: 60, size: 120, anim: 'none' },
       { emoji: '🐱', x: 90, y: 45, size: 80, anim: 'pulse', delay: 1 },
     ] },
+    comprehension: { question: 'Kto śpi na kanapie?', options: ['🐱', '🐭', '🐰'], answer: 0 },
   },
   {
     id: 'cz-32', group: 3, title: 'Jesień w parku', emoji: '🍂',
@@ -345,7 +400,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🍂', x: 22, y: 45, size: 70, anim: 'float' },
       { emoji: '👧', x: 50, y: 68, size: 100, anim: 'bob', delay: 0.4 },
       { emoji: '🌳', x: 80, y: 55, size: 120, anim: 'sway', delay: 0.9 },
+      { emoji: '🍄', x: 15, y: 80, size: 60, anim: 'pulse', delay: 1.3 },
     ] },
+    comprehension: { question: 'Co zbiera Ola?', options: ['🌰', '🍂', '🍄'], answer: 1 },
   },
   {
     id: 'cz-33', group: 3, title: 'Deszcz za oknem', emoji: '🌧️',
@@ -359,7 +416,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🌧️', x: 25, y: 40, size: 80, anim: 'float' },
       { emoji: '☂️', x: 55, y: 58, size: 90, anim: 'sway', delay: 0.5 },
       { emoji: '👧', x: 80, y: 70, size: 100, anim: 'bob', delay: 1 },
+      { emoji: '🎒', x: 15, y: 74, size: 70, anim: 'bob', delay: 1.3 },
     ] },
+    comprehension: { question: 'Co ma Ola?', options: ['🧤', '🎒', '☂️'], answer: 2 },
   },
   {
     id: 'cz-34', group: 3, title: 'Wiewiórka i orzechy', emoji: '🐿️',
@@ -373,7 +432,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🐿️', x: 28, y: 55, size: 90, anim: 'wiggle' },
       { emoji: '🌰', x: 55, y: 74, size: 66, anim: 'pulse', delay: 0.6 },
       { emoji: '🌳', x: 82, y: 50, size: 120, anim: 'sway', delay: 1 },
+      { emoji: '🍎', x: 15, y: 78, size: 62, anim: 'pulse', delay: 1.3 },
     ] },
+    comprehension: { question: 'Co zbiera wiewiórka?', options: ['🌰', '🍎', '🥕'], answer: 0 },
   },
   {
     id: 'cz-35', group: 3, title: 'Kaczki na stawie', emoji: '🦆',
@@ -386,7 +447,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🦆', x: 25, y: 70, size: 90, anim: 'bob' },
       { emoji: '🦆', x: 50, y: 76, size: 76, anim: 'bob', delay: 0.5 },
       { emoji: '🧒', x: 80, y: 60, size: 100, anim: 'sway', delay: 1 },
+      { emoji: '🐸', x: 15, y: 80, size: 62, anim: 'wiggle', delay: 1.3 },
     ] },
+    comprehension: { question: 'Kto pływa na stawie?', options: ['🐟', '🐸', '🦆'], answer: 2 },
   },
   {
     id: 'cz-36', group: 3, title: 'Urodziny Oli', emoji: '🎂',
@@ -400,7 +463,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🎂', x: 32, y: 65, size: 110, anim: 'pulse' },
       { emoji: '👧', x: 62, y: 58, size: 105, anim: 'bob', delay: 0.4 },
       { emoji: '🎈', x: 88, y: 40, size: 70, anim: 'float', delay: 0.9 },
+      { emoji: '🍞', x: 15, y: 76, size: 62, anim: 'none' },
     ] },
+    comprehension: { question: 'Co stoi na stole?', options: ['🍞', '🎂', '🍲'], answer: 1 },
   },
   {
     id: 'cz-37', group: 3, title: 'Kotek i kłębek', emoji: '🧶',
@@ -414,7 +479,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🐈', x: 28, y: 66, size: 100, anim: 'wiggle' },
       { emoji: '🧶', x: 58, y: 76, size: 74, anim: 'bob', delay: 0.5 },
       { emoji: '🪑', x: 85, y: 60, size: 100, anim: 'none' },
+      { emoji: '⚽', x: 15, y: 80, size: 64, anim: 'bob', delay: 1.3 },
     ] },
+    comprehension: { question: 'Co znalazł kotek?', options: ['🧶', '⚽', '🪀'], answer: 0 },
   },
   {
     id: 'cz-38', group: 3, title: 'Sanki', emoji: '🛷',
@@ -427,8 +494,10 @@ export const CZYTANKI: readonly Czytanka[] = [
     scene: { bg: 'snow', actors: [
       { emoji: '🛷', x: 28, y: 70, size: 100, anim: 'bob' },
       { emoji: '🧒', x: 58, y: 60, size: 100, anim: 'wiggle', delay: 0.4 },
-      { emoji: '☕', x: 85, y: 72, size: 70, anim: 'pulse', delay: 1.2 },
+      { emoji: '🍵', x: 85, y: 72, size: 70, anim: 'pulse', delay: 1.2 },
+      { emoji: '🥛', x: 15, y: 78, size: 62, anim: 'pulse', delay: 1.4 },
     ] },
+    comprehension: { question: 'Co piją dzieci?', options: ['🥛', '🧃', '🍵'], answer: 2 },
   },
   {
     id: 'cz-39', group: 3, title: 'Ciastka babci', emoji: '🍪',
@@ -443,6 +512,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🍪', x: 58, y: 72, size: 76, anim: 'pulse', delay: 0.5 },
       { emoji: '👧', x: 85, y: 62, size: 95, anim: 'bob', delay: 1 },
     ] },
+    comprehension: { question: 'Kto piecze ciastka?', options: ['👧', '👵', '🧔'], answer: 1 },
   },
   {
     id: 'cz-40', group: 3, title: 'Jeż w ogrodzie', emoji: '🦔',
@@ -456,7 +526,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🦔', x: 30, y: 72, size: 90, anim: 'wiggle' },
       { emoji: '🍃', x: 60, y: 60, size: 70, anim: 'float', delay: 0.6 },
       { emoji: '🐌', x: 85, y: 76, size: 66, anim: 'sway', delay: 1.1 },
+      { emoji: '🐞', x: 15, y: 66, size: 58, anim: 'wiggle', delay: 1.4 },
     ] },
+    comprehension: { question: 'Kogo szuka jeż?', options: ['🐌', '🐝', '🐞'], answer: 0 },
   },
   {
     id: 'cz-41', group: 3, title: 'Kałuża na drodze', emoji: '🚲',
@@ -470,7 +542,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🚲', x: 30, y: 66, size: 110, anim: 'bob' },
       { emoji: '💧', x: 62, y: 78, size: 70, anim: 'pulse', delay: 0.5 },
       { emoji: '🌳', x: 88, y: 55, size: 110, anim: 'sway', delay: 1 },
+      { emoji: '🛴', x: 15, y: 72, size: 74, anim: 'sway', delay: 1.3 },
     ] },
+    comprehension: { question: 'Na czym jedzie Tomek?', options: ['🛴', '🚲', '🛷'], answer: 1 },
   },
   {
     id: 'cz-42', group: 3, title: 'Ptaki lecą', emoji: '🐦',
@@ -484,7 +558,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🐦', x: 25, y: 38, size: 66, anim: 'float' },
       { emoji: '🐦', x: 50, y: 45, size: 70, anim: 'float', delay: 0.6 },
       { emoji: '👧', x: 80, y: 72, size: 100, anim: 'bob', delay: 1.1 },
+      { emoji: '🦋', x: 15, y: 62, size: 60, anim: 'float', delay: 1.4 },
     ] },
+    comprehension: { question: 'Kto leci nad lasem?', options: ['🦋', '🐝', '🐦'], answer: 2 },
   },
   {
     id: 'cz-43', group: 3, title: 'Muszelki', emoji: '🐚',
@@ -498,7 +574,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🐚', x: 25, y: 76, size: 68, anim: 'pulse' },
       { emoji: '👧', x: 55, y: 66, size: 100, anim: 'bob', delay: 0.5 },
       { emoji: '☀️', x: 85, y: 38, size: 76, anim: 'pulse', delay: 1 },
+      { emoji: '🪨', x: 15, y: 80, size: 58, anim: 'none' },
     ] },
+    comprehension: { question: 'Co zbiera Ola?', options: ['🐚', '🪨', '🌰'], answer: 0 },
   },
   {
     id: 'cz-44', group: 3, title: 'Burek i piłka', emoji: '🐶',
@@ -512,7 +590,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🐶', x: 28, y: 70, size: 100, anim: 'wiggle' },
       { emoji: '⚽', x: 58, y: 76, size: 72, anim: 'bob', delay: 0.4 },
       { emoji: '🧒', x: 85, y: 62, size: 100, anim: 'sway', delay: 0.9 },
+      { emoji: '🪁', x: 15, y: 42, size: 70, anim: 'float', delay: 1.3 },
     ] },
+    comprehension: { question: 'Za czym biega Burek?', options: ['🪁', '⚽', '🧶'], answer: 1 },
   },
   {
     id: 'cz-45', group: 3, title: 'Księżyc i gwiazdy', emoji: '🌙',
@@ -526,7 +606,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🌙', x: 25, y: 36, size: 82, anim: 'float' },
       { emoji: '⭐', x: 52, y: 45, size: 64, anim: 'pulse', delay: 0.6 },
       { emoji: '👧', x: 82, y: 68, size: 100, anim: 'bob', delay: 1.1 },
+      { emoji: '🕯️', x: 15, y: 74, size: 62, anim: 'pulse', delay: 1.4 },
     ] },
+    comprehension: { question: 'Co świeci na niebie?', options: ['🕯️', '💡', '🌙'], answer: 2 },
   },
   // — grupa 4: 5–6 zdań po 3–6 słów, słowa 3-sylabowe i zbitki spółgłoskowe —
   {
@@ -542,7 +624,10 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🐮', x: 30, y: 70, size: 110, anim: 'sway' },
       { emoji: '🌳', x: 70, y: 55, size: 120, anim: 'sway', delay: 0.8 },
       { emoji: '🐦', x: 92, y: 40, size: 64, anim: 'float', delay: 0.2 },
+      { emoji: '🌿', x: 15, y: 80, size: 62, anim: 'sway', delay: 1.2 },
+      { emoji: '🍎', x: 55, y: 42, size: 58, anim: 'pulse', delay: 1.5 },
     ] },
+    comprehension: { question: 'Co je krowa?', options: ['🌿', '🍎', '🥕'], answer: 0 },
   },
   {
     id: 'cz-47', group: 4, title: 'Wycieczka do lasu', emoji: '🌲',
@@ -559,7 +644,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🐿️', x: 48, y: 50, size: 76, anim: 'wiggle', delay: 0.5 },
       { emoji: '🎒', x: 75, y: 72, size: 80, anim: 'bob', delay: 1 },
       { emoji: '🥪', x: 96, y: 78, size: 64, anim: 'pulse', delay: 1.4 },
+      { emoji: '🦔', x: 14, y: 80, size: 62, anim: 'wiggle', delay: 1.7 },
     ] },
+    comprehension: { question: 'Kogo widzimy na ścieżce?', options: ['🦊', '🐿️', '🦔'], answer: 1 },
   },
   {
     id: 'cz-48', group: 4, title: 'Obiad u babci', emoji: '🍲',
@@ -577,6 +664,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🥕', x: 75, y: 76, size: 66, anim: 'wiggle', delay: 0.9 },
       { emoji: '👧', x: 96, y: 62, size: 92, anim: 'bob', delay: 1.3 },
     ] },
+    comprehension: { question: 'Co bulgocze w garnku?', options: ['🥕', '🍪', '🍲'], answer: 2 },
   },
   {
     id: 'cz-49', group: 4, title: 'Dzień w przedszkolu', emoji: '🎨',
@@ -593,6 +681,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🎨', x: 74, y: 74, size: 72, anim: 'wiggle', delay: 0.7 },
       { emoji: '🧒', x: 95, y: 60, size: 95, anim: 'bob', delay: 1.2 },
     ] },
+    comprehension: { question: 'Kto czyta nam bajkę?', options: ['👩‍🏫', '🧒', '👵'], answer: 0 },
   },
   {
     id: 'cz-50', group: 4, title: 'Deszczowy dzień', emoji: '🌧️',
@@ -609,7 +698,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🪟', x: 48, y: 52, size: 100, anim: 'none' },
       { emoji: '🏰', x: 75, y: 70, size: 90, anim: 'pulse', delay: 0.8 },
       { emoji: '🧒', x: 96, y: 66, size: 92, anim: 'bob', delay: 1.2 },
+      { emoji: '⛵', x: 14, y: 76, size: 62, anim: 'sway', delay: 1.6 },
     ] },
+    comprehension: { question: 'Co budujemy z klocków?', options: ['🏠', '🏰', '⛵'], answer: 1 },
   },
   {
     id: 'cz-51', group: 4, title: 'Kotek na drzewie', emoji: '🐈',
@@ -626,7 +717,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🐈', x: 48, y: 38, size: 70, anim: 'pulse', delay: 0.5 },
       { emoji: '🪜', x: 72, y: 62, size: 90, anim: 'none' },
       { emoji: '🧔', x: 95, y: 70, size: 100, anim: 'bob', delay: 1 },
+      { emoji: '🐦', x: 14, y: 40, size: 56, anim: 'float', delay: 1.5 },
     ] },
+    comprehension: { question: 'Kto wszedł na drzewo?', options: ['🐿️', '🐦', '🐈'], answer: 2 },
   },
   {
     id: 'cz-52', group: 4, title: 'Zima na podwórku', emoji: '⛄',
@@ -643,7 +736,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🥕', x: 46, y: 58, size: 64, anim: 'wiggle', delay: 0.6 },
       { emoji: '🧒', x: 72, y: 70, size: 100, anim: 'bob', delay: 1 },
       { emoji: '❄️', x: 95, y: 40, size: 66, anim: 'float', delay: 1.4 },
+      { emoji: '🧣', x: 14, y: 80, size: 60, anim: 'sway', delay: 1.7 },
     ] },
+    comprehension: { question: 'Co dają zamiast nosa?', options: ['🥕', '🧣', '🎩'], answer: 0 },
   },
   {
     id: 'cz-53', group: 4, title: 'Urodziny psa', emoji: '🐕',
@@ -660,7 +755,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🍪', x: 52, y: 74, size: 68, anim: 'pulse', delay: 0.5 },
       { emoji: '🎉', x: 76, y: 50, size: 76, anim: 'float', delay: 0.9 },
       { emoji: '👧', x: 96, y: 62, size: 95, anim: 'bob', delay: 1.3 },
+      { emoji: '🍰', x: 14, y: 78, size: 62, anim: 'pulse', delay: 1.6 },
     ] },
+    comprehension: { question: 'Co upiekła Ola?', options: ['🍰', '🍪', '🍞'], answer: 1 },
   },
   {
     id: 'cz-54', group: 4, title: 'Wycieczka do zoo', emoji: '🚌',
@@ -678,6 +775,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🐒', x: 74, y: 50, size: 80, anim: 'wiggle', delay: 0.9 },
       { emoji: '📷', x: 96, y: 74, size: 66, anim: 'pulse', delay: 1.3 },
     ] },
+    comprehension: { question: 'Kto ma długą trąbę?', options: ['🐒', '🦒', '🐘'], answer: 2 },
   },
   {
     id: 'cz-55', group: 4, title: 'W sadzie', emoji: '🍐',
@@ -693,7 +791,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🍐', x: 50, y: 45, size: 66, anim: 'pulse', delay: 0.5 },
       { emoji: '🧺', x: 74, y: 74, size: 76, anim: 'none' },
       { emoji: '👴', x: 96, y: 66, size: 100, anim: 'bob', delay: 1.1 },
+      { emoji: '🍇', x: 14, y: 60, size: 58, anim: 'pulse', delay: 1.5 },
     ] },
+    comprehension: { question: 'Co zbiera Ola?', options: ['🍐', '🍇', '🥕'], answer: 0 },
   },
   {
     id: 'cz-56', group: 4, title: 'Burza', emoji: '⛈️',
@@ -710,7 +810,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '⚡', x: 52, y: 46, size: 70, anim: 'pulse', delay: 0.4 },
       { emoji: '🛋️', x: 78, y: 70, size: 105, anim: 'none' },
       { emoji: '🐶', x: 98, y: 74, size: 76, anim: 'wiggle', delay: 1.1 },
+      { emoji: '🐈', x: 14, y: 76, size: 66, anim: 'wiggle', delay: 1.6 },
     ] },
+    comprehension: { question: 'Kto wskoczył pod koc?', options: ['🐈', '🐦', '🐶'], answer: 2 },
   },
   {
     id: 'cz-57', group: 4, title: 'Pociąg do babci', emoji: '🚂',
@@ -725,7 +827,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🚂', x: 25, y: 66, size: 115, anim: 'bob' },
       { emoji: '🌳', x: 55, y: 52, size: 100, anim: 'sway', delay: 0.6 },
       { emoji: '👵', x: 82, y: 70, size: 100, anim: 'pulse', delay: 1.1 },
+      { emoji: '👩', x: 14, y: 72, size: 92, anim: 'bob', delay: 1.4 },
     ] },
+    comprehension: { question: 'Do kogo jedziemy?', options: ['👩', '👵', '🧔'], answer: 1 },
   },
   {
     id: 'cz-58', group: 4, title: 'Wieczorna kąpiel', emoji: '🛁',
@@ -742,7 +846,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🫧', x: 50, y: 48, size: 70, anim: 'float', delay: 0.5 },
       { emoji: '🧴', x: 74, y: 72, size: 66, anim: 'pulse', delay: 0.9 },
       { emoji: '👩', x: 96, y: 60, size: 100, anim: 'sway', delay: 1.3 },
+      { emoji: '👧', x: 14, y: 74, size: 88, anim: 'bob', delay: 1.6 },
     ] },
+    comprehension: { question: 'Kto szykuje kąpiel?', options: ['👩', '👧', '👵'], answer: 0 },
   },
   {
     id: 'cz-59', group: 4, title: 'Zakupy z mamą', emoji: '🛒',
@@ -759,7 +865,9 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🍞', x: 52, y: 74, size: 68, anim: 'pulse', delay: 0.5 },
       { emoji: '👩', x: 76, y: 58, size: 105, anim: 'sway', delay: 0.9 },
       { emoji: '👧', x: 98, y: 66, size: 92, anim: 'wiggle', delay: 1.3 },
+      { emoji: '🍎', x: 14, y: 78, size: 60, anim: 'pulse', delay: 1.6 },
     ] },
+    comprehension: { question: 'Co kupujemy w sklepie?', options: ['🥕', '🍎', '🍞'], answer: 2 },
   },
   {
     id: 'cz-60', group: 4, title: 'Gwiazdy na niebie', emoji: '🌟',
@@ -777,6 +885,7 @@ export const CZYTANKI: readonly Czytanka[] = [
       { emoji: '🧔', x: 74, y: 68, size: 105, anim: 'sway', delay: 0.9 },
       { emoji: '👧', x: 96, y: 72, size: 92, anim: 'bob', delay: 1.3 },
     ] },
+    comprehension: { question: 'Kto pokazuje Wielki Wóz?', options: ['👧', '🧔', '👵'], answer: 1 },
   },
 ]
 

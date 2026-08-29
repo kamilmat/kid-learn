@@ -10,7 +10,7 @@ import type {
   LetterState as SrsLetterState,
   Outcome as SrsOutcome,
 } from '@/shared/srs/types'
-import type { Level } from '@/shared/settings/types'
+import type { SessionMode } from '@/shared/stats/types'
 
 export type DisplayCase = SrsDisplayCase
 export type DisplayStyle = SrsDisplayStyle
@@ -52,7 +52,7 @@ export type SessionLog = {
   id: string
   startedAt: number
   endedAt: number | null
-  level: Level
+  level: SessionMode
   events: SessionEvent[]
 }
 
@@ -66,9 +66,18 @@ export type SessionStatus =
   | 'retry'
   | 'finished'
 
+/**
+ * Kierunek pytania.
+ * - `sound-to-letter` — wariant podstawowy: słyszysz dźwięk, wybierasz literę.
+ * - `letter-to-sound` — wariant odwrotny: widzisz literę, odsłuchujesz
+ *   kandydatów i wybierasz ten, który brzmi jak ta litera.
+ */
+export type QuestionKind = 'sound-to-letter' | 'letter-to-sound'
+
 // Pojedyncze pytanie — wszystko, co potrzebne do wyrenderowania ekranu pytania.
 export type Question = {
   index: number // 0-based numer pytania w sesji
+  kind: QuestionKind
   targetLetter: string
   // 4 litery w kolejności wyświetlania (slot 0..3); zawiera `targetLetter`
   tiles: string[]

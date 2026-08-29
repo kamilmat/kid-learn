@@ -12,6 +12,7 @@ import { useCzytanki } from '../store/czytankiStore'
 import { setPendingCue, takePendingCue } from '../audio/pendingCue'
 import { SyllableButton } from './SyllableButton'
 import { CzytankaScene } from './CzytankaScene'
+import { ComprehensionQuestion } from './ComprehensionQuestion'
 import { useReadAloud } from '../hooks/useReadAloud'
 
 const FONT_BY_GROUP: Record<CzytankaGroup, number> = { 1: 64, 2: 54, 3: 46, 4: 40 }
@@ -26,6 +27,15 @@ const FIT_SAFETY = 0.95
 const WORD_HIGHLIGHT_MS = 600
 // Zapomniana karta w tle nie może zaliczyć dziecku godzin "czytania".
 const VISIT_CAP_MS = 10 * 60_000
+// ❓ pojawia się dopiero, gdy dziecko naprawdę przeszło przez tekst: całe ▶
+// albo tyle dotkniętych sylab. Pytanie po dwóch tapach byłoby zgadywanką.
+const SYLLABLES_SEEN_RATIO = 0.6
+
+function countSyllables(czytanka: Czytanka): number {
+  let n = 0
+  for (const sent of czytanka.sentences) for (const word of sent) n += word.syllables.length
+  return n
+}
 
 type Props = {
   czytanka: Czytanka
@@ -50,6 +60,7 @@ const toggleBtn = {
 
 export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   const markOpened = useCzytanki((s) => s.markOpened)
+  const markRead = useCzytanki((s) => s.markRead)
   const hasSeenIntro = useCzytanki((s) => s.hasSeenIntro)
   const markIntroSeen = useCzytanki((s) => s.markIntroSeen)
   const recordVisit = useCzytanki((s) => s.recordVisit)
@@ -57,20 +68,33 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   const updateSetting = useSettings((s) => s.updateSetting)
   const echoMode = czytankiSettings.echoMode
   const tempo = czytankiSettings.tempo
+  const merged = czytankiSettings.mergedSyllables
+  const answeredQuestionIds = useCzytanki((s) => s.answeredQuestionIds)
   const [heldWord, setHeldWord] = useState<{ s: number; w: number } | null>(null)
+  // Sylaby dotknięte w TEJ wizycie — po wyjściu i powrocie dziecko przechodzi tekst od nowa.
+  const [seenSyllables, setSeenSyllables] = useState<Set<string>>(() => new Set())
+  const [readFinished, setReadFinished] = useState(false)
+  const [questionOpen, setQuestionOpen] = useState(false)
   const { activeWord, reading, echoing, toggle, stop, skipEcho } = useReadAloud({
     czytanka,
     audioBus,
     echoMode,
     tempo,
     introKey: echoMode ? 'czytanki-echo-intro' : null,
+    onFinished: () => setReadFinished(true),
   })
   const holdTimeoutRef = useRef<number | null>(null)
   // Tapy zliczamy w refie i zapisujemy batch'em na wyjściu — persist to zapis
   // do localStorage przy KAŻDYM set(), a dziecko stuka sylaby seriami.
   const tapsRef = useRef<Record<string, number>>({})
   const enteredAtRef = useRef(Date.now())
+  // Jedno wejście = najwyżej jedno zaliczone czytanie (guard 60 s w store i tak
+  // pilnuje powrotów, ale bez tego refu efekt strzelałby przy każdej sylabie).
+  const readCountedRef = useRef(false)
 
+  // `timeMs` zostaje liczony od mount (czas na ekranie to czas na ekranie —
+  // dziecko może wpatrywać się w tekst bez tapania). Dowodu przejścia tekstu
+  // wymaga tylko `readCounts`, bo to ono trafia do raportu jako „przeczytane".
   const flushVisit = useCallback(() => {
     const ms = Math.min(VISIT_CAP_MS, Date.now() - enteredAtRef.current)
     const taps = tapsRef.current
@@ -86,6 +110,10 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
 
   useEffect(() => {
     markOpened(czytanka.id)
+    readCountedRef.current = false
+    setSeenSyllables(new Set())
+    setReadFinished(false)
+    setQuestionOpen(false)
     enteredAtRef.current = Date.now()
     audioBus.stop()
     // Odbieramy odłożone cue nawigacji (ustawione przez ekran, z którego
@@ -124,9 +152,10 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
 
   // Tap w sylabę i long-press liczą się do tego samego SŁOWA — rodzic chce
   // wiedzieć, które wyrazy sprawiają trudność, nie które sylaby zostały stuknięte.
-  const tapSyllable = useCallback((syl: string, syllables: readonly string[]) => {
+  const tapSyllable = useCallback((syl: string, syllables: readonly string[], key: string) => {
     stop()
     countWordTap(syllables)
+    setSeenSyllables((prev) => (prev.has(key) ? prev : new Set(prev).add(key)))
     void audioBus.play(syllableAudioKey(syl))
   }, [audioBus, countWordTap, stop])
 
@@ -183,7 +212,39 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     },
   })
 
+  const mergeTap = useTapHandler({
+    onTap: () => {
+      const next = !merged
+      stop()
+      audioBus.stop()
+      updateSetting('czytanki', { ...czytankiSettings, mergedSyllables: next })
+      void audioBus.play(next ? 'czytanki-ui-merge-on' : 'czytanki-ui-merge-off')
+    },
+  })
+
   const echoSkipTap = useTapHandler({ onTap: skipEcho, disabled: echoing === null })
+
+  const comprehension = czytanka.comprehension
+  const syllablesThreshold = Math.ceil(SYLLABLES_SEEN_RATIO * countSyllables(czytanka))
+  // Ten sam dowód, którym odblokowuje się ❓: całe ▶ albo 60% sylab dotkniętych.
+  // Samo wejście na ekran (przeklikanie listy strzałką ▶) nie jest czytaniem.
+  const readEvidence = readFinished || seenSyllables.size >= syllablesThreshold
+  const questionReady = comprehension !== undefined && readEvidence
+  const questionAnswered = answeredQuestionIds.includes(czytanka.id)
+
+  useEffect(() => {
+    if (!readEvidence || readCountedRef.current) return
+    readCountedRef.current = true
+    markRead(czytanka.id)
+  }, [readEvidence, czytanka.id, markRead])
+
+  const questionTap = useTapHandler({
+    onTap: () => {
+      stop()
+      setQuestionOpen(true)
+    },
+    disabled: !questionReady,
+  })
 
   // Bez scrolla i bez przycinania: mierzymy raz przy rozmiarze bazowym grupy
   // i liczymy docelowy fontSize z proporcji dostępne/potrzebne — zamiast serii
@@ -210,7 +271,9 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     setFitPass((n) => n + 1)
   }, [baseFont, czytanka.group])
 
-  useLayoutEffect(() => { refit() }, [czytanka.id, refit])
+  // `merged` zmienia odstępy i podkreślenia, więc wysokość bloku tekstu też —
+  // bez ponownego fitu auto-fit zostaje przy rozmiarze policzonym dla drugiego trybu.
+  useLayoutEffect(() => { refit() }, [czytanka.id, merged, refit])
 
   // resize/orientationchange potrafią odpalić kilka razy pod rząd (np. obrót
   // iPada) — rAF zbija je do jednego refitu na klatkę zamiast serii rekalkulacji.
@@ -281,6 +344,17 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
             style={{ ...toggleBtn, background: tempo === 'turtle' ? '#bbf7d0' : '#fff' }}>
             🐢
           </button>
+          <button type="button" aria-label={merged ? 'Rozdziel sylaby' : 'Scal sylaby'} aria-pressed={merged}
+            data-testid="merge-syllables" {...mergeTap}
+            style={{ ...toggleBtn, fontFamily: 'var(--font-block)', fontWeight: 700, fontSize: 14, letterSpacing: '0.02em', color: colors.text, background: merged ? '#bbf7d0' : '#fff' }}>
+            {merged ? 'KOTA' : 'KO|TA'}
+          </button>
+          {questionReady && (
+            <button type="button" aria-label="Pytanie o czytankę" data-testid="comprehension-open" {...questionTap}
+              style={{ ...roundBtn, background: questionAnswered ? '#bbf7d0' : '#fff' }}>
+              {questionAnswered ? '✔' : '❓'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -311,7 +385,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
                     <span
                       data-testid="word"
                       style={{
-                        display: 'inline-flex', alignItems: 'baseline', gap: '0.12em',
+                        display: 'inline-flex', alignItems: 'baseline', gap: merged ? 0 : '0.12em',
                         padding: '0.04em 0.22em', borderRadius: '0.4em',
                         background: isActive ? '#fde047' : '#ffffff',
                         border: `3px solid ${isActive ? '#f59e0b' : '#cfd8e6'}`,
@@ -320,8 +394,8 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
                       }}
                     >
                       {word.syllables.map((syl, i) => (
-                        <SyllableButton key={i} text={syl} cue={getSyllableCue(i)} fontSize={fontSize}
-                          onTap={() => tapSyllable(syl, word.syllables)} onLongPress={() => holdWord(s, w, word.syllables)} />
+                        <SyllableButton key={i} text={syl} cue={getSyllableCue(i)} fontSize={fontSize} merged={merged}
+                          onTap={() => tapSyllable(syl, word.syllables, `${s}-${w}-${i}`)} onLongPress={() => holdWord(s, w, word.syllables)} />
                       ))}
                     </span>
                     {word.punct && <span aria-hidden="true" style={{ fontFamily: 'var(--font-block)', fontWeight: 700, fontSize, color: colors.text, marginLeft: '0.08em' }}>{word.punct}</span>}
@@ -332,6 +406,15 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
           ))}
         </div>
       </div>
+
+      {questionOpen && comprehension && (
+        <ComprehensionQuestion
+          czytankaId={czytanka.id}
+          comprehension={comprehension}
+          audioBus={audioBus}
+          onClose={() => setQuestionOpen(false)}
+        />
+      )}
     </div>
   )
 }

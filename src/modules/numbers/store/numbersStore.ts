@@ -115,6 +115,45 @@ export function migrateNumbersPersist(persisted: unknown): PersistedNumbers {
   return { ...p, facts: migratedFacts, sessions }
 }
 
+/**
+ * v2 → v3: mastery przestaje być „seria z rzędu" i staje się oknem ostatnich
+ * 10 odpowiedzi (`recentOutcomes`) + zbiorem faktów zaliczonych POPRAWNIE
+ * (`factsCorrect`). Stary `factsTouched` przepisujemy na `factsCorrect` —
+ * jest to jedyne przybliżenie, jakim dysponujemy, i nie zabiera dziecku
+ * postępu; okno startuje puste, więc świeże mastery wymaga nowych odpowiedzi.
+ */
+export function migrateNumbersV3(persisted: unknown): unknown {
+  const p = (persisted ?? {}) as { concepts?: Record<string, Record<string, unknown>> }
+  if (!p.concepts || typeof p.concepts !== 'object' || Array.isArray(p.concepts)) return p
+  const concepts: Record<string, unknown> = {}
+  for (const [id, c] of Object.entries(p.concepts)) {
+    if (!c || typeof c !== 'object') continue
+    const touched = Array.isArray(c['factsTouched']) ? (c['factsTouched'] as string[]) : []
+    // Persist v1 trzymał `count-N`; bez przepisania `factsCorrect` liczyłoby
+    // te same fakty drugi raz obok zmigrowanych `count5-N`/`count10-N`.
+    const migrated = [...new Set(touched.map(migrateLegacyFactId).filter((f) => f !== null))]
+    concepts[id] = { ...c, factsCorrect: migrated, recentOutcomes: [] }
+  }
+  return { ...p, concepts }
+}
+
+/** Dopełnia pola konceptu dodane w v3 — persist sprzed migracji ich nie ma. */
+function normalizeConcepts(
+  concepts: Partial<Record<ConceptId, ConceptMastery>>,
+): Partial<Record<ConceptId, ConceptMastery>> {
+  const out: Partial<Record<ConceptId, ConceptMastery>> = {}
+  for (const [id, c] of Object.entries(concepts) as [ConceptId, ConceptMastery | undefined][]) {
+    if (!c || typeof c !== 'object') continue
+    out[id] = {
+      ...c,
+      factsTouched: Array.isArray(c.factsTouched) ? c.factsTouched : [],
+      recentOutcomes: Array.isArray(c.recentOutcomes) ? c.recentOutcomes : [],
+      factsCorrect: Array.isArray(c.factsCorrect) ? c.factsCorrect : [],
+    }
+  }
+  return out
+}
+
 const initialState = {
   facts: {} as Record<MathFactId, MathFactState>,
   concepts: {} as Partial<Record<ConceptId, ConceptMastery>>,
@@ -197,12 +236,15 @@ export const useNumbers = create<NumbersState>()(
     }),
     {
       name: 'iskierki-numbers-v1',
-      version: 2,
+      version: 3,
       // Bez `migrate` bump wersji wyrzuciłby cały postęp — `merge` sanityzuje shape.
-      migrate: (persisted, version) =>
-        (version < 2
-          ? migrateNumbersPersist(persisted)
-          : persisted) as NumbersState,
+      // Migracje łańcuchowe: persist v1 przechodzi przez obie.
+      migrate: (persisted, version) => {
+        let p: unknown = persisted
+        if (version < 2) p = migrateNumbersPersist(p)
+        if (version < 3) p = migrateNumbersV3(p)
+        return p as NumbersState
+      },
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<NumbersState>
         return {
@@ -213,7 +255,7 @@ export const useNumbers = create<NumbersState>()(
               : {},
           concepts:
             p.concepts && typeof p.concepts === 'object' && !Array.isArray(p.concepts)
-              ? p.concepts
+              ? normalizeConcepts(p.concepts)
               : {},
           sessions: Array.isArray(p.sessions)
             ? p.sessions.slice(-MAX_SESSION_HISTORY)
