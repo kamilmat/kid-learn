@@ -157,6 +157,10 @@ export const useSettings = create<SettingsStore>()(
         if (!sanitizedSettings.humorMode) {
           sanitizedSettings.humorMode = 'on'
         }
+        // Druga próba po błędzie — dodana po v4, więc stary persist jej nie ma.
+        if (typeof sanitizedSettings.secondAttempt !== 'boolean') {
+          sanitizedSettings.secondAttempt = defaultSettings.secondAttempt
+        }
         // Deep-merge: stary persist mógł zapisać `reading` bez pól dodanych później
         // (np. wildCelebrationFreq -> undefined -> NaN w useReadingSession).
         const persistedReading = sanitizedSettings.reading as Record<string, unknown> | undefined

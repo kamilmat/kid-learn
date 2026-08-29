@@ -41,6 +41,8 @@ export type UnifiedSession = SessionLog & {
   wrong: number
   /** Świadome „nie wiem" — to nie to samo co pomyłka, nie mieszamy do `wrong`. */
   dontKnow: number
+  /** Drugie podejścia do tego samego pytania (poprawki po błędzie). */
+  retries: number
 }
 
 /** Kształt logu sesji modułu 2 — `readingStore` trzyma go jako typ lokalny. */
@@ -65,25 +67,33 @@ function summarize(events: SessionEvent[]): {
   correct: number
   wrong: number
   dontKnow: number
+  retries: number
 } {
   let questions = 0
   let correct = 0
   let wrong = 0
   let dontKnow = 0
+  let retries = 0
   for (const ev of events) {
     if (ev.type !== 'answer') continue
+    // Poprawki (druga próba) liczone OSOBNO — nie są ani correct, ani wrong,
+    // żeby nie zaburzać procentów pierwszego podejścia.
+    if (ev.attempt === 2) {
+      retries++
+      continue
+    }
     questions++
     if (ev.outcome === 'correct') correct++
     else if (ev.outcome === 'dontKnow') dontKnow++
     else wrong++
   }
-  return { questions, correct, wrong, dontKnow }
+  return { questions, correct, wrong, dontKnow, retries }
 }
 
 function withSummary(
   base: Omit<
     UnifiedSession,
-    'questions' | 'correct' | 'wrong' | 'dontKnow' | 'moduleLabel'
+    'questions' | 'correct' | 'wrong' | 'dontKnow' | 'retries' | 'moduleLabel'
   >,
 ): UnifiedSession {
   return {

@@ -28,6 +28,9 @@ export type SessionEventAnswer = {
   // Indeks kafelka; do 9 kafelków przy `tilesPerQuestion` z ustawień.
   chosenPosition?: number
   responseMs: number
+  // Numer podejścia do tego samego pytania. Brak pola = 1 (stare logi).
+  // `2` = poprawka po błędzie — nie liczy się ani jako correct, ani jako wrong.
+  attempt?: 1 | 2
 }
 
 export type SessionEventPause = {
