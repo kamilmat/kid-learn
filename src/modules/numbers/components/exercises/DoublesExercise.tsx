@@ -14,13 +14,15 @@ type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
   promptKeys: string[]
-  onAnswer: (outcome: AnswerOutcome) => void
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 const DROP_TARGET_ID = 'answer-target'
 const DOT_COLOR = '#dc2626'
 
-export function DoublesExercise({ audioBus, payload, promptKeys, onAnswer }: Props) {
+export function DoublesExercise({ audioBus, payload, promptKeys, onAnswer, restrictChoicesTo }: Props) {
   const n = clamp(payload.args[0] ?? 1, 1, 10)
   const correct = n * 2
 
@@ -30,15 +32,15 @@ export function DoublesExercise({ audioBus, payload, promptKeys, onAnswer }: Pro
 
   const choices = useMemo(
     () =>
-      buildChoices(correct, { min: 1, max: 20, offsets: NEAR_MISS_OFFSETS }),
-    [correct],
+      buildChoices(correct, { restrictChoicesTo, min: 1, max: 20, offsets: NEAR_MISS_OFFSETS }),
+    [correct, restrictChoicesTo],
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
     const dropped = event.active.data.current?.['digit'] as number | undefined
     if (dropped === undefined) return
-    onAnswer(dropped === correct ? 'correct' : 'wrong')
+    onAnswer(dropped === correct ? 'correct' : 'wrong', dropped)
   }
 
   return (

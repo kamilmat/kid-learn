@@ -115,16 +115,21 @@ export function fromReadingLog(
   for (const ev of log.events) {
     // Moduł 2 nie loguje osobnego `question-start`, ale `answer` niesie cel —
     // syntetyzujemy parę, żeby "Ostatnia sesja" mogła pokazać co było pytane.
-    events.push({
-      type: 'question-start',
-      ts: ev.timestamp - ev.responseMs,
-      targetLetter: readingTargetLabel(ev.targetId),
-    })
+    // Druga próba to TO SAMO pytanie — bez własnego `question-start`, inaczej
+    // raport liczyłby je jako kolejne pytanie (jak retry w module liter).
+    if (ev.attempt !== 2) {
+      events.push({
+        type: 'question-start',
+        ts: ev.timestamp - ev.responseMs,
+        targetLetter: readingTargetLabel(ev.targetId),
+      })
+    }
     events.push({
       type: 'answer',
       ts: ev.timestamp,
       outcome: ev.outcome,
       responseMs: ev.responseMs,
+      ...(ev.attempt === 2 ? { attempt: 2 as const } : {}),
     })
   }
   return withSummary({
@@ -143,16 +148,20 @@ export function fromNumbersLog(
 ): UnifiedSession {
   const events: SessionEvent[] = []
   for (const ev of log.events) {
-    events.push({
-      type: 'question-start',
-      ts: ev.timestamp - ev.responseMs,
-      targetLetter: ev.factId,
-    })
+    // Jak wyżej — druga próba nie jest nowym pytaniem.
+    if (ev.attempt !== 2) {
+      events.push({
+        type: 'question-start',
+        ts: ev.timestamp - ev.responseMs,
+        targetLetter: ev.factId,
+      })
+    }
     events.push({
       type: 'answer',
       ts: ev.timestamp,
       outcome: ev.outcome,
       responseMs: ev.responseMs,
+      ...(ev.attempt === 2 ? { attempt: 2 as const } : {}),
     })
   }
   for (const ev of log.antiCheatEvents ?? []) {

@@ -13,6 +13,11 @@ export interface BuildChoicesOptions {
    * cały zakres [min, max].
    */
   offsets?: readonly number[]
+  /**
+   * Faza drugiej próby: zamiast generować dystraktory, pokaż dokładnie te
+   * wartości (plus poprawną). Pusta tablica / brak pola = zwykłe losowanie.
+   */
+  restrictChoicesTo?: readonly number[] | undefined
   rng?: () => number
 }
 
@@ -31,6 +36,14 @@ export const NEAR_MISS_OFFSETS = [-3, -2, -1, 1, 2, 3] as const
  */
 export function buildChoices(correct: number, options: BuildChoicesOptions): number[] {
   const { count = DEFAULT_CHOICE_COUNT, min, max, offsets, rng = Math.random } = options
+
+  // Faza retry: zamiast generować dystraktory, pokazujemy dokładnie dwie opcje —
+  // poprawną i tę, którą dziecko wybrało. Kolejność losowa (nie da się zapamiętać
+  // pozycji). Zakres [min, max] celowo NIE filtruje: wybór dziecka pokazujemy
+  // zawsze, nawet gdyby wypadł poza pulę dystraktorów.
+  if (options.restrictChoicesTo && options.restrictChoicesTo.length > 0) {
+    return shuffled(Array.from(new Set([correct, ...options.restrictChoicesTo])), rng)
+  }
 
   const pool: number[] = []
   if (offsets === undefined) {

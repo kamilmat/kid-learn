@@ -13,12 +13,14 @@ type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop'>
   payload: { args: number[] }
   promptKeys: string[]
-  onAnswer: (outcome: AnswerOutcome) => void
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 const DROP_TARGET_ID = 'tenframe-fill-target'
 
-export function TenFrameFill({ audioBus, payload, promptKeys, onAnswer }: Props) {
+export function TenFrameFill({ audioBus, payload, promptKeys, onAnswer, restrictChoicesTo }: Props) {
   const filled = clamp(payload.args[0] ?? 0, 0, 10)
   const missing = clamp(payload.args[1] ?? 10 - filled, 1, 10)
 
@@ -26,13 +28,13 @@ export function TenFrameFill({ audioBus, payload, promptKeys, onAnswer }: Props)
     for (const key of promptKeys) void audioBus.play(key)
   }, [audioBus, promptKeys])
 
-  const choices = useMemo(() => buildChoices(missing, { min: 1, max: 10 }), [missing])
+  const choices = useMemo(() => buildChoices(missing, { restrictChoicesTo, min: 1, max: 10 }), [missing, restrictChoicesTo])
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id !== DROP_TARGET_ID) return
     const dropped = event.active.data.current?.['digit'] as number | undefined
     if (dropped === undefined) return
-    onAnswer(dropped === missing ? 'correct' : 'wrong')
+    onAnswer(dropped === missing ? 'correct' : 'wrong', dropped)
   }
 
   return (

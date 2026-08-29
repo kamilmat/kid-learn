@@ -84,13 +84,19 @@ export function SessionView({
   // Także podczas feedbacku: overlay auto-znika, ale dziecko może odejść w trakcie.
   useIdleDetector({
     thresholdMs: 20_000,
-    enabled: session.status === 'asking' || session.status === 'feedback',
+    enabled:
+      session.status === 'asking' ||
+      session.status === 'retry' ||
+      session.status === 'feedback',
     onIdle: () => session.pause(),
   })
 
   // Anti-cheat: page visibility — auto-pauza gdy dziecko opuszcza tab
   usePageVisibility({
-    enabled: session.status === 'asking' || session.status === 'feedback',
+    enabled:
+      session.status === 'asking' ||
+      session.status === 'retry' ||
+      session.status === 'feedback',
     onHidden: () => session.pause(),
     onVisible: () => {
       // pauza pozostaje aktywna — dziecko musi tapnąć Wznów (celowe)

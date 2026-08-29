@@ -77,6 +77,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
     questionCount: settings.numbers?.questionCount ?? 8,
     skipCountStep: settings.numbers?.skipCountStep ?? 'mixed',
     treeCelebrationsOn: settings.numbers?.treeCelebrationsOn ?? true,
+    secondAttempt: settings.secondAttempt,
   })
   const seenIntros = useNumbers((s) => s.seenIntros)
   const markIntroSeen = useNumbers((s) => s.markIntroSeen)
@@ -92,7 +93,10 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
 
   // Anti-cheat: wyjście z zakładki / zablokowanie iPada → auto-pauza.
   usePageVisibility({
-    enabled: session.status === 'asking' || session.status === 'feedback',
+    enabled:
+      session.status === 'asking' ||
+      session.status === 'retry' ||
+      session.status === 'feedback',
     onHidden: () => session.pause('visibility'),
     onVisible: () => {
       // Celowo bez auto-wznowienia — dziecko musi tapnąć Wznów.
@@ -139,7 +143,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
   // i nic nie tapie, a auto-pauza ucinała je w pół zdania.
   useIdleDetector({
     thresholdMs: IDLE_THRESHOLD_MS,
-    enabled: session.status === 'asking' && !showIntro,
+    enabled: (session.status === 'asking' || session.status === 'retry') && !showIntro,
     onIdle: () => session.pause('idle'),
   })
 
@@ -195,9 +199,22 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
   }, [audioBus, session.currentQuestion])
 
   const handleDontKnow = useCallback(() => {
+    // 🤷 w drugiej próbie = druga pomyłka: hiperkorekcja i lecimy dalej.
+    if (session.status === 'retry') {
+      session.answer('wrong', 2)
+      return
+    }
     session.answer('dontKnow')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.answer])
+  }, [session.answer, session.status])
+
+  const handleAnswer = useCallback(
+    (outcome: AnswerOutcome, chosenValue?: number) => {
+      session.answer(outcome, session.status === 'retry' ? 2 : 1, chosenValue)
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [session.answer, session.status],
+  )
 
   if (session.status === 'ended') {
     return (
@@ -252,7 +269,10 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
         <ExerciseRouter
           question={session.currentQuestion}
           audioBus={audioBus}
-          onAnswer={session.answer}
+          onAnswer={handleAnswer}
+          {...(session.status === 'retry' && session.retryChoices !== null
+            ? { restrictChoicesTo: session.retryChoices }
+            : {})}
         />
       </div>
       {/* Overlay ZOSTAJE zamontowany pod pauzą — unmount/remount kasował
@@ -266,6 +286,7 @@ export function SessionView({ level, audioBus, settings, onExit, onTree, quitRef
           onAdvance={session.advance}
           paused={session.status === 'paused'}
           strategyKey={strategyKey}
+          attempt={session.lastAttempt}
           {...(session.praiseKey !== null ? { praiseKey: session.praiseKey } : {})}
         />
       )}
@@ -288,17 +309,21 @@ type ExerciseProps = {
    * bo tylko on widzi całe `Question`; ćwiczenie zna jedynie `payload`.
    */
   promptKeys: string[]
-  onAnswer: (outcome: AnswerOutcome) => void
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  /** Faza drugiej próby: dokładnie te dwie wartości zamiast dystraktorów. */
+  restrictChoicesTo?: number[]
 }
 
 function ExerciseRouter({
   question,
   audioBus,
   onAnswer,
+  restrictChoicesTo,
 }: {
   question: Question
   audioBus: Pick<AudioBus, 'play' | 'stop'>
-  onAnswer: (outcome: AnswerOutcome) => void
+  onAnswer: (outcome: AnswerOutcome, chosenValue?: number) => void
+  restrictChoicesTo?: number[]
 }) {
   // Stabilna referencja — tablica trafia do deps `useEffect` ćwiczeń.
   const promptKeys = useMemo(() => promptAudioKeys(question), [question])
@@ -307,6 +332,7 @@ function ExerciseRouter({
     payload: question.payload as { args: number[] },
     promptKeys,
     onAnswer,
+    ...(restrictChoicesTo !== undefined ? { restrictChoicesTo } : {}),
   }
   // Re-mount na zmianę question.factId — gwarantuje czysty stan ćwiczenia
   return <ExerciseSwitch key={question.factId} type={question.exerciseType} props={props} />
@@ -474,6 +500,7 @@ export function FeedbackOverlay({
   praiseKey,
   paused = false,
   strategyKey = null,
+  attempt = 1,
 }: {
   outcome: AnswerOutcome
   correctValue: number | null
@@ -485,6 +512,8 @@ export function FeedbackOverlay({
   paused?: boolean
   /** Nazwa strategii grana po korekcie; null = limit sesji wyczerpany. */
   strategyKey?: string | null
+  /** `2` = poprawka w drugiej próbie: cicha pochwała zamiast pełnej. */
+  attempt?: 1 | 2
 }) {
   const onAdvanceRef = useRef(onAdvance)
   // Prop czytany przez ref: rodzic dobija licznik jeszcze w trakcie feedbacku,
@@ -503,7 +532,7 @@ export function FeedbackOverlay({
   useEffect(() => {
     elapsedRef.current = 0
     firstRunRef.current = true
-  }, [outcome, correctValue, praiseKey])
+  }, [outcome, correctValue, praiseKey, attempt])
 
   useEffect(() => {
     if (paused) return
@@ -518,7 +547,11 @@ export function FeedbackOverlay({
     if (firstRunRef.current) audioBus.stop()
     firstRunRef.current = false
     const plays: Array<Promise<unknown>> = []
-    if (outcome === 'correct') {
+    if (outcome === 'correct' && attempt === 2) {
+      // Druga próba trafiona: cicha pochwała za autokorektę — bez pochwały
+      // z puli, bo iskierki za to nie ma i fanfara byłaby obietnicą nagrody.
+      plays.push(settled(audioBus.play('retry-correct')))
+    } else if (outcome === 'correct') {
       const praise =
         praiseKey ?? NUMBERS_PRAISE_KEYS[Math.floor(Math.random() * NUMBERS_PRAISE_KEYS.length)]!
       plays.push(settled(audioBus.play(praise)))
@@ -559,7 +592,7 @@ export function FeedbackOverlay({
       if (timer !== undefined) clearTimeout(timer)
       if (safetyTimer !== undefined) clearTimeout(safetyTimer)
     }
-  }, [outcome, correctValue, audioBus, praiseKey, paused])
+  }, [outcome, correctValue, audioBus, praiseKey, paused, attempt])
 
   const bg =
     outcome === 'correct' ? 'rgba(22, 163, 74, 0.85)' : 'rgba(239, 68, 68, 0.85)'

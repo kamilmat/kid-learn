@@ -67,7 +67,14 @@ export type ReadingPraiseKey =
   | (typeof READING_PRAISE_KEYS)[number]
   | (typeof READING_PRAISE_PROCESS_KEYS)[number]
 
-export type Status = 'idle' | 'asking' | 'feedback' | 'paused' | 'complete' | 'wild-celebration'
+export type Status =
+  | 'idle'
+  | 'asking'
+  | 'feedback'
+  | 'retry'
+  | 'paused'
+  | 'complete'
+  | 'wild-celebration'
 export type FeedbackVariant = null | 'correct' | 'wrong' | 'dontKnow' | 'wild'
 
 export type SessionResult = {
@@ -421,6 +428,12 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   // Ostatnia zagrana pochwała — picker nie powtarza jej dwa razy pod rząd
   const lastPraiseRef = useRef<ReadingPraiseKey | null>(null)
 
+  // Druga próba po błędzie: pytanie przycięte do dwóch kafelków czeka tu, aż
+  // wybrzmi feedback korekty. `retryPendingRef` chroni je przed `advance()` —
+  // także gdy dziecko tapnie overlay albo złapie pauzę w trakcie feedbacku.
+  const retryQuestionRef = useRef<ReadingQuestion | null>(null)
+  const retryPendingRef = useRef(false)
+
   const questionsPerSession =
     settings.reading.questionsPerSession[level] ?? DEFAULT_QUESTIONS_PER_SESSION
 
@@ -519,6 +532,11 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
         throw new Error(`useReadingSession: nie można wygenerować pytania dla "${level}"`)
       }
 
+      // Nowe pytanie zamyka temat drugiej próby — zaległy ref przeniósłby
+      // kafelki poprzedniego pytania na kolejny błąd.
+      retryPendingRef.current = false
+      retryQuestionRef.current = null
+
       questionStartedAtRef.current = nowMs
       currentQuestionIndexRef.current = questionIndex
       setCurrentQuestionIndex(questionIndex)
@@ -587,13 +605,16 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     [audioBus],
   )
 
-  // Obsługuje outcome (correct/wrong/dontKnow) dla aktualnego pytania
+  // Obsługuje outcome (correct/wrong/dontKnow) dla aktualnego pytania.
+  // `attempt === 2` to poprawka w drugiej próbie: nie rusza SRS, liczników,
+  // iskierek ani kropek postępu — pierwsza pomyłka zostaje pomyłką.
   const handleOutcome = useCallback(
-    (outcome: Outcome): void => {
+    (outcome: Outcome, attempt: 1 | 2 = 1, chosen?: string): void => {
       const q = currentQuestionRef.current
       if (!q) return
 
       const isCorrect = outcome === 'correct'
+      const isFirstAttempt = attempt === 1
       // Nowa karta w albumie — cue audio dokleja się do kolejki feedbacku
       let unlockedAlbumCard = false
 
@@ -601,13 +622,15 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
       let targetId: string
       if (q.type === 'syllable-match') {
         targetId = getSyllableId(q.targetSyllable)
-        updateSyllableState(targetId, outcome)
+        if (isFirstAttempt) updateSyllableState(targetId, outcome)
       } else {
         targetId = ALL_WORDS.find((w) => w.text === q.targetWord)?.id ?? `word-${q.targetWord}`
-        const newlyMastered = updateWordState(targetId, outcome)
-        if (newlyMastered) {
-          newAlbumWordsRef.current = [...newAlbumWordsRef.current, targetId]
-          unlockedAlbumCard = true
+        if (isFirstAttempt) {
+          const newlyMastered = updateWordState(targetId, outcome)
+          if (newlyMastered) {
+            newAlbumWordsRef.current = [...newAlbumWordsRef.current, targetId]
+            unlockedAlbumCard = true
+          }
         }
       }
 
@@ -622,11 +645,34 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
           outcome,
           responseMs: Math.max(0, answeredAt - questionStartedAtRef.current),
           timestamp: answeredAt,
+          ...(attempt === 2 ? { attempt: 2 as const } : {}),
         },
       ]
 
-      // Zapisz wynik pytania (pushowany do questionOutcomes w advance)
-      pendingOutcomeRef.current = isCorrect ? 'correct' : outcome === 'wrong' ? 'wrong' : 'dontKnow'
+      // Zapisz wynik pytania (pushowany do questionOutcomes w advance).
+      // Kropka postępu opisuje PIERWSZE podejście — poprawka nie zamalowuje błędu.
+      if (isFirstAttempt) {
+        pendingOutcomeRef.current = isCorrect
+          ? 'correct'
+          : outcome === 'wrong'
+            ? 'wrong'
+            : 'dontKnow'
+      }
+
+      // Druga próba trafiona: cicha pochwała za autokorektę — bez dinga,
+      // bez pochwały z puli, bez iskierki i bez wild celebration.
+      if (!isFirstAttempt) {
+        const retryPlays: Promise<unknown>[] = isCorrect
+          ? [audioBus.play('retry-correct')]
+          : playCorrectionAudio(outcome === 'wrong' ? 'wrong' : 'dontKnow', q)
+        feedbackAudioRef.current = Promise.all(retryPlays)
+        setFeedbackVariant(isCorrect ? 'correct' : outcome === 'wrong' ? 'wrong' : 'dontKnow')
+        setStatus('feedback')
+        statusRef.current = 'feedback'
+        feedbackStartedAtRef.current = answeredAt
+        feedbackElapsedBeforePauseRef.current = 0
+        return
+      }
 
       // Zaktualizuj liczniki
       const plays: Promise<unknown>[] = []
@@ -674,6 +720,30 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
 
       if (unlockedAlbumCard) plays.push(audioBus.play('reading-album-unlock'))
 
+      // Pierwsza pomyłka z wyborem kafelka → druga próba zamiast przejścia dalej.
+      // `word-assembly` (drag-drop) jest wyłączone: nie ma tam „dwóch opcji",
+      // z których dziecko mogłoby wybrać. „Nie wiem" też nie — dziecko nie
+      // postawiło hipotezy, więc nie ma czego korygować.
+      if (
+        outcome === 'wrong' &&
+        settings.secondAttempt &&
+        q.type !== 'word-assembly' &&
+        chosen !== undefined
+      ) {
+        const correctChoice =
+          q.type === 'syllable-match'
+            ? q.targetSyllable
+            : q.type === 'word-choice'
+              ? q.targetWord
+              : q.missingSyllable
+        plays.push(audioBus.play('try-again'))
+        retryQuestionRef.current = {
+          ...q,
+          choices: shuffled(Array.from(new Set([correctChoice, chosen])), rng),
+        }
+        retryPendingRef.current = true
+      }
+
       // Overlay feedbacku auto-advance'uje gdy ta kolejka wybrzmi (min. MIN_FEEDBACK_MS)
       feedbackAudioRef.current = Promise.all(plays)
 
@@ -719,6 +789,8 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
 
   // Przechodzi do następnego pytania lub kończy sesję
   const advance = useCallback((): void => {
+    retryPendingRef.current = false
+    retryQuestionRef.current = null
     // Pushuj wynik zakończonego pytania do questionOutcomes
     if (pendingOutcomeRef.current !== null) {
       const outcome = pendingOutcomeRef.current
@@ -769,6 +841,8 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     finishedRef.current = false
     feedbackAudioRef.current = Promise.resolve()
     lastPraiseRef.current = null
+    retryPendingRef.current = false
+    retryQuestionRef.current = null
 
     // Oblicz jitter dla tej sesji: ±2
     wildJitterRef.current = Math.floor(rng() * 5) - 2  // -2, -1, 0, 1, 2
@@ -803,7 +877,8 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
 
   const submitAnswer = useCallback(
     (answer: string): void => {
-      if (statusRef.current !== 'asking') return
+      const st = statusRef.current
+      if (st !== 'asking' && st !== 'retry') return
       const q = currentQuestionRef.current
       if (!q) return
 
@@ -823,13 +898,20 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
           break
       }
 
-      handleOutcome(isCorrect ? 'correct' : 'wrong')
+      handleOutcome(isCorrect ? 'correct' : 'wrong', st === 'retry' ? 2 : 1, answer)
     },
     [handleOutcome],
   )
 
   const submitDontKnow = useCallback((): void => {
-    if (statusRef.current !== 'asking') return
+    const st = statusRef.current
+    if (st !== 'asking' && st !== 'retry') return
+    // 🤷 w drugiej próbie = druga pomyłka: hiperkorekcja (cel jeszcze raz)
+    // i lecimy dalej. Trzeciej próby nie ma.
+    if (st === 'retry') {
+      handleOutcome('wrong', 2)
+      return
+    }
     handleOutcome('dontKnow')
   }, [handleOutcome])
 
@@ -841,17 +923,58 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     void audioBus.play('correction-prefix')
   }, [audioBus])
 
+  /**
+   * Wchodzi w drugą próbę: to samo pytanie z dwoma kafelkami (poprawny +
+   * wybrany przez dziecko). Bez timera — autokorekta ma być momentem myślenia.
+   * `replayCue` gra `try-again` ponownie, gdy poprzednie `stop()` je ucięło.
+   */
+  const enterRetry = useCallback(
+    (replayCue: boolean): void => {
+      const retryQuestion = retryQuestionRef.current
+      if (retryQuestion === null) return
+      retryPendingRef.current = false
+      setFeedbackVariant(null)
+      feedbackVariantRef.current = null
+      setCurrentQuestion(retryQuestion)
+      currentQuestionRef.current = retryQuestion
+      questionStartedAtRef.current = now()
+      setStatus('retry')
+      statusRef.current = 'retry'
+      if (replayCue) void audioBus.play('try-again')
+    },
+    [audioBus, now],
+  )
+
+  // Po wybrzmieniu feedbacku: druga próba (jeśli zaplanowana) albo dalej.
+  const finishFeedback = useCallback(
+    (replayCue: boolean): void => {
+      if (retryPendingRef.current && retryQuestionRef.current !== null) {
+        enterRetry(replayCue)
+        return
+      }
+      advance()
+    },
+    [advance, enterRetry],
+  )
+
   const skipFeedback = useCallback((viaTap = false): void => {
     if (statusRef.current !== 'feedback') return
     audioBus.stop()
     // „Każdy klik mówi co zrobił" — krótkie cue potwierdzające tap; prompt
     // następnego pytania dokleja się za nim w kolejce FIFO.
     if (viaTap) void audioBus.play('nav-tap')
-    advance()
-  }, [advance, audioBus])
+    // Tap skraca wybrzmiewanie, ale NIE kasuje drugiej próby — jedna dodatkowa
+    // próba należy się dziecku zawsze. `stop()` ucięło `try-again`, więc przy
+    // tapie gramy je jeszcze raz.
+    finishFeedback(viaTap)
+  }, [audioBus, finishFeedback])
 
   const pause = useCallback((): void => {
-    if (statusRef.current === 'asking' || statusRef.current === 'feedback') {
+    if (
+      statusRef.current === 'asking' ||
+      statusRef.current === 'feedback' ||
+      statusRef.current === 'retry'
+    ) {
       if (statusRef.current === 'feedback') {
         // Zamrażamy licznik na czas pauzy — resume() dolicza tylko RESZTĘ
         // MIN_FEEDBACK_MS, nie liczy czasu spędzonego na pauzie.
@@ -875,6 +998,12 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
     setStatus(restored)
     statusRef.current = restored
     void audioBus.play('nav-resume')
+    // Pauza złapana na ekranie drugiej próby: `pause()` zrobiło `stop()`, więc
+    // bez ponownego `try-again` dziecko wraca do dwóch kafelków bez wyjaśnienia.
+    if (restored === 'retry') {
+      void audioBus.play('try-again')
+      return
+    }
     // Pauza w trakcie feedbacku ucięła kolejkę audio (`stop()` w pause), więc
     // po wznowieniu overlay stałby w ciszy — a przy wariancie 'wild' nikt już
     // nie zawołałby skipFeedback i sesja zostawała zakleszczona na zawsze.
@@ -896,7 +1025,8 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
           statusRef.current === 'feedback' &&
           currentQuestionIndexRef.current === questionIndexAtResume
         ) {
-          advance()
+          // `pause()` ucięło `try-again` razem z korektą — retry musi je powtórzyć.
+          finishFeedback(true)
         }
       })
       return
@@ -917,10 +1047,10 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
         statusRef.current === 'feedback' &&
         currentQuestionIndexRef.current === questionIndexAtResume
       ) {
-        advance()
+        finishFeedback(false)
       }
     }, remaining)
-  }, [advance, audioBus, playCorrectionAudio])
+  }, [audioBus, finishFeedback, playCorrectionAudio])
 
   const repeatAudio = useCallback((): void => {
     const q = currentQuestionRef.current
