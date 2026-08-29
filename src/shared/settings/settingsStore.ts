@@ -134,7 +134,7 @@ export const useSettings = create<SettingsStore>()(
         mathGateState: state.mathGateState,
         parentGateUnlockedUntil: state.parentGateUnlockedUntil,
       }),
-      version: 5,
+      version: 6,
       // Bez `migrate` zustand ODRZUCA persist przy niezgodnej wersji (merge dostaje
       // undefined) — przepuszczamy blob dalej, resztę roboty robi `merge` poniżej.
       //
@@ -153,6 +153,16 @@ export const useSettings = create<SettingsStore>()(
           // zostaje jako override.
           if (numbers && numbers.questionCount === 8) {
             delete numbers.questionCount
+          }
+        }
+        if (version < 6) {
+          // v5 → v6: domyślny tryb promptu liter wraca do „jak się czyta"
+          // (nagrania rodzica). `both` z v5 nie było wyborem rodzica, tylko
+          // ówczesnym defaultem — nadpisujemy; inne wartości zostają.
+          const s = p.settings as unknown as Record<string, unknown> | undefined
+          const letters = s?.letters as Record<string, unknown> | undefined
+          if (letters && letters.promptMode === 'both') {
+            letters.promptMode = 'phoneme'
           }
         }
         return p

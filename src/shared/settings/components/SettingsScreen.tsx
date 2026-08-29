@@ -173,9 +173,9 @@ const STYLE_OPTIONS: StyleMode[] = [
 ]
 
 const PROMPT_MODE_LABELS: Record<PromptMode, string> = {
-  phoneme: 'Sam dźwięk (b)',
-  name: 'Sama nazwa (be)',
-  both: 'Nazwa i dźwięk (be… b)',
+  phoneme: 'Jak się czyta (by, ny) — nagrania',
+  name: 'Nazwa litery (be, en)',
+  both: 'Nazwa i dźwięk (be… by)',
 }
 const PROMPT_MODE_OPTIONS: PromptMode[] = ['phoneme', 'name', 'both']
 // Sentinel w selectach per poziom — pusty string znaczy "brak override, bierz

@@ -2,29 +2,32 @@ import { slugPl } from '@/shared/audio/slugPl'
 import type { PromptMode } from '@/shared/settings/types'
 
 /**
- * W trybie `both` kolejność to NAZWA → FONEM: nazwa identyfikuje literę, a fonem
- * zostaje ostatnim bodźcem przed wyborem — to on jest potrzebny do scalania
- * głosek w słowo (Piasta & Wagner 2010). Brak pliku nie boli: `play()` zwraca
- * `false`, kolejka idzie dalej, a przy `both` dziecko usłyszy przynajmniej nazwę.
+ * Tryb `phoneme` = „jak się czyta" (b → „by", n → „ny"): klucze `letter-<x>`,
+ * czyli nagrania rodzica z `manual-overrides/` — to była wymowa modułu od
+ * początku i user wprost ją potwierdził (fonemy Azure `phon-*` zostają w repo,
+ * ale nie grają). W trybie `both` kolejność to NAZWA → DŹWIĘK; dla samogłosek
+ * nazwa = dźwięk, więc gra sam dźwięk (inaczej „a… a"). `ó` ma osobną nazwę
+ * („u zamknięte"), więc nie jest wyjątkiem.
  */
-// Samogłoski (a, e, i, o, u, y, ą, ę) nazywa się tak samo, jak brzmią — w trybie
-// `both` grałoby „a… a", więc dla nich zostaje sam fonem. `ó` ma inną nazwę
-// („u zamknięte"), więc nie jest tu wyjątkiem.
-const NAME_EQUALS_PHONEME = new Set(['a', 'e', 'i', 'o', 'u', 'y', 'ą', 'ę'])
+const NAME_EQUALS_SOUND = new Set(['a', 'e', 'i', 'o', 'u', 'y', 'ą', 'ę'])
+
+export function soundKey(letter: string): string {
+  return `letter-${letter.toLowerCase()}`
+}
 
 export function promptAudioKeys(letter: string, mode: PromptMode): string[] {
   const slug = slugPl(letter)
-  if (mode === 'both' && NAME_EQUALS_PHONEME.has(letter.toLowerCase())) {
-    return [`phon-${slug}`]
+  if (mode === 'both' && NAME_EQUALS_SOUND.has(letter.toLowerCase())) {
+    return [soundKey(letter)]
   }
   switch (mode) {
     case 'phoneme':
-      return [`phon-${slug}`]
+      return [soundKey(letter)]
     case 'name':
       return [`letter-name-${slug}`]
     case 'both':
-      return [`letter-name-${slug}`, `phon-${slug}`]
+      return [`letter-name-${slug}`, soundKey(letter)]
     default:
-      return [`phon-${slug}`]
+      return [soundKey(letter)]
   }
 }

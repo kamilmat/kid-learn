@@ -233,8 +233,8 @@ describe('getEffectiveTimeLimit', () => {
 })
 
 describe('getEffectivePromptMode', () => {
-  it('returns default `both` when no override', () => {
-    expect(getEffectivePromptMode(defaultSettings, 'iskierka')).toBe('both')
+  it('returns default `phoneme` when no override', () => {
+    expect(getEffectivePromptMode(defaultSettings, 'iskierka')).toBe('phoneme')
   })
 
   it('returns per-level override when present, over the global default', () => {

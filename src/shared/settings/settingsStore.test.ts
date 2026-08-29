@@ -360,14 +360,14 @@ describe('letters.promptMode sanitization on rehydrate', () => {
     return useSettings.getState().settings.letters
   }
 
-  it('falls back to default `both` when promptMode is invalid', () => {
+  it('falls back to default `phoneme` when promptMode is invalid', () => {
     expect(persist({ promptMode: 'invalid', promptModeByLevel: {} })).toEqual(
-      { promptMode: 'both', promptModeByLevel: {} },
+      { promptMode: 'phoneme', promptModeByLevel: {} },
     )
   })
 
-  it('falls back to default `both` when promptMode is missing entirely', () => {
-    expect(persist({ promptModeByLevel: {} }).promptMode).toBe('both')
+  it('falls back to default `phoneme` when promptMode is missing entirely', () => {
+    expect(persist({ promptModeByLevel: {} }).promptMode).toBe('phoneme')
   })
 
   it('keeps a valid promptMode value', () => {
