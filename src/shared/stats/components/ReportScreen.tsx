@@ -26,8 +26,7 @@ import { CONCEPTS } from '@/modules/numbers/data/concepts'
 import { LettersSection } from './LettersSection'
 import { CollapsibleSection } from './CollapsibleSection'
 import { NextStepCard } from './NextStepCard'
-import { streakDays } from './ActivitySection'
-import { ActivitySection } from './ActivitySection'
+import { ActivitySection, streakDays } from './ActivitySection'
 import { LiveSessionSection } from './LiveSessionSection'
 import { SuggestionsSection } from './SuggestionsSection'
 import { AntiCheatSection, collectFlagsForRecentSessions } from './AntiCheatSection'
@@ -443,7 +442,10 @@ export function ReportScreen({
       ? `${nextSteps.length - 1} dodatkowych wskazówek`
       : 'Wskazówki dla rodzica'
 
-  const flagCount = collectFlagsForRecentSessions(allSessions, 5).length
+  const flagCount = useMemo(
+    () => collectFlagsForRecentSessions(allSessions, 5).length,
+    [allSessions],
+  )
   const flagsSummary =
     flagCount === 0
       ? 'Brak flag w ostatnich sesjach'
