@@ -337,3 +337,51 @@ describe('activeLettersOverride validation on rehydrate', () => {
     expect(persist({ iskierka: ['ż', 'ó', 'ś'] })).toEqual({})
   })
 })
+
+describe('letters.promptMode sanitization on rehydrate', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSettings.getState()._resetForTests()
+  })
+
+  const persist = (letters: unknown) => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        state: {
+          settings: { ...defaultSettings, letters },
+          mathGateState: initialMathGateState,
+          parentGateUnlockedUntil: 0,
+        },
+        version: 4,
+      }),
+    )
+    useSettings.persist.rehydrate()
+    return useSettings.getState().settings.letters
+  }
+
+  it('falls back to default `both` when promptMode is invalid', () => {
+    expect(persist({ promptMode: 'invalid', promptModeByLevel: {} })).toEqual(
+      { promptMode: 'both', promptModeByLevel: {} },
+    )
+  })
+
+  it('falls back to default `both` when promptMode is missing entirely', () => {
+    expect(persist({ promptModeByLevel: {} }).promptMode).toBe('both')
+  })
+
+  it('keeps a valid promptMode value', () => {
+    expect(persist({ promptMode: 'phoneme', promptModeByLevel: {} }).promptMode).toBe(
+      'phoneme',
+    )
+  })
+
+  it('drops invalid per-level promptMode overrides but keeps valid ones', () => {
+    expect(
+      persist({
+        promptMode: 'both',
+        promptModeByLevel: { iskierka: 'name', plomyk: 'nonsense' },
+      }).promptModeByLevel,
+    ).toEqual({ iskierka: 'name' })
+  })
+})
