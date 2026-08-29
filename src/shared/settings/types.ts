@@ -21,6 +21,20 @@ export type HumorMode = 'on' | 'off'
 export type WordAnimations = 'on' | 'off'
 export type SkipCountStep = 2 | 5 | 10 | 'mixed'
 
+// Moduł 1: jak brzmi prompt litery. `phoneme` = sam dźwięk („b"), `name` =
+// nazwa litery („be"), `both` = nazwa + dźwięk („be… b"). Typ mieszka w
+// settings, nie w module liter — inaczej `promptKeys.ts` i settings tworzyłyby
+// cykl importów.
+export type PromptMode = 'phoneme' | 'name' | 'both'
+
+// Ustawienia modułu 1 (litery)
+export type LettersSettings = {
+  // Domyślny tryb promptu dla wszystkich poziomów.
+  promptMode: PromptMode
+  // Override per poziom; brak klucza = `promptMode`.
+  promptModeByLevel: Partial<Record<Level, PromptMode>>
+}
+
 // Ustawienia modułu 3 (matematyka) — sekcja 12 spec
 export type NumbersSettings = {
   // Iskra "thinking aloud" — competent other (Wygotski). Default true.
@@ -54,6 +68,8 @@ export type Settings = {
   // Druga próba po błędzie: to samo pytanie z 2 kafelkami (poprawny + wybrany).
   // Pierwsza pomyłka i tak trafia do SRS — retry uczy autokorekty, nie kasuje błędu.
   secondAttempt: boolean
+  // Ustawienia modułu liter (moduł 1)
+  letters: LettersSettings
   // Ustawienia modułu czytania
   reading: {
     wordAnimations: WordAnimations

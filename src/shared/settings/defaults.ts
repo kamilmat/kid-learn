@@ -3,14 +3,23 @@
 import type {
   CaseMode,
   HumorMode,
+  LettersSettings,
   Level,
   NumbersSettings,
+  PromptMode,
   Settings,
   StyleMode,
   TilesPerQuestion,
   TimeLimit,
   WordAnimations,
 } from './types'
+
+// Moduł 1: default `both` (nazwa → fonem). Sama nazwa nie wystarcza do scalania
+// głosek, sam fonem bywa nieidentyfikowalny — para uczy obu (Piasta & Wagner 2010).
+export const LETTERS_DEFAULTS: LettersSettings = {
+  promptMode: 'both',
+  promptModeByLevel: {},
+}
 
 // Sekcja 12 spec: defaulty modułu 3 (matematyka)
 export const NUMBERS_DEFAULTS: NumbersSettings = {
@@ -122,6 +131,7 @@ export const defaultSettings: Settings = {
   tilesPerQuestion: {},
   humorMode: 'on' as HumorMode,
   secondAttempt: true,
+  letters: LETTERS_DEFAULTS,
   reading: {
     wordAnimations: 'on' as WordAnimations,
     wildCelebrationFreq: 8,
@@ -140,6 +150,22 @@ export function getEffectiveTilesPerQuestion(
 ): TilesPerQuestion {
   return (
     settings.tilesPerQuestion?.[level] ?? levelDefaults[level].tilesPerQuestion
+  )
+}
+
+/**
+ * Zwraca efektywny tryb promptu litery dla poziomu — override z
+ * `settings.letters.promptModeByLevel[level]` jeśli ustawiony, inaczej globalny
+ * `settings.letters.promptMode`.
+ */
+export function getEffectivePromptMode(
+  settings: Settings,
+  level: Level,
+): PromptMode {
+  return (
+    settings.letters?.promptModeByLevel?.[level] ??
+    settings.letters?.promptMode ??
+    LETTERS_DEFAULTS.promptMode
   )
 }
 

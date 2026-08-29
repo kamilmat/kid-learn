@@ -21,6 +21,7 @@ import type {
   DefaultLevelSetting,
   HumorMode,
   Level,
+  PromptMode,
   SessionLength,
   StyleMode,
   TilesPerQuestion,
@@ -171,6 +172,16 @@ const STYLE_OPTIONS: StyleMode[] = [
   'mieszane-per-pytanie',
   'oba-na-kafelku',
 ]
+
+const PROMPT_MODE_LABELS: Record<PromptMode, string> = {
+  phoneme: 'Sam dźwięk (b)',
+  name: 'Sama nazwa (be)',
+  both: 'Nazwa i dźwięk (be… b)',
+}
+const PROMPT_MODE_OPTIONS: PromptMode[] = ['phoneme', 'name', 'both']
+// Sentinel w selectach per poziom — pusty string znaczy "brak override, bierz
+// wartość globalną". Jedyna wartość, której nie da się pomylić z PromptMode.
+const PROMPT_MODE_INHERIT = ''
 
 const SESSION_LENGTH_OPTIONS: SessionLength[] = [5, 10, 15]
 const TIME_LIMIT_OPTIONS: TimeLimit[] = ['off', 10, 15, 20, 25]
@@ -417,6 +428,85 @@ export function SettingsScreen({
             </label>
           )
         })}
+      </section>
+
+      {/* Prompt litery (moduł 1) — fonem / nazwa / oba */}
+      <section style={sectionStyle} data-testid="section-prompt-mode">
+        <div style={labelStyle}>Jak czytamy literę</div>
+        <div style={{ fontSize: 13, color: '#6b7280' }}>
+          „Nazwa i dźwięk” uczy jednego i drugiego: nazwa identyfikuje literę, a
+          dźwięk (fonem) jest tym, co dziecko scala w słowo przy czytaniu.
+        </div>
+        <select
+          data-testid="prompt-mode"
+          aria-label="Jak czytamy literę"
+          value={settings.letters.promptMode}
+          onChange={(e) => {
+            updateSetting('letters', {
+              ...settings.letters,
+              promptMode: e.target.value as PromptMode,
+            })
+          }}
+          style={selectStyle}
+        >
+          {PROMPT_MODE_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {PROMPT_MODE_LABELS[opt]}
+            </option>
+          ))}
+        </select>
+        <details data-testid="prompt-mode-advanced" style={{ marginTop: 8 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 14, color: '#6b7280' }}>
+            Zaawansowane: inny tryb na wybranym poziomie
+          </summary>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}
+          >
+            {LEVELS.map((level) => {
+              const override = settings.letters.promptModeByLevel[level]
+              return (
+                <label
+                  key={level}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <span>{LEVEL_LABELS[level]}</span>
+                  <select
+                    data-testid={`prompt-mode-${level}`}
+                    aria-label={`Jak czytamy literę na poziomie ${LEVEL_LABELS[level]}`}
+                    value={override ?? PROMPT_MODE_INHERIT}
+                    onChange={(e) => {
+                      const next = { ...settings.letters.promptModeByLevel }
+                      if (e.target.value === PROMPT_MODE_INHERIT) {
+                        delete next[level]
+                      } else {
+                        next[level] = e.target.value as PromptMode
+                      }
+                      updateSetting('letters', {
+                        ...settings.letters,
+                        promptModeByLevel: next,
+                      })
+                    }}
+                    style={selectStyle}
+                  >
+                    <option value={PROMPT_MODE_INHERIT}>
+                      jak wyżej ({PROMPT_MODE_LABELS[settings.letters.promptMode]})
+                    </option>
+                    {PROMPT_MODE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {PROMPT_MODE_LABELS[opt]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )
+            })}
+          </div>
+        </details>
       </section>
 
       {/* Długość sesji */}

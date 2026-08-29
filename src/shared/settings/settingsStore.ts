@@ -161,6 +161,13 @@ export const useSettings = create<SettingsStore>()(
         if (typeof sanitizedSettings.secondAttempt !== 'boolean') {
           sanitizedSettings.secondAttempt = defaultSettings.secondAttempt
         }
+        // Deep-merge modułu 1 (`letters.promptMode`) — pole dodane po v4, stary
+        // persist go nie ma; bez tego `promptMode` byłoby `undefined`.
+        const persistedLetters = sanitizedSettings.letters as Record<string, unknown> | undefined
+        sanitizedSettings.letters = {
+          ...defaultSettings.letters,
+          ...(persistedLetters ?? {}),
+        }
         // Deep-merge: stary persist mógł zapisać `reading` bez pól dodanych później
         // (np. wildCelebrationFreq -> undefined -> NaN w useReadingSession).
         const persistedReading = sanitizedSettings.reading as Record<string, unknown> | undefined

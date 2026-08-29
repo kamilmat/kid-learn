@@ -53,14 +53,14 @@ describe('SessionView — integration', () => {
       />,
     )
     // Find the correct tile by inspecting data-letter on tiles vs the audio
-    // button label — easier: pick all tiles, find one whose letter the bus
-    // last requested via 'letter-x'.
+    // prompt — pick all tiles, find one whose letter the bus requested.
     const tiles = screen.getAllByRole('button', { name: /Litera/ }) as HTMLElement[]
-    // znajdź target letter na podstawie wywołań audioBus.play (key = 'letter-x')
+    // Klucz fonemu (`phon-x`) jednoznacznie niesie literę; pula Iskierki jest
+    // ASCII, więc slugPl(x) === x.
     const audioCalls = audioBus.play.mock.calls.map((c) => c[0])
-    const letterCall = audioCalls.find((k) => k.startsWith('letter-'))
+    const letterCall = audioCalls.find((k) => k.startsWith('phon-'))
     expect(letterCall).toBeDefined()
-    const target = letterCall!.replace('letter-', '')
+    const target = letterCall!.replace('phon-', '')
     const correctTile = tiles.find((t) => t.dataset.letter === target)
     expect(correctTile).toBeDefined()
     act(() => {
@@ -82,8 +82,8 @@ describe('SessionView — integration', () => {
     const tiles = screen.getAllByRole('button', { name: /Litera/ }) as HTMLElement[]
     const target = audioBus.play.mock.calls
       .map((c) => c[0])
-      .find((k) => k.startsWith('letter-'))!
-      .replace('letter-', '')
+      .find((k) => k.startsWith('phon-'))!
+      .replace('phon-', '')
     const correctTile = tiles.find((t) => t.dataset.letter === target)!
     act(() => {
       correctTile.click()
