@@ -43,7 +43,12 @@ function lettersMap(now: number): Record<string, LetterState> {
 
 function answerAll(letter: string, questions: number) {
   for (let i = 0; i < questions; i += 1) {
-    const tiles = screen.getAllByRole('button', { name: /Litera/ }) as HTMLElement[]
+    // Drugie pytanie mikrosesji jest odwrotne (`forceReverseIndices: [1]`) —
+    // odpowiedzią jest tam przycisk ✔ pod kafelkiem 🔊, nie kafelek z literą.
+    const isReverse = screen.queryByTestId('reverse-quiz-card') !== null
+    const tiles = screen.getAllByRole('button', {
+      name: isReverse ? /Wybierz dźwięk/ : /Litera/,
+    }) as HTMLElement[]
     const correct = tiles.find((t) => t.dataset.letter === letter)
     expect(correct).toBeDefined()
     act(() => {
