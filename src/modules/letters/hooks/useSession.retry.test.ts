@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
-import { useSession } from './useSession'
+import {
+  FEEDBACK_DURATION_BASE_MS,
+  POST_FEEDBACK_BREATH_MS,
+  TRY_AGAIN_CUE_MS,
+  useSession,
+} from './useSession'
 import type { UseSessionConfig } from './useSession'
 import type { LetterState, SessionLog } from '@/modules/letters/types'
 
@@ -38,8 +43,11 @@ function makeConfig(
   }
 }
 
-/** Feedback błędu (5500ms) + margines — po nim odpala się ekran drugiej próby. */
-const PAST_WRONG_FEEDBACK_MS = 7000
+// Liczone z eksportowanych stałych hooka (tempo `medium` = mnożnik 1.0),
+// żeby zmiana długości audio feedbacku nie wymagała ręcznej korekty testów.
+const WRONG_FEEDBACK_MS = FEEDBACK_DURATION_BASE_MS.wrong
+/** Feedback błędu + cue „spróbuj jeszcze raz" — po nim odpala się ekran drugiej próby. */
+const PAST_WRONG_FEEDBACK_MS = WRONG_FEEDBACK_MS + TRY_AGAIN_CUE_MS + 500
 
 describe('useSession — druga próba po błędzie', () => {
   beforeEach(() => {
@@ -217,7 +225,7 @@ describe('useSession — druga próba po błędzie', () => {
     expect(result.current.wrongCount).toBe(1)
 
     act(() => {
-      vi.advanceTimersByTime(PAST_WRONG_FEEDBACK_MS + 2000)
+      vi.advanceTimersByTime(PAST_WRONG_FEEDBACK_MS + POST_FEEDBACK_BREATH_MS)
     })
     expect(result.current.status).toBe('playing')
     expect(result.current.currentQuestion!.tiles).toHaveLength(4)
@@ -237,7 +245,7 @@ describe('useSession — druga próba po błędzie', () => {
       result.current.answer(q.tiles[wrongIdx]!, wrongIdx)
     })
     act(() => {
-      vi.advanceTimersByTime(PAST_WRONG_FEEDBACK_MS + 2000)
+      vi.advanceTimersByTime(PAST_WRONG_FEEDBACK_MS + POST_FEEDBACK_BREATH_MS)
     })
     expect(result.current.status).toBe('playing')
     expect(result.current.questionNumber).toBe(2)
@@ -297,16 +305,16 @@ describe('useSession — druga próba po błędzie', () => {
       result.current.answer(q.tiles[wrongIdx]!, wrongIdx)
     })
 
-    // Wrong-feedback (5500ms, tempo medium) samo w sobie NIE wystarcza —
-    // "try-again" jest kolejkowane ZA nim w AudioBus i potrzebuje własnego
-    // bufora (TRY_AGAIN_CUE_MS), inaczej retry wskoczyłby zanim cue doigra.
+    // Sam wrong-feedback (tempo medium) NIE wystarcza — "try-again" jest
+    // kolejkowane ZA nim w AudioBus i potrzebuje własnego bufora
+    // (TRY_AGAIN_CUE_MS), inaczej retry wskoczyłby zanim cue doigra.
     act(() => {
-      vi.advanceTimersByTime(5500)
+      vi.advanceTimersByTime(WRONG_FEEDBACK_MS)
     })
     expect(result.current.status).toBe('feedback')
 
     act(() => {
-      vi.advanceTimersByTime(1200)
+      vi.advanceTimersByTime(TRY_AGAIN_CUE_MS)
     })
     expect(result.current.status).toBe('retry')
   })

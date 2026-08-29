@@ -163,7 +163,7 @@ const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
 //   - timeout:  identyczne audio jak dontKnow ≈ 4.8s → 6500
 //   - mastery:  sfx-fanfara (2.1s) + mastery-celebration (3.3s) ≈ 5.4s → 7000
 //               (streak audio dorzucany przez STREAK_AUDIO_DURATION_MS gdy próg)
-const FEEDBACK_DURATION_BASE_MS: Record<FeedbackVariant, number> = {
+export const FEEDBACK_DURATION_BASE_MS: Record<FeedbackVariant, number> = {
   correct: 4500,
   wrong: 6300,
   dontKnow: 6500,
@@ -174,7 +174,7 @@ const FEEDBACK_DURATION_BASE_MS: Record<FeedbackVariant, number> = {
 // `scheduleRetry` kolejkuje "try-again" ZA wrong-feedback audio (AudioBus
 // FIFO), ale timer ekranu retry liczy tylko czas wrong-feedbacku — bez tego
 // bufora ekran retry potrafi wskoczyć zanim "spróbuj jeszcze raz" doigra.
-const TRY_AGAIN_CUE_MS = 1200
+export const TRY_AGAIN_CUE_MS = 1200
 
 const TEMPO_MULTIPLIERS: Record<CelebrationTempo, number> = {
   short: 0.7,
@@ -191,7 +191,7 @@ const COUNTDOWN_3S_WARNING_MS = 3000
 // poprzedniego audio (np. niedokończony streak audio) przed nowym promptem.
 // Wcześniej 500ms — za szybkie przejście, dziecko nie nadążało reseet uwagi
 // po wybrzmiewaniu pochwały/korekty. 1200ms = wyraźna pauza ale nie nudna.
-const POST_FEEDBACK_BREATH_MS = 1200
+export const POST_FEEDBACK_BREATH_MS = 1200
 // Górny bound dla najdłuższego streak audio ("ognisty streak!" ~1.6-1.9s
 // w Edge TTS PL Zofia). Dorzucany do feedback duration tylko gdy próg streak
 // osiągnięty — inaczej overlay zniknie przed końcem audio.
