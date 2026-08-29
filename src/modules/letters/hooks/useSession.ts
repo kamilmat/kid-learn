@@ -32,7 +32,6 @@ import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import type {
   CaseMode,
   CelebrationTempo,
-  Level,
   PromptMode,
   StyleMode,
   TimeLimit,
@@ -53,6 +52,7 @@ import { createInitialLetterState } from '@/shared/srs/createInitialLetterState'
 import { pickDistractors, pickRandom, shuffled } from '@/shared/srs/distractors'
 import { pickNextLetter } from '@/shared/srs/select'
 import { updateLetterState } from '@/shared/srs/update'
+import type { SessionMode } from '@/shared/stats/types'
 import type {
   DisplayCase,
   DisplayStyle,
@@ -69,8 +69,15 @@ import type {
 
 /** Konfiguracja wejściowa hooka — sesja zna swoje parametry "od strzału". */
 export type UseSessionConfig = {
-  level: Level
+  /** Trafia wprost do `SessionLog.level` — poziom albo tryb powtórki. */
+  level: SessionMode
   activeLetters: string[]
+  /**
+   * Pula, z której losujemy CEL pytania. Pusta/brak → `activeLetters`.
+   * Dystraktory zawsze lecą z `activeLetters`, żeby powtórka trudnych liter
+   * nie zwężała wyboru do samych trudnych (to byłaby inna, łatwiejsza gra).
+   */
+  targetPool?: string[]
   sessionLength: number
   timeLimit: TimeLimit
   showCountdownBar: boolean
@@ -273,6 +280,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   const {
     level,
     activeLetters,
+    targetPool,
     sessionLength,
     timeLimit,
     showCountdownBar,
@@ -294,6 +302,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   // dependencji równej wszystkim polom.
   const cfgRef = useRef({
     activeLetters,
+    targetPool,
     sessionLength,
     timeLimit,
     showCountdownBar,
@@ -311,6 +320,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   })
   cfgRef.current = {
     activeLetters,
+    targetPool,
     sessionLength,
     timeLimit,
     showCountdownBar,
@@ -488,9 +498,12 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     // pomylić późniejszy `resume()`/`skipFeedback()` co do tego, gdzie jesteśmy.
     retryPendingRef.current = false
     const states = Object.values(statesRef.current)
+    // Cel z puli powtórki (jeśli podana), dystraktory dalej z pełnej puli poziomu.
+    const pool =
+      cfg.targetPool && cfg.targetPool.length > 0 ? cfg.targetPool : cfg.activeLetters
     const target = pickNextLetter(
       states,
-      cfg.activeLetters,
+      pool,
       lastTargetRef.current,
       cfg.now(),
       cfg.rng,

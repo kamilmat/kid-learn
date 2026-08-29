@@ -2,7 +2,7 @@
 //
 // Tabela eventów ostatniej sesji z timestampami HH:MM:SS i opisem akcji.
 
-import type { SessionEvent } from '@/shared/stats/types'
+import type { SessionEvent, SessionMode } from '@/shared/stats/types'
 import type { UnifiedSession } from '@/shared/stats/aggregate'
 import { LEVEL_LABEL } from '@/shared/settings/defaults'
 import { toUpper } from '@/modules/letters/data/alphabet'
@@ -10,6 +10,14 @@ import { toUpper } from '@/modules/letters/data/alphabet'
 export type LiveSessionSectionProps = {
   /** Sesje wszystkich modułów, posortowane rosnąco po `startedAt`. */
   sessions: UnifiedSession[]
+}
+
+// Tryby powtórki (`hard`, `daily`) nie są poziomami, ale trafiają do
+// `SessionLog.level` — bez własnych etykiet raport pokazywałby `undefined`.
+const SESSION_MODE_LABEL: Record<SessionMode, string> = {
+  ...LEVEL_LABEL,
+  hard: 'Trudne literki',
+  daily: 'Literka dnia',
 }
 
 const OUTCOME_ICON: Record<'correct' | 'wrong' | 'dontKnow' | 'timeout', string> = {
@@ -54,7 +62,7 @@ export function buildEventRows(session: UnifiedSession): EventRow[] {
   out.push({
     ts: session.startedAt,
     icon: '▶',
-    description: `Sesja zaczęta (${session.moduleLabel} · ${LEVEL_LABEL[session.level]}, ${totalQuestions} pytań)`,
+    description: `Sesja zaczęta (${session.moduleLabel} · ${SESSION_MODE_LABEL[session.level]}, ${totalQuestions} pytań)`,
   })
 
   let questionNum = 0

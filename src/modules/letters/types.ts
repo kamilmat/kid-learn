@@ -10,7 +10,7 @@ import type {
   LetterState as SrsLetterState,
   Outcome as SrsOutcome,
 } from '@/shared/srs/types'
-import type { Level } from '@/shared/settings/types'
+import type { SessionMode } from '@/shared/stats/types'
 
 export type DisplayCase = SrsDisplayCase
 export type DisplayStyle = SrsDisplayStyle
@@ -52,7 +52,7 @@ export type SessionLog = {
   id: string
   startedAt: number
   endedAt: number | null
-  level: Level
+  level: SessionMode
   events: SessionEvent[]
 }
 

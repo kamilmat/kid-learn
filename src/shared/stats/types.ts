@@ -6,6 +6,12 @@
 import type { Level } from '@/shared/settings/types'
 export type { Level }
 
+/**
+ * Czym była sesja: poziomem modułu albo trybem powtórki bez własnego poziomu.
+ * `hard` = „Trudne literki" (pula z SRS), `daily` = „Literka dnia".
+ */
+export type SessionMode = Level | 'hard' | 'daily'
+
 export type SessionEventQuestionStart = {
   type: 'question-start'
   ts: number
@@ -54,6 +60,6 @@ export type SessionLog = {
   id: string
   startedAt: number
   endedAt: number | null
-  level: Level
+  level: SessionMode
   events: SessionEvent[]
 }
