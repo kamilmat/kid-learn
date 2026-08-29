@@ -62,14 +62,19 @@ export function buildEventRows(session: UnifiedSession): EventRow[] {
     target: string
     ts: number
   } | null = null
+  // Druga próba nie ma własnego `question-start` — pamiętamy cel poprzedniej
+  // odpowiedzi, żeby wiersz poprawki nie pokazywał „prompt ?".
+  let lastTarget = '?'
 
   for (const ev of session.events as SessionEvent[]) {
     if (ev.type === 'question-start') {
       questionNum++
       pendingQuestion = { target: ev.targetLetter, ts: ev.ts }
     } else if (ev.type === 'answer') {
+      const isRetry = ev.attempt === 2
       const icon = OUTCOME_ICON[ev.outcome]
-      const target = pendingQuestion?.target ?? '?'
+      const target = pendingQuestion?.target ?? (isRetry ? lastTarget : '?')
+      lastTarget = target
       const responseS = (ev.responseMs / 1000).toFixed(1)
       let outcomeText: string
       if (ev.outcome === 'correct') {
@@ -81,10 +86,13 @@ export function buildEventRows(session: UnifiedSession): EventRow[] {
       } else {
         outcomeText = `${icon}`
       }
+      const label = isRetry
+        ? `Pytanie ${questionNum} (2. próba)`
+        : `Pytanie ${questionNum}`
       out.push({
         ts: ev.ts,
         icon,
-        description: `Pytanie ${questionNum}: prompt ${fmtTarget(target)} → ${outcomeText} (${responseS}s)`,
+        description: `${label}: prompt ${fmtTarget(target)} → ${outcomeText} (${responseS}s)`,
       })
       pendingQuestion = null
     } else if (ev.type === 'pause') {
@@ -125,6 +133,12 @@ export function LiveSessionSection({ sessions }: LiveSessionSectionProps) {
             style={{ marginLeft: 8, fontSize: 15, color: '#6a6a72' }}
           >
             {last.moduleLabel}
+            {last.retries > 0 && (
+              <span data-testid="live-session-retries">
+                {' · poprawki: '}
+                {last.retries}
+              </span>
+            )}
           </span>
         )}
       </h2>

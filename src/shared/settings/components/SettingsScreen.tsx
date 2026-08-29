@@ -650,6 +650,18 @@ export function SettingsScreen({
         </select>
       </section>
 
+      {/* Druga próba po błędzie — globalnie, wszystkie moduły quizowe */}
+      <section style={sectionStyle} data-testid="section-second-attempt">
+        <div style={labelStyle}>Uczenie się na błędach</div>
+        <ToggleField
+          label="Druga próba po błędzie"
+          description="Po pomyłce dziecko dostaje to samo pytanie z dwiema opcjami: poprawną i tą, którą wybrało. Pierwsza pomyłka i tak liczy się do statystyk."
+          value={settings.secondAttempt}
+          onChange={(v) => updateSetting('secondAttempt', v)}
+          testId="second-attempt"
+        />
+      </section>
+
       {/* Czytanie (moduł 2) */}
       <section style={sectionStyle} data-testid="section-reading">
         <div style={labelStyle}>Czytanie (moduł 2)</div>

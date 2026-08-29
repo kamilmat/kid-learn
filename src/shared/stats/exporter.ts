@@ -251,6 +251,9 @@ export function exportReportToMarkdown(
   lines.push(
     `- Domyślny poziom: ${settings.defaultLevel === 'last-used' ? 'ostatnio używany' : LEVEL_LABEL[settings.defaultLevel]}`,
   )
+  lines.push(
+    `- Druga próba po błędzie: ${settings.secondAttempt ? 'włączona' : 'wyłączona'}`,
+  )
   lines.push('')
 
   // ---- Matematyka ----

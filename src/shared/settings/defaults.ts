@@ -121,6 +121,7 @@ export const defaultSettings: Settings = {
   defaultLevel: 'last-used',
   tilesPerQuestion: {},
   humorMode: 'on' as HumorMode,
+  secondAttempt: true,
   reading: {
     wordAnimations: 'on' as WordAnimations,
     wildCelebrationFreq: 8,

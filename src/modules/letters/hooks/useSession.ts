@@ -21,6 +21,9 @@
 //   - mastery: `sfx-mastery-fanfara` + `mastery-celebration` (+ ewentualnie streak audio)
 //   - 3s warning: `cue-warning-3s` gdy zostają 3s do końca timera (tylko gdy showCountdownBar)
 //   - session-end: `session-end-perfect` jeśli detectPerfectSession else `session-end`
+//   - retry (druga próba po błędzie, gdy `secondAttempt`): `try-again` po
+//     feedbacku błędu, potem to samo pytanie z 2 kafelkami bez timera;
+//     poprawka gra `retry-correct` (bez dinga, bez iskierki, bez streaka).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
@@ -73,6 +76,11 @@ export type UseSessionConfig = {
   celebrationTempo: CelebrationTempo
   /** Liczba kafelków na pytanie (1 target + N-1 dystraktorów). Default 4. */
   tilesPerQuestion?: number
+  /**
+   * Druga próba po błędzie (`settings.secondAttempt`). Default `true`.
+   * Pierwsza pomyłka i tak aktualizuje SRS — retry uczy autokorekty.
+   */
+  secondAttempt?: boolean
   /** Initialny słownik `LetterState` (z lettersStore lub czysty). */
   initialStates?: Record<string, LetterState>
   /**
@@ -256,6 +264,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     styleMode,
     celebrationTempo,
     tilesPerQuestion = 4,
+    secondAttempt = true,
     initialStates,
     onSessionEnd,
     audioBus = defaultAudioBus,
@@ -275,6 +284,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     styleMode,
     celebrationTempo,
     tilesPerQuestion,
+    secondAttempt,
     rng,
     now,
     audioBus,
@@ -290,6 +300,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     styleMode,
     celebrationTempo,
     tilesPerQuestion,
+    secondAttempt,
     rng,
     now,
     audioBus,
@@ -329,6 +340,18 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   const dontKnowCountRef = useRef<number>(0)
   const timeoutCountRef = useRef<number>(0)
   const questionStartedAtRef = useRef<number>(0)
+  // Pytanie drugiej próby (te same litery, 2 kafelki) — budowane w
+  // `scheduleRetry`, podstawiane gdy overlay błędu zniknie.
+  const retryQuestionRef = useRef<Question | null>(null)
+  // Druga próba jest ZAPLANOWANA, ale wciąż gra feedback błędu. Skip/resume
+  // muszą wejść w retry, a nie przeskoczyć do następnego pytania.
+  const retryPendingRef = useRef<boolean>(false)
+  // Pauza złapana w statusie `retry` — resume musi powtórzyć `try-again`
+  // (pause robi audioBus.stop(), inaczej dziecko wraca do niemego ekranu).
+  const pausedDuringRetryRef = useRef<boolean>(false)
+  // Podejście, którego dotyczy aktualnie wyświetlany feedback — resume po
+  // pauzie musi odegrać `retry-correct`, a nie ding + pochwałę.
+  const lastFeedbackAttemptRef = useRef<1 | 2>(1)
   // Flag: pause został wyzwolony podczas status='feedback' (przerywając
   // pipeline feedback→breath→next-question). Resume rekonstruuje pipeline.
   const pausedDuringFeedbackRef = useRef<boolean>(false)
@@ -382,7 +405,13 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
 
   // Forward-ref na handleOutcome — ustawiany po jego definicji.
   const handleOutcomeRef = useRef<
-    ((outcome: Outcome, chosenLetter?: string, chosenSlot?: Slot) => void) | null
+    | ((
+        outcome: Outcome,
+        chosenLetter?: string,
+        chosenSlot?: Slot,
+        attempt?: 1 | 2,
+      ) => void)
+    | null
   >(null)
 
   // Forward-ref na scheduleFeedbackDismiss — używany przez handleOutcome
@@ -539,12 +568,20 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       target: string,
       chosenLetter: string | undefined,
       newStreak: number,
+      attempt: 1 | 2 = 1,
     ): number => {
       const cfg = cfgRef.current
       let extraDurationMs = 0
 
       switch (variant) {
         case 'correct': {
+          // Druga próba: cicha pochwała za autokorektę. Bez dinga, bez
+          // pochwały z puli i bez streak audio — iskierki też nie ma, więc
+          // fanfara byłaby obietnicą nagrody, której dziecko nie dostanie.
+          if (attempt === 2) {
+            void cfg.audioBus.play('retry-correct')
+            break
+          }
           // Bez assoc-X audio — gdy dziecko zna literę, "X jak Y" wydłuża
           // sequence niepotrzebnie. Asocjacja gra tylko dla dontKnow/timeout
           // (gdy dziecko potrzebuje wskazówki). Guzik "→ Dalej" daje opcję
@@ -609,8 +646,42 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     [],
   )
 
+  /**
+   * Druga próba: to samo pytanie, ale tylko dwa kafelki — poprawny i ten,
+   * który dziecko wybrało. Bez timera (`startCountdown` celowo pominięty):
+   * autokorekta ma być momentem myślenia, nie kolejną presją.
+   */
+  const scheduleRetry = useCallback(
+    (q: Question, chosenLetter: string, effectiveMs: number) => {
+      const cfg = cfgRef.current
+      void cfg.audioBus.play('try-again')
+      retryPendingRef.current = true
+      const tiles = shuffled([q.targetLetter, chosenLetter], cfg.rng)
+      retryQuestionRef.current = {
+        ...q,
+        tiles,
+        targetSlot: tiles.indexOf(q.targetLetter),
+      }
+      clearFeedbackTimer()
+      feedbackTimerRef.current = setTimeout(() => {
+        feedbackTimerRef.current = null
+        retryPendingRef.current = false
+        setLastFeedback(null)
+        setCurrentQuestion(retryQuestionRef.current)
+        questionStartedAtRef.current = cfgRef.current.now()
+        setStatus('retry')
+      }, effectiveMs)
+    },
+    [clearFeedbackTimer],
+  )
+
   const handleOutcome = useCallback(
-    (outcome: Outcome, chosenLetter: string | undefined, chosenSlot: Slot | undefined) => {
+    (
+      outcome: Outcome,
+      chosenLetter: string | undefined,
+      chosenSlot: Slot | undefined,
+      attempt: 1 | 2 = 1,
+    ) => {
       const cfg = cfgRef.current
       const q = currentQuestionRef.current
       if (!q) return
@@ -620,33 +691,39 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       const targetState = statesRef.current[target]
       if (!targetState) return
 
-      // Update SRS
       const displayStyle = q.chosenStyle
       const displayCase = deriveDisplayCase(cfg.caseMode, q.chosenCase)
-      const [updated, meta] = updateLetterState(
-        targetState,
-        outcome,
-        responseMs,
-        ts,
-        displayStyle,
-        displayCase,
-        chosenLetter,
-      )
-      statesRef.current = { ...statesRef.current, [target]: updated }
 
-      // Iskierki + liczniki per outcome
-      if (outcome === 'correct') {
-        iskierkiRef.current += 1
-        setIskierki(iskierkiRef.current)
-      } else if (outcome === 'wrong') {
-        wrongCountRef.current += 1
-        setWrongCount(wrongCountRef.current)
-      } else if (outcome === 'dontKnow') {
-        dontKnowCountRef.current += 1
-        setDontKnowCount(dontKnowCountRef.current)
-      } else if (outcome === 'timeout') {
-        timeoutCountRef.current += 1
-        setTimeoutCount(timeoutCountRef.current)
+      // SRS i liczniki sesji rusza WYŁĄCZNIE pierwsze podejście. Pierwsza
+      // pomyłka to pomyłka — poprawka w drugiej próbie uczy autokorekty, ale
+      // nie odkręca boxa ani nie dosypuje iskierki.
+      let firstMastery = false
+      if (attempt === 1) {
+        const [updated, meta] = updateLetterState(
+          targetState,
+          outcome,
+          responseMs,
+          ts,
+          displayStyle,
+          displayCase,
+          chosenLetter,
+        )
+        statesRef.current = { ...statesRef.current, [target]: updated }
+        firstMastery = meta.firstMastery
+
+        if (outcome === 'correct') {
+          iskierkiRef.current += 1
+          setIskierki(iskierkiRef.current)
+        } else if (outcome === 'wrong') {
+          wrongCountRef.current += 1
+          setWrongCount(wrongCountRef.current)
+        } else if (outcome === 'dontKnow') {
+          dontKnowCountRef.current += 1
+          setDontKnowCount(dontKnowCountRef.current)
+        } else if (outcome === 'timeout') {
+          timeoutCountRef.current += 1
+          setTimeoutCount(timeoutCountRef.current)
+        }
       }
 
       // Event
@@ -657,13 +734,14 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
         responseMs,
         ...(chosenLetter !== undefined ? { chosenLetter } : {}),
         ...(chosenSlot !== undefined ? { chosenPosition: chosenSlot } : {}),
+        ...(attempt === 2 ? { attempt: 2 as const } : {}),
       }
       pushEvent(answerEvent)
 
       clearCountdown()
 
       // Audio + feedback
-      const variant: FeedbackVariant = meta.firstMastery
+      const variant: FeedbackVariant = firstMastery
         ? 'mastery'
         : outcome === 'correct'
           ? 'correct'
@@ -686,23 +764,51 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       })
       setStatus('feedback')
 
-      // Audio sequence (non-blocking) + streak update
-      const isCorrectOutcome = outcome === 'correct'
-      const newStreak = isCorrectOutcome ? currentStreakRef.current + 1 : 0
-      currentStreakRef.current = newStreak
-      setCurrentStreak(newStreak)
+      // Streak liczy tylko pierwsze podejście — poprawka po błędzie nie
+      // wskrzesza serii, którą ten błąd właśnie zerwał.
+      const newStreak =
+        attempt === 1
+          ? outcome === 'correct'
+            ? currentStreakRef.current + 1
+            : 0
+          : currentStreakRef.current
+      if (attempt === 1) {
+        currentStreakRef.current = newStreak
+        setCurrentStreak(newStreak)
+      }
 
-      const extraDurationMs = playFeedbackAudio(variant, target, chosenLetter, newStreak)
+      const extraDurationMs = playFeedbackAudio(
+        variant,
+        target,
+        chosenLetter,
+        newStreak,
+        attempt,
+      )
+      const effectiveMs = durationMs + extraDurationMs
+      lastFeedbackEffectiveMsRef.current = effectiveMs
+      lastFeedbackAttemptRef.current = attempt
+
+      // Pierwsza pomyłka z wyborem kafelka → druga próba zamiast przejścia
+      // dalej. „Nie wiem"/timeout retry NIE dostają: dziecko nie postawiło
+      // hipotezy, więc nie ma czego korygować.
+      if (
+        outcome === 'wrong' &&
+        attempt === 1 &&
+        cfg.secondAttempt &&
+        chosenLetter !== undefined
+      ) {
+        scheduleRetry(q, chosenLetter, effectiveMs)
+        return
+      }
 
       // Po feedbacku — następne pytanie lub koniec.
-      // Sekwencja: durationMs+extra → zamknij overlay → 500ms wdech → next.
+      // Sekwencja: durationMs+extra → zamknij overlay → wdech → next.
       // Status pozostaje 'feedback' przez cały wdech (kafelki disabled), co
       // chroni przed re-tap na stare pytanie. `setStatus('playing')` dopiero
       // gdy generujemy nowe pytanie.
-      lastFeedbackEffectiveMsRef.current = durationMs + extraDurationMs
-      scheduleFeedbackDismissRef.current(durationMs + extraDurationMs)
+      scheduleFeedbackDismissRef.current(effectiveMs)
     },
-    [clearCountdown, pushEvent],
+    [clearCountdown, playFeedbackAudio, pushEvent, scheduleRetry],
   )
 
   // Refs równoległe do state'u: wewnątrz callbacków używamy ref-version żeby
@@ -788,6 +894,11 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     currentStreakRef.current = 0
     setCurrentStreak(0)
     lastPraiseKeyRef.current = null
+    lastFeedbackAttemptRef.current = 1
+    retryQuestionRef.current = null
+    retryPendingRef.current = false
+    pausedDuringRetryRef.current = false
+    pausedDuringFeedbackRef.current = false
     // re-init letter states zgodnie z aktywną pulą
     const initial = initialStates ?? {}
     const next: Record<string, LetterState> = {}
@@ -802,10 +913,13 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
 
   const pause = useCallback(
     (reason: 'manual' | 'idle' | 'visibility' = 'manual') => {
-      if (status !== 'playing' && status !== 'feedback') return
+      if (status !== 'playing' && status !== 'feedback' && status !== 'retry') {
+        return
+      }
       // Zapamiętaj że pauza złapała feedback w trakcie — resume musi
       // ponowić scheduleFeedbackDismiss, bo clearFeedbackTimer urywa pipeline.
       pausedDuringFeedbackRef.current = status === 'feedback'
+      pausedDuringRetryRef.current = status === 'retry'
       clearCountdown()
       clearFeedbackTimer()
       pushEvent({ type: 'pause', ts: cfgRef.current.now(), reason })
@@ -826,6 +940,17 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     // Jeśli pauza złapała feedback w trakcie — odtwórz pipeline od nowa
     // (overlay nadal w lastFeedback, czas resetujemy do pełnej długości
     // żeby dziecko zobaczyło/usłyszało feedback ponownie po wznowieniu).
+    // Pauza w drugiej próbie: wracamy do tego samego ekranu z 2 kafelkami.
+    // `pause()` zrobiło stop(), więc bez ponownego `try-again` dziecko wraca
+    // do niemego ekranu i nie wie, czego się od niego oczekuje.
+    if (pausedDuringRetryRef.current) {
+      pausedDuringRetryRef.current = false
+      setStatus('retry')
+      questionStartedAtRef.current = cfgRef.current.now()
+      void cfgRef.current.audioBus.play('try-again')
+      return
+    }
+
     if (pausedDuringFeedbackRef.current) {
       pausedDuringFeedbackRef.current = false
       setStatus('feedback')
@@ -838,8 +963,24 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
           fb.targetLetter,
           fb.chosenLetter,
           currentStreakRef.current,
+          lastFeedbackAttemptRef.current,
         )
-        scheduleFeedbackDismissRef.current(lastFeedbackEffectiveMsRef.current)
+        // Pauza złapana między błędem a drugą próbą — wznawiamy tę samą
+        // ścieżkę, inaczej retry przepadłby i sesja przeskoczyłaby dalej.
+        const pendingQ = currentQuestionRef.current
+        if (
+          retryPendingRef.current &&
+          pendingQ !== null &&
+          fb.chosenLetter !== undefined
+        ) {
+          scheduleRetry(
+            pendingQ,
+            fb.chosenLetter,
+            lastFeedbackEffectiveMsRef.current,
+          )
+        } else {
+          scheduleFeedbackDismissRef.current(lastFeedbackEffectiveMsRef.current)
+        }
       } else {
         // Overlay był już zamknięty — pauza złapała "wdech". Odtwarzanie
         // pełnego timera feedbacku oznaczałoby kilka sekund pustego ekranu.
@@ -854,15 +995,22 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       questionStartedAtRef.current = cfgRef.current.now()
       startCountdown()
     }
-  }, [playFeedbackAudio, pushEvent, scheduleBreathThenNext, startCountdown, status])
+  }, [
+    playFeedbackAudio,
+    pushEvent,
+    scheduleBreathThenNext,
+    scheduleRetry,
+    startCountdown,
+    status,
+  ])
 
   const answer = useCallback(
     (chosenLetter: string, position: Slot) => {
-      if (status !== 'playing') return
+      if (status !== 'playing' && status !== 'retry') return
       const q = currentQuestionRef.current
       if (!q) return
       const outcome: Outcome = chosenLetter === q.targetLetter ? 'correct' : 'wrong'
-      handleOutcome(outcome, chosenLetter, position)
+      handleOutcome(outcome, chosenLetter, position, status === 'retry' ? 2 : 1)
     },
     [handleOutcome, status],
   )
@@ -877,6 +1025,17 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
       feedbackTimerRef.current = null
     }
     cfgRef.current.audioBus.stop()
+    // „Dalej" w trakcie feedbacku błędu skraca wybrzmiewanie, ale NIE kasuje
+    // drugiej próby — jedna dodatkowa próba należy się dziecku zawsze.
+    if (retryPendingRef.current && retryQuestionRef.current !== null) {
+      retryPendingRef.current = false
+      setLastFeedback(null)
+      setCurrentQuestion(retryQuestionRef.current)
+      questionStartedAtRef.current = cfgRef.current.now()
+      void cfgRef.current.audioBus.play('try-again')
+      setStatus('retry')
+      return
+    }
     const nextNum = questionNumberRef.current + 1
     if (nextNum >= cfgRef.current.sessionLength) {
       finishSession()
@@ -890,7 +1049,13 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   }, [finishSession, generateNextQuestion, status])
 
   const dontKnow = useCallback(() => {
-    if (status !== 'playing') return
+    if (status !== 'playing' && status !== 'retry') return
+    // 🤷 w drugiej próbie = druga pomyłka: hiperkorekcja (litera jeszcze raz)
+    // i lecimy dalej. Trzeciej próby nie ma.
+    if (status === 'retry') {
+      handleOutcome('wrong', undefined, undefined, 2)
+      return
+    }
     // NIE dodajemy nav-tap — to TTS "klik" (1.4s) co brzydko miesza się
     // z `dont-know-X` audio ("spokojnie..."). Sekwencja "klik + spokojnie
     // + posłuchaj jeszcze raz" była mylna. dont-know-X jest natychmiastowym

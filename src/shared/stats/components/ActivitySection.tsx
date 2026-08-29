@@ -42,7 +42,9 @@ export type DailyAggregate = {
 function countQuestions(events: SessionEvent[]): number {
   let n = 0
   for (const ev of events) {
-    if (ev.type === 'answer') n++
+    // Poprawki (druga próba) nie są osobnym pytaniem — inaczej dzień z
+    // wieloma retry wyglądałby na bardziej pracowity niż był.
+    if (ev.type === 'answer' && ev.attempt !== 2) n++
   }
   return n
 }

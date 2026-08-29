@@ -63,6 +63,12 @@ export function gridLayoutFor(count: number): {
   gridTemplateRows: string
 } {
   switch (count) {
+    case 2:
+      // Druga próba po błędzie — poprawna litera + ta wybrana przez dziecko.
+      return {
+        gridTemplateColumns: '1fr 1fr',
+        gridTemplateRows: '1fr',
+      }
     case 3:
       return {
         gridTemplateColumns: 'repeat(3, 1fr)',

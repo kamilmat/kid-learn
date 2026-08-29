@@ -51,6 +51,9 @@ export type Settings = {
   tilesPerQuestion: Partial<Record<Level, TilesPerQuestion>>
   // Tryb humoru — śmieszne reakcje Iskry (beknięcie, czkawka, apsik)
   humorMode: HumorMode
+  // Druga próba po błędzie: to samo pytanie z 2 kafelkami (poprawny + wybrany).
+  // Pierwsza pomyłka i tak trafia do SRS — retry uczy autokorekty, nie kasuje błędu.
+  secondAttempt: boolean
   // Ustawienia modułu czytania
   reading: {
     wordAnimations: WordAnimations

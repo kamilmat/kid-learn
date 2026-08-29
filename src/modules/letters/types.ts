@@ -40,6 +40,9 @@ export type SessionEvent =
       chosenLetter?: string
       chosenPosition?: Slot
       responseMs: number
+      // Numer podejścia do TEGO SAMEGO pytania. Brak pola = 1 (stare logi).
+      // `2` to druga próba po błędzie: nie dotyka SRS ani liczników sesji.
+      attempt?: 1 | 2
     }
   | { type: 'pause'; ts: number; reason: 'manual' | 'idle' | 'visibility' }
   | { type: 'resume'; ts: number }
@@ -59,6 +62,8 @@ export type SessionStatus =
   | 'playing'
   | 'paused'
   | 'feedback'
+  // Druga próba: to samo pytanie, 2 kafelki, bez timera.
+  | 'retry'
   | 'finished'
 
 // Pojedyncze pytanie — wszystko, co potrzebne do wyrenderowania ekranu pytania.

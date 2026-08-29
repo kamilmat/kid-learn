@@ -88,6 +88,7 @@ export function SessionView({
     styleMode,
     celebrationTempo: settings.celebrationTempo,
     tilesPerQuestion: getEffectiveTilesPerQuestion(settings, level),
+    secondAttempt: settings.secondAttempt,
     ...(initialStates !== undefined ? { initialStates } : {}),
     ...(onSessionComplete !== undefined ? { onSessionEnd: onSessionComplete } : {}),
     audioBus,
@@ -124,13 +125,16 @@ export function SessionView({
   // Anti-cheat: idle detection — auto-pauza po 20s bez interakcji.
   useIdleDetector({
     thresholdMs: 20_000,
-    enabled: session.status === 'playing',
+    enabled: session.status === 'playing' || session.status === 'retry',
     onIdle: () => session.pause('idle'),
   })
 
   // Anti-cheat: page visibility — auto-pauza gdy dziecko opuszcza tab.
   usePageVisibility({
-    enabled: session.status === 'playing' || session.status === 'feedback',
+    enabled:
+      session.status === 'playing' ||
+      session.status === 'feedback' ||
+      session.status === 'retry',
     onHidden: () => session.pause('visibility'),
     onVisible: () => {
       // gdy wraca i jesteśmy w pause z reason='visibility' — sam zostaje
@@ -188,7 +192,7 @@ export function SessionView({
           lastWrongSlot={session.lastFeedback?.variant === 'wrong' ? session.lastFeedback.chosenSlot ?? null : null}
           countdownMs={session.countdownMs}
           countdownTotalMs={session.countdownTotalMs}
-          interactive={session.status === 'playing'}
+          interactive={session.status === 'playing' || session.status === 'retry'}
           {...(tileState !== undefined ? { tileState } : {})}
           onTileClick={(letter, slot) => session.answer(letter, slot)}
           onPlayAudio={() => {
