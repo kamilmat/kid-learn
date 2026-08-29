@@ -15,7 +15,7 @@ import { useCzytanki } from '@/modules/czytanki/store/czytankiStore'
 import { ALL_WORDS } from '@/modules/reading/data/words'
 import { ALL_SYLLABLES } from '@/modules/reading/data/syllables'
 import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '@/modules/czytanki/data/czytanki'
-import { exportReportToMarkdown, topTappedWords } from '@/shared/stats/exporter'
+import { countComprehension, exportReportToMarkdown, topTappedWords } from '@/shared/stats/exporter'
 import { toUnifiedSessions } from '@/shared/stats/aggregate'
 import {
   FALLBACK_SUGGESTION,
@@ -180,6 +180,8 @@ function CzytankiStats() {
   const wordTaps = useCzytanki((s) => s.wordTaps)
   const timeMs = useCzytanki((s) => s.timeMs)
   const readCounts = useCzytanki((s) => s.readCounts)
+  const comprehensionResults = useCzytanki((s) => s.comprehensionResults)
+  const comprehension = useMemo(() => countComprehension(comprehensionResults), [comprehensionResults])
 
   // Powtórne czytanie tej samej czytanki to sygnał płynności, nie nudy —
   // rodzic widzi, co dziecko wraca czytać samo.
@@ -233,6 +235,12 @@ function CzytankiStats() {
         {repeatList.length > 0 && (
           <p style={{ margin: '2px 0 0', fontSize: 13, color: '#6b7280' }}>
             {repeatList.map((c) => `${c.emoji} ${c.title}`).join(', ')}
+          </p>
+        )}
+        {comprehension.total > 0 && (
+          <p style={{ margin: '4px 0 0' }} data-testid="czytanki-comprehension">
+            Pytania o rozumienie: {comprehension.first} za 1. razem, {comprehension.second} za 2.,{' '}
+            {comprehension.miss} nietrafione
           </p>
         )}
         {openedList.length > 0 ? (
@@ -378,6 +386,7 @@ export function ReportScreen({
       timeMs: useCzytanki.getState().timeMs,
       readCounts: useCzytanki.getState().readCounts,
       lastCountedAt: useCzytanki.getState().lastCountedAt,
+      comprehensionResults: useCzytanki.getState().comprehensionResults,
     }
     const readingSnapshot = {
       syllables: useReading.getState().syllables,

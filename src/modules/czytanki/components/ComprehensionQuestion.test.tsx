@@ -48,7 +48,7 @@ function tiles(): HTMLElement[] {
 
 describe('ComprehensionQuestion', () => {
   beforeEach(() => {
-    useCzytanki.setState({ answeredQuestionIds: [] })
+    useCzytanki.setState({ answeredQuestionIds: [], comprehensionResults: {} })
   })
 
   it('na mount zatrzymuje audio i gra intro + pytanie', () => {
@@ -109,20 +109,55 @@ describe('ComprehensionQuestion', () => {
     audioBus.play.mockClear()
     audioBus.stop.mockClear()
     fireEvent.click(screen.getByTestId('comprehension-close'))
-    expect(audioBus.play).toHaveBeenCalledWith('czytanki-ui-open')
+    expect(audioBus.play).toHaveBeenCalledWith('czytanki-q-close')
     expect(onClose).toHaveBeenCalled()
     const stopsBefore = audioBus.stop.mock.calls.length
     cleanup()
     expect(audioBus.stop.mock.calls.length).toBe(stopsBefore)
   })
 
-  it('druga próba zawsze kończy się pochwałą', () => {
+  it('trafienie za pierwszym razem zapisuje wynik "first"', () => {
+    setup()
+    fireEvent.click(tiles()[0]!)
+    expect(useCzytanki.getState().comprehensionResults['cz-01']).toBe('first')
+  })
+
+  it('trafienie za drugim razem daje 👏 i wynik "second"', () => {
     const { audioBus } = setup()
     fireEvent.click(tiles()[1]!)
-    const wrongLeft = tiles().find((t) => t.getAttribute('data-option-index') !== '0')!
-    fireEvent.click(wrongLeft)
+    fireEvent.click(tiles().find((t) => t.getAttribute('data-option-index') === '0')!)
     expect(audioBus.play).toHaveBeenCalledWith('czytanki-q-praise')
+    expect(useCzytanki.getState().comprehensionResults['cz-01']).toBe('second')
     expect(useCzytanki.getState().answeredQuestionIds).toContain('cz-01')
+  })
+
+  it('druga pomyłka: łagodne cue, bez 👏, poprawny kafelek podświetlony, wynik "miss"', async () => {
+    vi.useFakeTimers()
+    const { audioBus, onClose } = setup()
+    fireEvent.click(tiles()[1]!)
+    audioBus.play.mockClear()
+    fireEvent.click(tiles().find((t) => t.getAttribute('data-option-index') === '2')!)
+    expect(audioBus.play).toHaveBeenCalledWith('czytanki-q-miss')
+    expect(audioBus.play).not.toHaveBeenCalledWith('czytanki-q-praise')
+    expect(screen.queryByTestId('comprehension-praise')).toBeNull()
+    const revealed = tiles().filter((t) => t.getAttribute('data-revealed') === 'true')
+    expect(revealed.map((t) => t.getAttribute('data-option-index'))).toEqual(['0'])
+    expect(useCzytanki.getState().comprehensionResults['cz-01']).toBe('miss')
+    // Bez ✔ na liście — badge należy się tylko za trafienie.
+    expect(useCzytanki.getState().answeredQuestionIds).not.toContain('cz-01')
+    await vi.advanceTimersByTimeAsync(1500)
+    expect(onClose).toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('✋ zostaje widoczne w trakcie 👏 i zamyka overlay ucinając audio', () => {
+    const { audioBus, onClose } = setup()
+    fireEvent.click(tiles()[0]!)
+    expect(screen.getByTestId('comprehension-praise')).toBeDefined()
+    audioBus.stop.mockClear()
+    fireEvent.click(screen.getByTestId('comprehension-close'))
+    expect(audioBus.stop).toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('🔊 powtarza pytanie', () => {

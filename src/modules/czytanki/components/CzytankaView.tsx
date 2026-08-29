@@ -60,6 +60,7 @@ const toggleBtn = {
 
 export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   const markOpened = useCzytanki((s) => s.markOpened)
+  const markRead = useCzytanki((s) => s.markRead)
   const hasSeenIntro = useCzytanki((s) => s.hasSeenIntro)
   const markIntroSeen = useCzytanki((s) => s.markIntroSeen)
   const recordVisit = useCzytanki((s) => s.recordVisit)
@@ -87,7 +88,13 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   // do localStorage przy KAŻDYM set(), a dziecko stuka sylaby seriami.
   const tapsRef = useRef<Record<string, number>>({})
   const enteredAtRef = useRef(Date.now())
+  // Jedno wejście = najwyżej jedno zaliczone czytanie (guard 60 s w store i tak
+  // pilnuje powrotów, ale bez tego refu efekt strzelałby przy każdej sylabie).
+  const readCountedRef = useRef(false)
 
+  // `timeMs` zostaje liczony od mount (czas na ekranie to czas na ekranie —
+  // dziecko może wpatrywać się w tekst bez tapania). Dowodu przejścia tekstu
+  // wymaga tylko `readCounts`, bo to ono trafia do raportu jako „przeczytane".
   const flushVisit = useCallback(() => {
     const ms = Math.min(VISIT_CAP_MS, Date.now() - enteredAtRef.current)
     const taps = tapsRef.current
@@ -103,6 +110,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
 
   useEffect(() => {
     markOpened(czytanka.id)
+    readCountedRef.current = false
     setSeenSyllables(new Set())
     setReadFinished(false)
     setQuestionOpen(false)
@@ -218,9 +226,17 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
 
   const comprehension = czytanka.comprehension
   const syllablesThreshold = Math.ceil(SYLLABLES_SEEN_RATIO * countSyllables(czytanka))
-  const questionReady =
-    comprehension !== undefined && (readFinished || seenSyllables.size >= syllablesThreshold)
+  // Ten sam dowód, którym odblokowuje się ❓: całe ▶ albo 60% sylab dotkniętych.
+  // Samo wejście na ekran (przeklikanie listy strzałką ▶) nie jest czytaniem.
+  const readEvidence = readFinished || seenSyllables.size >= syllablesThreshold
+  const questionReady = comprehension !== undefined && readEvidence
   const questionAnswered = answeredQuestionIds.includes(czytanka.id)
+
+  useEffect(() => {
+    if (!readEvidence || readCountedRef.current) return
+    readCountedRef.current = true
+    markRead(czytanka.id)
+  }, [readEvidence, czytanka.id, markRead])
 
   const questionTap = useTapHandler({
     onTap: () => {

@@ -28,22 +28,30 @@ const T0 = 1_700_000_000_000
 describe('czytankiStore — licznik przeczytań', () => {
   beforeEach(() => useCzytanki.getState().resetAllProgress())
 
-  it('pierwsze wejście liczy się jako jedno czytanie', () => {
-    useCzytanki.getState().markOpened('cz-01', T0)
+  it('pierwsze zaliczone czytanie liczy się jako jedno', () => {
+    useCzytanki.getState().markRead('cz-01', T0)
     expect(useCzytanki.getState().readCounts['cz-01']).toBe(1)
   })
 
+  it('samo markOpened nie zalicza czytania (przeklikanie listy ▶)', () => {
+    useCzytanki.getState().markOpened('cz-01')
+    useCzytanki.getState().markOpened('cz-02')
+    expect(useCzytanki.getState().openedIds).toEqual(['cz-01', 'cz-02'])
+    expect(useCzytanki.getState().readCounts).toEqual({})
+    expect(useCzytanki.getState().lastCountedAt).toEqual({})
+  })
+
   it('powrót w ciągu 60 s nie inkrementuje, po 60 s inkrementuje', () => {
-    useCzytanki.getState().markOpened('cz-01', T0)
-    useCzytanki.getState().markOpened('cz-01', T0 + 30_000)
+    useCzytanki.getState().markRead('cz-01', T0)
+    useCzytanki.getState().markRead('cz-01', T0 + 30_000)
     expect(useCzytanki.getState().readCounts['cz-01']).toBe(1)
-    useCzytanki.getState().markOpened('cz-01', T0 + 90_000)
+    useCzytanki.getState().markRead('cz-01', T0 + 90_000)
     expect(useCzytanki.getState().readCounts['cz-01']).toBe(2)
   })
 
   it('guard jest per czytanka — inne id liczy się od razu', () => {
-    useCzytanki.getState().markOpened('cz-01', T0)
-    useCzytanki.getState().markOpened('cz-02', T0 + 1_000)
+    useCzytanki.getState().markRead('cz-01', T0)
+    useCzytanki.getState().markRead('cz-02', T0 + 1_000)
     expect(useCzytanki.getState().readCounts).toEqual({ 'cz-01': 1, 'cz-02': 1 })
   })
 
@@ -61,8 +69,25 @@ describe('czytankiStore — licznik przeczytań', () => {
     expect(merged.lastCountedAt).toEqual({})
   })
 
+  it('recordComprehension: trafienie daje badge ✔, nietrafienie tylko wynik', () => {
+    useCzytanki.getState().recordComprehension('cz-01', 'first')
+    useCzytanki.getState().recordComprehension('cz-02', 'second')
+    useCzytanki.getState().recordComprehension('cz-03', 'miss')
+    expect(useCzytanki.getState().comprehensionResults).toEqual({
+      'cz-01': 'first',
+      'cz-02': 'second',
+      'cz-03': 'miss',
+    })
+    expect(useCzytanki.getState().answeredQuestionIds).toEqual(['cz-01', 'cz-02'])
+  })
+
+  it('mergeCzytankiState defaultuje comprehensionResults dla starego persistu', () => {
+    const merged = mergeCzytankiState({ openedIds: ['cz-03'] }, useCzytanki.getState())
+    expect(merged.comprehensionResults).toEqual({})
+  })
+
   it('resetAllProgress czyści licznik przeczytań', () => {
-    useCzytanki.getState().markOpened('cz-01', T0)
+    useCzytanki.getState().markRead('cz-01', T0)
     useCzytanki.getState().resetAllProgress()
     expect(useCzytanki.getState().readCounts).toEqual({})
     expect(useCzytanki.getState().lastCountedAt).toEqual({})

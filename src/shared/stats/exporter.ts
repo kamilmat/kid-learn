@@ -45,6 +45,7 @@ import type {
 } from '@/modules/numbers/types'
 import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '@/modules/czytanki/data/czytanki'
 import { wordAudioKey } from '@/modules/czytanki/data/audioKeys'
+import type { ComprehensionResult } from '@/modules/czytanki/store/czytankiStore'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1_000
 
@@ -86,6 +87,19 @@ export type CzytankiSnapshot = {
   readCounts?: Record<string, number>
   /** id czytanki → timestamp ostatniego zaliczonego przeczytania. */
   lastCountedAt?: Record<string, number>
+  /** id czytanki → 'first' | 'second' | 'miss' (pytanie o rozumienie). */
+  comprehensionResults?: Record<string, ComprehensionResult>
+}
+
+/** Zliczenie wyników pytań o rozumienie — wspólne dla UI raportu i eksportu MD. */
+export function countComprehension(
+  results: Record<string, ComprehensionResult> | undefined,
+): { first: number; second: number; miss: number; total: number } {
+  const values = Object.values(results ?? {})
+  const first = values.filter((r) => r === 'first').length
+  const second = values.filter((r) => r === 'second').length
+  const miss = values.filter((r) => r === 'miss').length
+  return { first, second, miss, total: values.length }
 }
 
 const SEVERITY_LABEL: Record<AntiCheatFlag['severity'], string> = {
@@ -414,6 +428,12 @@ export function exportReportToMarkdown(
     if (topTaps.length > 0) {
       lines.push(
         `- **Najczęściej dotykane**: ${topTaps.map((t) => `${t.label} — ${t.count}×`).join(', ')}`,
+      )
+    }
+    const comp = countComprehension(czytankiSnapshot.comprehensionResults)
+    if (comp.total > 0) {
+      lines.push(
+        `- **Pytania o rozumienie**: ${comp.first} za 1. razem, ${comp.second} za 2., ${comp.miss} nietrafione`,
       )
     }
     const totalMs = Object.values(czytankiSnapshot.timeMs ?? {}).reduce((a, b) => a + b, 0)
