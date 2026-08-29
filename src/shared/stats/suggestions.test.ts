@@ -4,7 +4,7 @@ import type { UnifiedSession } from './aggregate'
 import { STATS_MODULE_LABEL, type StatsModuleId } from './aggregate'
 import { createInitialLetterState } from '@/shared/srs/createInitialLetterState'
 import type { LetterState } from '@/shared/srs/types'
-import type { SyllableState } from '@/modules/reading/types'
+import type { SyllableState, WordState } from '@/modules/reading/types'
 import type { ConceptMastery } from '@/modules/numbers/types'
 
 const NOW = new Date(2026, 7, 29, 18, 0, 0).getTime()
@@ -43,6 +43,23 @@ function hardLetters(n: number): Record<string, LetterState> {
   return out
 }
 
+function hardSyllables(n: number): Record<string, SyllableState> {
+  const out: Record<string, SyllableState> = {}
+  for (const syl of ['MA', 'LO', 'TA', 'SZY'].slice(0, n)) {
+    out[`syl-${syl}`] = {
+      id: `syl-${syl}`,
+      syllable: syl,
+      box: 1,
+      lastSeen: NOW,
+      recentWrong: 2,
+      totalSeen: 4,
+      totalCorrect: 1,
+      totalWrong: 3,
+    }
+  }
+  return out
+}
+
 function base(patch: Partial<SuggestionInput> = {}): SuggestionInput {
   return { now: NOW, letters: {}, allSessions: [], ...patch }
 }
@@ -64,7 +81,7 @@ describe('generateSuggestions', () => {
       }),
     )
     expect(out[0]!.id).toBe('no-activity')
-    expect(out.map((s) => s.id)).toContain('hard-items')
+    expect(out.map((s) => s.id)).toContain('hard-letters')
     // posortowane malejąco po priorytecie
     const priorities = out.map((s) => s.priority)
     expect([...priorities].sort((a, b) => b - a)).toEqual(priorities)
@@ -87,6 +104,71 @@ describe('generateSuggestions', () => {
     )
     expect(out.map((s) => s.id)).not.toContain('no-activity')
     expect(out[0]!.id).toBe('two-sessions')
+  })
+
+  it('„Literka dnia" i porzucony start nie liczą się jako aktywność', () => {
+    const out = generateSuggestions(
+      base({
+        allSessions: [
+          session('letters', NOW - 5 * DAY),
+          // mikrosesja + start porzucony po 2 pytaniach — oba dzisiaj
+          { ...session('letters', NOW - 60_000, 6), level: 'daily' },
+          session('reading', NOW - 30_000, 2),
+        ],
+      }),
+    )
+    const noActivity = out.find((s) => s.id === 'no-activity')
+    expect(noActivity).toBeDefined()
+    expect(noActivity!.why).toContain('5 dni')
+  })
+
+  it('czytanka z wczoraj wyłącza no-activity, choć czytanki nie logują sesji', () => {
+    const out = generateSuggestions(
+      base({
+        allSessions: [session('letters', NOW - 5 * DAY)],
+        czytanki: {
+          openedIds: ['cz-1'],
+          readCounts: { 'cz-1': 2 },
+          lastCountedAt: { 'cz-1': NOW - DAY },
+        },
+      }),
+    )
+    expect(out.map((s) => s.id)).not.toContain('no-activity')
+  })
+
+  it('czytanki otwarte, ale ostatnia ponad 7 dni temu → module-cold „wróćcie"', () => {
+    const out = generateSuggestions(
+      base({
+        allSessions: [
+          session('letters', NOW - 60_000),
+          session('reading', NOW - 60_000),
+          session('numbers', NOW - 60_000),
+        ],
+        czytanki: {
+          openedIds: ['cz-1'],
+          readCounts: { 'cz-1': 2 },
+          lastCountedAt: { 'cz-1': NOW - 9 * DAY },
+        },
+      }),
+    )
+    const cold = out.find((s) => s.id === 'module-cold')
+    expect(cold?.module).toBe('czytanki')
+    expect(cold?.text).toContain('Wróćcie')
+    expect(cold?.why).toContain('9 dni')
+  })
+
+  it('bez `lastCountedAt` (persist sprzed v3) czytanki nie wywołują module-cold', () => {
+    const out = generateSuggestions(
+      base({
+        allSessions: [
+          session('letters', NOW - 60_000),
+          session('reading', NOW - 60_000),
+          session('numbers', NOW - 60_000),
+        ],
+        czytanki: { openedIds: ['cz-1'], readCounts: { 'cz-1': 2 } },
+      }),
+    )
+    expect(out.map((s) => s.id)).not.toContain('module-cold')
   })
 
   it('moduł nigdy nietknięty dostaje „zacznijcie", nie „wróćcie"', () => {
@@ -129,39 +211,63 @@ describe('generateSuggestions', () => {
     ).not.toThrow()
   })
 
-  it('liczy trudne sylaby razem z literami', () => {
-    const syllables: Record<string, SyllableState> = {
-      'syl-MA': {
-        id: 'syl-MA',
-        syllable: 'MA',
+  it('trudne litery i trudne sylaby to DWIE osobne sugestie, każda w swoim module', () => {
+    const out = generateSuggestions(
+      base({
+        allSessions: [session('letters', NOW - 60_000)],
+        letters: hardLetters(3),
+        reading: { syllables: hardSyllables(3), words: {} },
+      }),
+    )
+    const letters = out.find((s) => s.id === 'hard-letters')
+    const reading = out.find((s) => s.id === 'hard-reading')
+    expect(letters?.module).toBe('letters')
+    expect(letters?.text).toContain('Trudnych literek')
+    expect(letters?.why).toContain('3 liter')
+    expect(reading?.module).toBe('reading')
+    expect(reading?.text).not.toContain('literek')
+    // Same sylaby → poziom Iskierka i najsłabsze wymienione z nazwy.
+    expect(reading?.text).toContain('Iskierka')
+    expect(reading?.text).toContain('MA')
+  })
+
+  it('same trudne sylaby nie wywołują sugestii o literach', () => {
+    const out = generateSuggestions(
+      base({
+        allSessions: [session('letters', NOW - 60_000)],
+        reading: { syllables: hardSyllables(3), words: {} },
+      }),
+    )
+    expect(out.map((s) => s.id)).not.toContain('hard-letters')
+    expect(out.map((s) => s.id)).toContain('hard-reading')
+  })
+
+  it('trudne słowa liczą się do hard-reading i wskazują poziom słowa', () => {
+    const words: Record<string, WordState> = {
+      'word-KOTEK': {
+        id: 'word-KOTEK',
+        word: 'KOTEK',
         box: 1,
         lastSeen: NOW,
-        recentWrong: 2,
-        totalSeen: 4,
+        recentWrong: 4,
+        totalSeen: 5,
         totalCorrect: 1,
-        totalWrong: 3,
-      },
-      'syl-LO': {
-        id: 'syl-LO',
-        syllable: 'LO',
-        box: 1,
-        lastSeen: NOW,
-        recentWrong: 3,
-        totalSeen: 4,
-        totalCorrect: 1,
-        totalWrong: 3,
+        totalWrong: 4,
+        level: 'ognik',
+        album: false,
       },
     }
     const out = generateSuggestions(
       base({
         allSessions: [session('letters', NOW - 60_000)],
-        letters: hardLetters(1),
-        reading: { syllables, words: {} },
+        reading: { syllables: hardSyllables(2), words },
       }),
     )
-    const hard = out.find((s) => s.id === 'hard-items')
-    expect(hard).toBeDefined()
-    expect(hard!.why).toContain('3')
+    const reading = out.find((s) => s.id === 'hard-reading')
+    expect(reading?.why).toContain('3 sylab')
+    expect(reading?.text).toContain('Ognik')
+    // Najsłabsza pozycja (recentWrong 4) idzie na początek listy.
+    expect(reading?.text).toContain('KOTEK')
   })
 
   it('koncept w nauce od ponad 14 dni daje concept-stuck z nazwą konceptu', () => {

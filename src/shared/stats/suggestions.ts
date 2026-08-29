@@ -16,6 +16,8 @@ import type {
   MathFactState,
 } from '@/modules/numbers/types'
 import { CONCEPT_LABELS } from '@/modules/numbers/data/conceptLabels'
+import { LEVEL_LABEL } from '@/shared/settings/defaults'
+import type { Level } from '@/shared/settings/types'
 import {
   STATS_MODULE_LABEL,
   type StatsModuleId,
@@ -48,6 +50,12 @@ export type SuggestionReadingSnapshot = {
 export type SuggestionCzytankiSnapshot = {
   openedIds: string[]
   readCounts: Record<string, number>
+  /**
+   * id czytanki → timestamp ostatniego zaliczonego przeczytania. Opcjonalne:
+   * persist sprzed v3 tego pola nie ma i wtedy „kiedy ostatnio" jest nieznane —
+   * lepiej milczeć niż zgadywać datę.
+   */
+  lastCountedAt?: Record<string, number> | undefined
 }
 
 export type SuggestionInput = {
@@ -75,6 +83,10 @@ const MODULE_COLD_DAYS = 7
 const CONCEPT_STUCK_DAYS = 14
 const HARD_ITEM_WRONG = 2
 const HARD_ITEMS_REQUIRED = 3
+/** Tak samo jak w `todaySessions` — porzucony start to jeszcze nie nauka. */
+const MIN_QUESTIONS_FOR_ACTIVITY = 3
+/** Ile najsłabszych pozycji wymieniamy rodzicowi z nazwy. */
+const HARD_ITEMS_NAMED = 3
 
 const MODULE_ORDER: StatsModuleId[] = ['letters', 'reading', 'numbers']
 
@@ -103,15 +115,73 @@ function lastSessionAt(
   return last
 }
 
-function countHardItems(input: SuggestionInput): number {
+/**
+ * Ostatnia PRAWDZIWA sesja. „Literka dnia" (60-90 s przywitanie) i porzucone
+ * starty na 1-2 pytaniach nie mogą uciszać reguły „wróćcie do nauki".
+ */
+function lastRealSessionAt(sessions: readonly UnifiedSession[]): number | null {
+  let last: number | null = null
+  for (const s of sessions) {
+    if (s.level === 'daily') continue
+    if (s.questions < MIN_QUESTIONS_FOR_ACTIVITY) continue
+    if (last === null || s.startedAt > last) last = s.startedAt
+  }
+  return last
+}
+
+/** Czytanki nie logują sesji — jedynym śladem aktywności jest `lastCountedAt`. */
+function lastCzytankaAt(
+  czytanki: SuggestionCzytankiSnapshot | undefined,
+): number | null {
+  let last: number | null = null
+  for (const ts of Object.values(czytanki?.lastCountedAt ?? {})) {
+    if (last === null || ts > last) last = ts
+  }
+  return last
+}
+
+function countHardLetters(letters: Record<string, LetterState>): number {
   let n = 0
-  for (const l of Object.values(input.letters)) {
+  for (const l of Object.values(letters)) {
     if (l.recentWrong >= HARD_ITEM_WRONG) n++
   }
-  for (const s of Object.values(input.reading?.syllables ?? {})) {
-    if (s.recentWrong >= HARD_ITEM_WRONG) n++
-  }
   return n
+}
+
+type HardReading = { count: number; labels: string[]; level: Level }
+
+/**
+ * Trudne sylaby i słowa modułu 2 — razem, bo dla rodzica to jedna czynność,
+ * ale ODDZIELNIE od liter: tam prowadzi zupełnie inny ekran.
+ */
+function hardReading(reading: SuggestionReadingSnapshot): HardReading {
+  const syllables = Object.values(reading.syllables).filter(
+    (s) => s.recentWrong >= HARD_ITEM_WRONG,
+  )
+  const words = Object.values(reading.words).filter(
+    (w) => w.recentWrong >= HARD_ITEM_WRONG,
+  )
+  const named = [
+    ...syllables.map((s) => ({ label: s.syllable, wrong: s.recentWrong })),
+    ...words.map((w) => ({ label: w.word, wrong: w.recentWrong })),
+  ]
+  // Stabilne sortowanie: przy remisie zostaje kolejność (sylaby przed słowami).
+  named.sort((a, b) => b.wrong - a.wrong)
+  // Sylaby żyją wyłącznie na Iskierce, słowa niosą własny poziom — kierujemy
+  // rodzica tam, gdzie najsłabsze słowo faktycznie się pojawia.
+  let level: Level = 'iskierka'
+  let worstWordWrong = -1
+  for (const w of words) {
+    if (w.recentWrong > worstWordWrong) {
+      worstWordWrong = w.recentWrong
+      level = w.level
+    }
+  }
+  return {
+    count: syllables.length + words.length,
+    labels: named.slice(0, HARD_ITEMS_NAMED).map((n) => n.label),
+    level,
+  }
 }
 
 function stuckConcept(
@@ -144,7 +214,14 @@ export function generateSuggestions(input: SuggestionInput): Suggestion[] {
 
   const out: Suggestion[] = []
 
-  const lastAny = lastSessionAt(allSessions)
+  // Czytanka nie tworzy sesji, więc bez `lastCountedAt` reguła mówiłaby
+  // „wróćcie do nauki" dziecku, które wczoraj czytało.
+  const lastSession = lastRealSessionAt(allSessions)
+  const lastCzytanka = lastCzytankaAt(input.czytanki)
+  const lastAny =
+    lastSession === null || (lastCzytanka !== null && lastCzytanka > lastSession)
+      ? lastCzytanka
+      : lastSession
   if (lastAny !== null) {
     const days = daysAgo(lastAny, now)
     if (days >= NO_ACTIVITY_DAYS) {
@@ -153,7 +230,7 @@ export function generateSuggestions(input: SuggestionInput): Suggestion[] {
         priority: 6,
         module: 'all',
         text: 'Wróćcie do nauki — wystarczy jedna krótka sesja.',
-        why: `Ostatnia sesja była ${days} dni temu, a przerwy najbardziej kosztują świeżo poznane litery.`,
+        why: `Ostatnia aktywność była ${days} dni temu, a przerwy najbardziej kosztują świeżo poznany materiał.`,
       })
     }
   }
@@ -183,25 +260,53 @@ export function generateSuggestions(input: SuggestionInput): Suggestion[] {
     }
   }
 
-  if (input.czytanki && input.czytanki.openedIds.length === 0) {
-    out.push({
-      id: 'module-cold',
-      priority: 5,
-      module: 'czytanki',
-      text: `Zacznijcie moduł „${CZYTANKI_LABEL}" — jeszcze w nim nie byliście.`,
-      why: 'Czytanie całych zdań łączy sylaby w płynność.',
-    })
+  if (input.czytanki) {
+    if (input.czytanki.openedIds.length === 0) {
+      out.push({
+        id: 'module-cold',
+        priority: 5,
+        module: 'czytanki',
+        text: `Zacznijcie moduł „${CZYTANKI_LABEL}" — jeszcze w nim nie byliście.`,
+        why: 'Czytanie całych zdań łączy sylaby w płynność.',
+      })
+    } else if (lastCzytanka !== null) {
+      const days = daysAgo(lastCzytanka, now)
+      if (days >= MODULE_COLD_DAYS) {
+        out.push({
+          id: 'module-cold',
+          priority: 5,
+          module: 'czytanki',
+          text: `Wróćcie do modułu „${CZYTANKI_LABEL}" — dawno go nie było.`,
+          why: `Ostatnia czytanka była ${days} dni temu.`,
+        })
+      }
+    }
   }
 
-  const hardItems = countHardItems(input)
-  if (hardItems >= HARD_ITEMS_REQUIRED) {
+  // Litery i Czytanie OSOBNO: „Trudne literki" to ekran modułu 1 i nie powtórzy
+  // tam ani jednej sylaby, więc wspólny licznik wysyłał rodzica w złe miejsce.
+  const hardLetters = countHardLetters(input.letters)
+  if (hardLetters >= HARD_ITEMS_REQUIRED) {
     out.push({
-      id: 'hard-items',
+      id: 'hard-letters',
       priority: 4,
       module: 'letters',
       text: 'Zróbcie 5 minut „Trudnych literek" — same problematyczne znaki.',
-      why: `${hardItems} liter i sylab wciąż wraca z błędem.`,
+      why: `${hardLetters} liter wciąż wraca z błędem.`,
     })
+  }
+
+  if (input.reading) {
+    const hard = hardReading(input.reading)
+    if (hard.count >= HARD_ITEMS_REQUIRED) {
+      out.push({
+        id: 'hard-reading',
+        priority: 4,
+        module: 'reading',
+        text: `Poćwiczcie Czytanie na poziomie „${LEVEL_LABEL[hard.level]}" — najsłabsze: ${hard.labels.join(', ')}.`,
+        why: `${hard.count} sylab i słów wciąż wraca z błędem.`,
+      })
+    }
   }
 
   if (input.numbers) {
