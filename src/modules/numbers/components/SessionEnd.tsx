@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { colors, radii } from '@/app/theme'
 import { IskraHero } from '@/shared/ui/IskraHero'
+import { hasEnoughForToday } from '@/shared/stats/enoughForToday'
 
 type Props = {
   counters: { correct: number; wrong: number; dontKnow: number }
@@ -12,10 +13,17 @@ type Props = {
 }
 
 export function SessionEnd({ counters, audioBus, onExit, onTree }: Props) {
+  // „Na dziś wystarczy" — liczone raz na mount, ze WSZYSTKICH modułów (dziecko
+  // mogło już grać w Litery). Log bieżącej sesji jest zapisany zanim ten ekran
+  // się pojawi.
+  const [enough] = useState(() => hasEnoughForToday(Date.now()))
+
   useEffect(() => {
     audioBus.stop()
     void audioBus.play('session-end-good')
-  }, [audioBus])
+    // AudioBus to kolejka FIFO — cue dokleja się PO pochwale, nie przerywa jej.
+    if (enough) void audioBus.play('session-stop-enough')
+  }, [audioBus, enough])
 
   const isPerfect = counters.wrong === 0 && counters.dontKnow === 0 && counters.correct > 0
 
@@ -66,25 +74,71 @@ export function SessionEnd({ counters, audioBus, onExit, onTree }: Props) {
           🤷 {counters.dontKnow}
         </span>
       </div>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
-        <button
-          type="button"
-          data-testid="session-end-tree"
-          aria-label="Drzewko mistrzostwa"
-          {...treeTap}
-          style={btnStyle('#dcfce7', '#16a34a', '#166534')}
-        >
-          🌱 Drzewko
-        </button>
-        <button
-          type="button"
-          data-testid="session-end-exit"
-          aria-label="Wyjdź"
-          {...exitTap}
-          style={btnStyle('#fff', colors.accentBlue, colors.text)}
-        >
-          → Wyjdź
-        </button>
+      {/* Koniec na dziś: 🏠 przejmuje rolę głównego przycisku, Drzewko schodzi
+          na bok. Oba targety dalej ≥60×60. */}
+      <div
+        data-testid="session-end-actions"
+        style={{
+          display: 'flex',
+          gap: 16,
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          alignItems: 'center',
+          flexDirection: enough ? 'column' : 'row',
+        }}
+      >
+        {enough ? (
+          <>
+            <button
+              type="button"
+              data-testid="session-end-exit"
+              aria-label="Wróć do domu"
+              {...exitTap}
+              style={{
+                ...btnStyle('#dcfce7', colors.accentGreen, '#166534'),
+                minWidth: 280,
+                fontSize: 34,
+              }}
+            >
+              🏠
+            </button>
+            <button
+              type="button"
+              data-testid="session-end-tree"
+              aria-label="Drzewko mistrzostwa"
+              {...treeTap}
+              style={{
+                ...btnStyle('transparent', '#d8d8de', '#7a7a82'),
+                minWidth: 160,
+                fontSize: 20,
+                borderWidth: 2,
+              }}
+            >
+              🌱 Drzewko
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              data-testid="session-end-tree"
+              aria-label="Drzewko mistrzostwa"
+              {...treeTap}
+              style={btnStyle('#dcfce7', '#16a34a', '#166534')}
+            >
+              🌱 Drzewko
+            </button>
+            <button
+              type="button"
+              data-testid="session-end-exit"
+              aria-label="Wyjdź"
+              {...exitTap}
+              style={btnStyle('#fff', colors.accentBlue, colors.text)}
+            >
+              → Wyjdź
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

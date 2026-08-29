@@ -105,8 +105,8 @@ describe('SettingsScreen', () => {
         now={() => 1_000}
       />,
     )
-    fireEvent.click(screen.getByTestId('session-length-15'))
-    expect(useSettings.getState().settings.sessionLength).toBe(15)
+    fireEvent.click(screen.getByTestId('questions-per-session-12'))
+    expect(useSettings.getState().settings.questionsPerSession).toBe(12)
 
     fireEvent.change(screen.getByTestId('celebration-tempo'), {
       target: { value: 'short' },

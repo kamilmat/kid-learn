@@ -434,8 +434,11 @@ export function useReadingSession({ level, audioBus, settings, rng = Math.random
   const retryQuestionRef = useRef<ReadingQuestion | null>(null)
   const retryPendingRef = useRef(false)
 
+  // Per-poziom override > globalna kontrolka „Ile pytań" > stała modułu.
   const questionsPerSession =
-    settings.reading.questionsPerSession[level] ?? DEFAULT_QUESTIONS_PER_SESSION
+    settings.reading.questionsPerSession[level] ??
+    settings.questionsPerSession ??
+    DEFAULT_QUESTIONS_PER_SESSION
 
   // Synchronizuj ref ze stanem
   statusRef.current = status

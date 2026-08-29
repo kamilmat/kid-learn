@@ -13,6 +13,8 @@ const SUGGESTIONS_COLOR_TEXT = '#2d2d33'
 export type SuggestionsSectionProps = {
   letters: Record<string, LetterState>
   sessions: SessionLog[]
+  /** Sesje ukończone dziś we wszystkich modułach — patrz `completedSessionsToday`. */
+  sessionsToday?: number
 }
 
 /**
@@ -89,8 +91,15 @@ export function isResponseTimeIncreasing(sessions: SessionLog[]): boolean {
 export function generateSuggestions(
   letters: Record<string, LetterState>,
   sessions: SessionLog[],
+  sessionsToday?: number,
 ): string[] {
   const out: string[] = []
+
+  // Nudge na dziś — dwie krótkie sesje konsolidują lepiej niż jedna długa.
+  // Pokazujemy go NA GÓRZE, bo to jedyna sugestia „do zrobienia jeszcze dziś".
+  if (sessionsToday === 1) {
+    out.push('Dziś była jedna sesja; druga wieczorem działa lepiej niż jedna długa.')
+  }
 
   // Najsłabsze 3
   const weakest = topNLetters(letters, letterWeaknessScore, 3)
@@ -124,8 +133,9 @@ export { POLISH_ALPHABET }
 export function SuggestionsSection({
   letters,
   sessions,
+  sessionsToday,
 }: SuggestionsSectionProps) {
-  const suggestions = generateSuggestions(letters, sessions)
+  const suggestions = generateSuggestions(letters, sessions, sessionsToday)
 
   return (
     <section

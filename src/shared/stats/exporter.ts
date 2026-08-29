@@ -20,6 +20,7 @@ import {
   streakDays,
 } from './components/ActivitySection'
 import { generateSuggestions } from './components/SuggestionsSection'
+import { completedSessionsToday } from './todaySessions'
 import {
   collectFlagsForRecentSessions,
   FLAG_LABEL,
@@ -261,7 +262,13 @@ export function exportReportToMarkdown(
   // ---- Sugestie ----
   lines.push('## Sugestie')
   lines.push('')
-  for (const s of generateSuggestions(letters, sessions)) {
+  // Ta sama funkcja karmi UI i markdown — treść musi być identyczna, więc
+  // nudge „druga sesja wieczorem" liczymy tu tak samo jak w `ReportScreen`.
+  for (const s of generateSuggestions(
+    letters,
+    sessions,
+    completedSessionsToday(allSessions, now),
+  )) {
     lines.push(`- ${s}`)
   }
   lines.push('')
@@ -287,7 +294,7 @@ export function exportReportToMarkdown(
   // ---- Ustawienia (krótko, dla kontekstu nauczyciela) ----
   lines.push('## Ustawienia')
   lines.push('')
-  lines.push(`- Długość sesji: ${settings.sessionLength} pytań`)
+  lines.push(`- Długość sesji: ${settings.questionsPerSession} pytań`)
   lines.push('- Limit czasu (per poziom):')
   for (const lvl of ALL_LEVELS) {
     const limit = getEffectiveTimeLimit(settings, lvl)
