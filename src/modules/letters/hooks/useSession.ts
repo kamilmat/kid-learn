@@ -328,6 +328,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
   }
 
   const [status, setStatus] = useState<SessionStatus>('preparing')
+  // Patrz komentarz w `start()` — pamięta ostatni `status`, dla którego
+  // faktycznie wystartowaliśmy sesję (guard przeciw dev/StrictMode dublowi).
+  const startedForStatusRef = useRef<SessionStatus | null>(null)
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null)
   const [iskierki, setIskierki] = useState(0)
   // Liczniki per outcome — pokazywane w status barze i podsumowaniu sesji.
@@ -899,6 +902,18 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     if (status !== 'preparing' && status !== 'finished') {
       return
     }
+    // Guard na `status`: React w dev/StrictMode odpala auto-start effect
+    // w komponencie jako setup→cleanup→setup przy pierwszym mouncie — obie
+    // kopie widzą TEN SAM (jeszcze niescommitowany) `status`, więc sam
+    // powyższy check nie odróżnia dubla od pierwszego wywołania. Ref
+    // pamięta, dla jakiego `status` już faktycznie wystartowaliśmy sesję —
+    // drugie wywołanie z tym samym `status` (bez żadnego renderu pomiędzy)
+    // jest no-opem; prawdziwy restart (po realnym przejściu do 'finished')
+    // ma inny `status`, więc przechodzi normalnie.
+    if (startedForStatusRef.current === status) {
+      return
+    }
+    startedForStatusRef.current = status
     const cfg = cfgRef.current
     // czyścimy kolejkę audio z ewentualnych pozostałości (poprzednie sesje,
     // niedokończone intro itp.) — żeby pierwsze pytanie miało czystą scenę

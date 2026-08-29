@@ -493,7 +493,7 @@ export function SettingsScreen({
                     style={selectStyle}
                   >
                     <option value={PROMPT_MODE_INHERIT}>
-                      jak wyżej ({PROMPT_MODE_LABELS[settings.letters.promptMode]})
+                      globalnie ({PROMPT_MODE_LABELS[settings.letters.promptMode]})
                     </option>
                     {PROMPT_MODE_OPTIONS.map((opt) => (
                       <option key={opt} value={opt}>
