@@ -11,13 +11,14 @@
 // API: start / pause / resume / answer / dontKnow / quit
 //
 // Audio (wywoływane przez `audioBus.play(key)`, sekwencja FIFO):
-//   - prompt: `letter-<x>`
+//   - prompt: `promptAudioKeys(<x>, promptMode)` — `phon-<slug>` i/lub
+//              `letter-name-<slug>` (default `both`: nazwa, potem fonem)
 //   - correct: `sfx-correct-ding` + pickPraiseKey z `praise-1..12` (no-repeat-with-last)
 //              + `assoc-<x>` + opcjonalnie `streak-3` / `streak-5` / `streak-7-plus`
 //   - wrong:   pickCorrectionPrefix (`correction-prefix-1..3` lub `correction-prefix-contrastive`
-//              gdy chosenLetter ∈ CONTRASTIVE_PAIRS[target]) + `letter-<x>`
+//              gdy chosenLetter ∈ CONTRASTIVE_PAIRS[target]) + prompt litery
 //   - dontKnow + timeout (scalone audio): losowy `dont-know-1..3` + losowy
-//              `correction-prefix-1..3` + `letter-<x>`
+//              `correction-prefix-1..3` + prompt litery
 //   - mastery: `sfx-mastery-fanfara` + `mastery-celebration` (+ ewentualnie streak audio)
 //   - 3s warning: `cue-warning-3s` gdy zostają 3s do końca timera (tylko gdy showCountdownBar)
 //   - session-end: `session-end-perfect` jeśli detectPerfectSession else `session-end`
@@ -32,6 +33,7 @@ import type {
   CaseMode,
   CelebrationTempo,
   Level,
+  PromptMode,
   StyleMode,
   TimeLimit,
 } from '@/shared/settings/types'
@@ -44,6 +46,7 @@ import {
   type PraiseKey,
 } from './useSession.pickers'
 import type { IskraIntensity } from '@/shared/ui/IskraMascot'
+import { promptAudioKeys } from '@/modules/letters/audio/promptKeys'
 import { CONTRASTIVE_PAIRS } from '@/modules/letters/data/contrastivePairs'
 import { getAssociation } from '@/modules/letters/data/associations'
 import { createInitialLetterState } from '@/shared/srs/createInitialLetterState'
@@ -81,6 +84,11 @@ export type UseSessionConfig = {
    * Pierwsza pomyłka i tak aktualizuje SRS — retry uczy autokorekty.
    */
   secondAttempt?: boolean
+  /**
+   * Jak brzmi prompt litery: `phoneme` („b"), `name` („be"), `both` („be… b").
+   * Default `both` — nazwa identyfikuje literę, fonem jest potrzebny do scalania.
+   */
+  promptMode?: PromptMode
   /** Initialny słownik `LetterState` (z lettersStore lub czysty). */
   initialStates?: Record<string, LetterState>
   /**
@@ -148,14 +156,16 @@ const DONTKNOW_KEYS = ['dont-know-1', 'dont-know-2', 'dont-know-3'] as const
 // "wybrzmiewania" — czujemy że za szybko leci.
 //   - correct:  sfx-ding (1.8s) + praise (~1.5s) ≈ 3.3s → 4500
 //               (bez assoc "X jak Y" — dziecko zna literę; guzik "→" do skip)
-//   - wrong:    correction-prefix (~2.1s) + letter (~1.2s) ≈ 3.3s → 5500
+//   - wrong:    correction-prefix (~2.1s) + prompt litery ≈ 3.3-4.1s → 6300
+//               (prompt to 1-2 klipy zależnie od `promptMode`; `both` =
+//               nazwa + fonem, stąd +800 ms względem poprzednich 5500)
 //   - dontKnow: dont-know (~1.7s) + letter (~1.2s) + assoc "X jak Y" (~1.9s) ≈ 4.8s → 6500
 //   - timeout:  identyczne audio jak dontKnow ≈ 4.8s → 6500
 //   - mastery:  sfx-fanfara (2.1s) + mastery-celebration (3.3s) ≈ 5.4s → 7000
 //               (streak audio dorzucany przez STREAK_AUDIO_DURATION_MS gdy próg)
 const FEEDBACK_DURATION_BASE_MS: Record<FeedbackVariant, number> = {
   correct: 4500,
-  wrong: 5500,
+  wrong: 6300,
   dontKnow: 6500,
   timeout: 6500,
   mastery: 7000,
@@ -265,6 +275,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     celebrationTempo,
     tilesPerQuestion = 4,
     secondAttempt = true,
+    promptMode = 'both',
     initialStates,
     onSessionEnd,
     audioBus = defaultAudioBus,
@@ -285,6 +296,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     celebrationTempo,
     tilesPerQuestion,
     secondAttempt,
+    promptMode,
     rng,
     now,
     audioBus,
@@ -301,6 +313,7 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
     celebrationTempo,
     tilesPerQuestion,
     secondAttempt,
+    promptMode,
     rng,
     now,
     audioBus,
@@ -526,10 +539,12 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
 
     lastTargetRef.current = target
 
-    // Audio: prompt fonem dla nowej litery — kolejka AudioBus naturalnie
+    // Audio: prompt litery wg `promptMode` — kolejka AudioBus naturalnie
     // poczeka aż poprzedni feedback ("X jak Y") się skończy. NIE wołamy
     // stop() bo to obcięłoby końcówkę asocjacji.
-    void cfg.audioBus.play(`letter-${target}`)
+    for (const key of promptAudioKeys(target, cfg.promptMode)) {
+      void cfg.audioBus.play(key)
+    }
 
     // Timer
     startCountdown()
@@ -606,7 +621,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
             cfg.rng,
           )
           void cfg.audioBus.play(prefixKey)
-          void cfg.audioBus.play(`letter-${target}`)
+          for (const key of promptAudioKeys(target, cfg.promptMode)) {
+            void cfg.audioBus.play(key)
+          }
           break
         }
         case 'dontKnow':
@@ -618,7 +635,9 @@ export function useSession(config: UseSessionConfig): UseSessionApi {
           // do błędu). Dziecko nie pomyliło się, świadomie/biernie nie
           // odpowiedziało.
           void cfg.audioBus.play(pickRandom(DONTKNOW_KEYS, cfg.rng))
-          void cfg.audioBus.play(`letter-${target}`)
+          for (const key of promptAudioKeys(target, cfg.promptMode)) {
+            void cfg.audioBus.play(key)
+          }
           try {
             const assoc = getAssociation(target)
             void cfg.audioBus.play(assoc.audioKey)

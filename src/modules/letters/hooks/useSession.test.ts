@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useSession } from './useSession'
+import { promptAudioKeys } from '@/modules/letters/audio/promptKeys'
 import type { UseSessionConfig } from './useSession'
 
 function makeAudioBus() {
@@ -95,7 +96,10 @@ describe('useSession — lifecycle', () => {
       result.current.start()
     })
     const target = result.current.currentQuestion!.targetLetter
-    expect(audioBus.play).toHaveBeenCalledWith(`letter-${target}`)
+    // Default promptMode = 'both': nazwa litery, potem czysty fonem.
+    for (const key of promptAudioKeys(target, 'both')) {
+      expect(audioBus.play).toHaveBeenCalledWith(key)
+    }
   })
 
   it('handles correct answer: increments iskierki + records event', () => {
@@ -285,7 +289,9 @@ describe('useSession — lifecycle', () => {
     })
     const calls = audioBus.play.mock.calls.map((c) => c[0])
     expect(calls.some((k) => k.startsWith('correction-prefix-'))).toBe(true)
-    expect(calls).toContain(`letter-${q.targetLetter}`)
+    for (const key of promptAudioKeys(q.targetLetter, 'both')) {
+      expect(calls).toContain(key)
+    }
   })
 })
 

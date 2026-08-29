@@ -11,6 +11,7 @@ import { usePageVisibility } from '@/shared/engagement/usePageVisibility'
 import {
   defaultSettings,
   getActiveLetterPool,
+  getEffectivePromptMode,
   getEffectiveShowCountdownBar,
   getEffectiveTilesPerQuestion,
   getEffectiveTimeLimit,
@@ -22,6 +23,7 @@ import type {
   Settings,
   StyleMode,
 } from '@/shared/settings/types'
+import { promptAudioKeys } from '@/modules/letters/audio/promptKeys'
 import { useSession } from '@/modules/letters/hooks/useSession'
 import type { LetterTileState } from './LetterTile'
 import { FeedbackOverlay } from './FeedbackOverlay'
@@ -77,6 +79,7 @@ export function SessionView({
   const activeLetters = useMemo(() => getActiveLetterPool(settings, level), [settings, level])
   const caseMode = resolveCaseMode(settings, level)
   const styleMode = resolveStyleMode(settings, level)
+  const promptMode = getEffectivePromptMode(settings, level)
 
   const session = useSession({
     level,
@@ -89,6 +92,7 @@ export function SessionView({
     celebrationTempo: settings.celebrationTempo,
     tilesPerQuestion: getEffectiveTilesPerQuestion(settings, level),
     secondAttempt: settings.secondAttempt,
+    promptMode,
     ...(initialStates !== undefined ? { initialStates } : {}),
     ...(onSessionComplete !== undefined ? { onSessionEnd: onSessionComplete } : {}),
     audioBus,
@@ -201,7 +205,12 @@ export function SessionView({
               // dorzucały kolejne kopie do FIFO queue, które grały sekwencyjnie
               // z opóźnieniem ("powtórz" powinno restartować, nie kolejkować).
               audioBus.stop()
-              void audioBus.play(`letter-${session.currentQuestion.targetLetter}`)
+              for (const key of promptAudioKeys(
+                session.currentQuestion.targetLetter,
+                promptMode,
+              )) {
+                void audioBus.play(key)
+              }
             }
           }}
           onDontKnow={() => session.dontKnow()}
