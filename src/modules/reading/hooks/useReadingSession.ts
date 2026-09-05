@@ -275,7 +275,9 @@ export const MEANING_QUESTION_INDICES: readonly number[] = [2, 5]
 // Generuje pytanie word-meaning (obrazek → słowo) dla Ognika i Pochodni.
 // Rzuca, gdy pula dystraktorów jest za mała — `generateQuestion` wraca wtedy
 // po cichu do typu ćwiczenia poziomu.
-function generateWordMeaning(
+// Eksportowane dla testów: przez hooka kolizja dystraktorów wychodzi raz na
+// kilka przebiegów, a tu da się ją wywołać deterministycznie tysiąc razy.
+export function generateWordMeaning(
   statesMap: Record<string, WordState>,
   activePool: string[],
   lastTarget: string | null,
@@ -300,12 +302,18 @@ function generateWordMeaning(
       w.albumEmoji !== target.albumEmoji &&
       w.syllables[0] !== target.syllables[0],
   )
-  // Dystraktory też parami różne emoji (SAŁATA/KAPUSTA = 🥬).
+  // Dystraktory muszą być rozróżnialne także MIĘDZY SOBĄ — i emoji
+  // (SAŁATA/KAPUSTA = 🥬), i pierwszą sylabą. Bez tego drugiego warunku pula
+  // potrafiła wystawić „KOSZULA, KOŃ, KOTEK" obok siebie: dziecko odczytuje
+  // pierwszą sylabę, widzi trzy takie same i nie ma jak wybrać.
   const distractors: WordData[] = []
   const usedEmoji = new Set([target.albumEmoji])
+  const usedFirstSyllable = new Set([target.syllables[0]])
   for (const w of shuffled(pool, rng)) {
     if (usedEmoji.has(w.albumEmoji)) continue
+    if (usedFirstSyllable.has(w.syllables[0])) continue
     usedEmoji.add(w.albumEmoji)
+    usedFirstSyllable.add(w.syllables[0])
     distractors.push(w)
     if (distractors.length === CHOICE_COUNT - 1) break
   }

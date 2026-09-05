@@ -131,7 +131,7 @@ public/audio/              # build artifact: mp3 (`ls public/audio/*.mp3 | wc -l
 pnpm dev              # dev server z HMR
 pnpm build            # production build (lokalnie base='/'; CI ustawia VITE_BASE=/kid-learn/)
 pnpm tsc -b           # type check
-pnpm test --run       # testy (1079/1079 zielone: 960 src + 119 scripts, po dokładce 40 czytanek). `vitest.config.ts` wyklucza `**/.claude/**` — bez tego zbiera testy ze starych worktree'ów agentów
+pnpm test --run       # testy (1081/1081 zielone: 962 src + 119 scripts, po dokładce czytanek + fixie dystraktorów). `vitest.config.ts` wyklucza `**/.claude/**` — bez tego zbiera testy ze starych worktree'ów agentów
 pnpm audio:czytanki   # generuj czytanki-syllables.json (375) + czytanki-words.json (407) + czytanki-questions.json (99) z data/czytanki.ts (moduł 4)
 pnpm audio:reading    # generuj syllables.json (moduł 2) z SYLLABLE_TEXTS ∪ sylab ALL_WORDS (91 kluczy)
 pnpm audio:build      # audio:czytanki + audio:reading + generuj/aktualizuj mp3 (azure-ipa wymaga .env.local)

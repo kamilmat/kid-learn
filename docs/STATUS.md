@@ -70,7 +70,15 @@ Znalezione przy okazji ↻: rozwiązanie bramki matematycznej **na żywo** wywal
 - Test regresyjny w `ReportScreen.test.tsx` przechodzi **całą drogę rodzica**: render z zamkniętą bramką → odczyt działania z `math-gate-expression` → wpisanie wyniku → submit → `report-screen` w DOM. Bez fixu test wywala się dokładnie tym samym błędem co produkcja.
 - Potwierdzone w przeglądarce: `5 + 8 - 3` → 10 → raport z kartą „Następny krok", bez fallbacku.
 
-- `src/modules/reading/hooks/useReadingSession.meaning.test.ts` („ognik: pytanie na indeksie 2…") jest **flaky** — losowanie dystraktorów czasem daje dwa słowa o tej samej pierwszej sylabie. Wywrócił się raz na ~5 przebiegów, niezależnie od tej zmiany (moduł 2). Do naprawy przy okazji dotykania generatora.
+### Flaky test w module 2 (naprawione)
+
+`useReadingSession.meaning.test.ts` wywracał się mniej więcej raz na pięć przebiegów. **Przyczyna:** `generateWordMeaning` wymuszał inną pierwszą sylabę i inne emoji tylko względem CELU, a między dystraktorami pilnował wyłącznie emoji. Pomiar na 2000 losowań: 1,8% kolizji w Ogniku, 1,1% w Pochodni — czyli ~5% szans na czerwony przebieg przy dwóch pytaniach `word-meaning` na sesję i dwóch poziomach.
+
+Dydaktycznie to był realny błąd, nie tylko szum w CI: pytanie potrafiło wystawić „KOSZULA, KOŃ, KOTEK, CHŁOPIEC" — dziecko odczytuje pierwszą sylabę, widzi trzy takie same i nie ma jak wybrać, mimo że przeczytało poprawnie.
+
+- Fix: `usedFirstSyllable` obok istniejącego `usedEmoji` w pętli dobierającej dystraktory. Zapas puli jest duży (najgorszy target daje 12 kandydatów przy potrzebnych 3), więc reguła nikogo nie blokuje.
+- Test: `generateWordMeaning` eksportowany i wołany wprost, 400 zaseedowanych losowań na poziom. Przez hooka nie dało się tego złapać powtarzalnie; przed fixem pada na losowaniu 28 z konkretnym wypisem, po fixie 0 kolizji na 2000 losowań.
+- Pełny `pnpm test --run` przeszedł **trzy razy z rzędu** — 1081/1081.
 
 ## Fala 2 (2026-08-29) — ukończona (branch `feat/fala-2`, tip `1a25b8b`)
 

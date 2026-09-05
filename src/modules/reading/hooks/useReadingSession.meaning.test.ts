@@ -18,7 +18,7 @@ if (typeof localStorage === 'undefined' || typeof localStorage.clear !== 'functi
   }
 }
 
-const { useReadingSession, MEANING_QUESTION_INDICES } = await import('./useReadingSession')
+const { useReadingSession, MEANING_QUESTION_INDICES, generateWordMeaning } = await import('./useReadingSession')
 const { useReading } = await import('../store/readingStore')
 
 import { describe, expect, it, beforeEach, vi } from 'vitest'
@@ -52,6 +52,15 @@ function correctAnswerFor(q: ReadingQuestion): string {
     case 'syllable-match': return q.targetSyllable
     case 'syllable-fill': return q.missingSyllable
     default: return q.targetWord
+  }
+}
+
+/** Deterministyczny RNG — ten sam seed daje ten sam przebieg sesji. */
+function seededRng(seed: number): () => number {
+  let s = seed >>> 0
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0
+    return s / 0x1_0000_0000
   }
 }
 
@@ -107,6 +116,32 @@ describe('word-meaning — generator', () => {
       const chosen = q.choices.map((c) => ALL_WORDS.find((w) => w.text === c)!)
       expect(new Set(chosen.map((w) => w.albumEmoji)).size).toBe(4)
       expect(new Set(chosen.map((w) => w.syllables[0])).size).toBe(4)
+    },
+  )
+
+  it.each(['ognik', 'pochodnia'] as const)(
+    '%s: żadne dwie opcje nie zaczynają się tą samą sylabą — w 400 losowaniach',
+    (level) => {
+      // Pojedyncze pytanie trafiało kolizję w ~1,5% losowań, więc pełny przebieg
+      // testów bywał czerwony mniej więcej raz na pięć uruchomień. Generator
+      // wołamy tu wprost (zamiast przez hooka), bo tylko tak da się wykonać
+      // setki losowań i zamienić „czasem pada" w wynik powtarzalny.
+      const words = getWordsByLevel(level)
+      const states: Record<string, WordState> = {}
+      for (const word of words) {
+        states[word.id] = {
+          id: word.id, word: word.text, box: 3, lastSeen: 0, recentWrong: 0,
+          totalSeen: 0, totalCorrect: 0, totalWrong: 0, level, album: false,
+        }
+      }
+      const pool = words.map((word) => word.id)
+      const rng = seededRng(20260905)
+      for (let i = 0; i < 400; i++) {
+        const q = generateWordMeaning(states, pool, null, rng, 1_700_000_000_000)
+        const chosen = q.choices.map((c) => ALL_WORDS.find((word) => word.text === c)!)
+        expect(new Set(chosen.map((word) => word.syllables[0])).size, `losowanie ${i}: ${q.choices.join(', ')}`).toBe(4)
+        expect(new Set(chosen.map((word) => word.albumEmoji)).size, `losowanie ${i}: ${q.choices.join(', ')}`).toBe(4)
+      }
     },
   )
 
