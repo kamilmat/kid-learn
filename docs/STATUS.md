@@ -3,6 +3,28 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
+## Stan aktualny (2026-09-05, `bd726d2`)
+
+Jeden ekran prawdy na start sesji. Szczegóły — w sekcjach niżej, w kolejności odwrotnej chronologicznie.
+
+| | |
+|---|---|
+| **Moduły live** | 1 Literki · 2 Czytanie · 3 Cyferki · 4 Czytanki (**100 czytanek**, po 25 na grupę) |
+| **Testy** | `pnpm test --run` → **1081/1081** (962 src + 119 scripts) |
+| **Audio** | `pnpm audio:check` → **1430/1430**; plików `public/audio/*.mp3` = **1437** (7 nadwyżkowych, opisane w CLAUDE.md) |
+| **Persist** | `iskierki-state-v1` **v7** · `iskierki-letters-v1` v2 · `iskierki-reading-v1` v1 · `iskierki-numbers-v1` v3 · `iskierki-czytanki-v1` v3 |
+| **Ostatnie zmiany** | tryb „po literkach" (`A\|B`) w czytankach · guzik ↻ nowej wersji · fix crashu raportu po bramce · +40 czytanek · fix dystraktorów `word-meaning` |
+
+**Otwarte, świadomie odłożone** (nic nie blokuje):
+- Odsłuch starszych nagrań Azure: `phon-*` (32), `syl-*` (91), `cz-q-01`…`cz-q-60`. Nowe (`cz-q-61`…`cz-q-100`, `cz-let-*`) user odsłuchał — OK.
+- 404 na `favicon.png` / `favicon.svg` na podstronach (ścieżka względna; kosmetyka, nic nie psuje).
+- Reszta długu z Fal 1-2 — patrz „Fala 1+2 — odłożone drobiazgi" w `CLAUDE.md`.
+
+**Jak weryfikować zmiany** (sprawdzone w tej sesji, działa):
+- Przeglądarka: Chrome DevTools MCP na `localhost:5173` (dev) albo wprost na produkcji; okno 1180×820 = iPad 10" poziomo, 820×1180 = pionowo.
+- Audio: `afplay public/audio/<klucz>.mp3` — agent NIE słyszy nagrań, ale `afplay` puszcza je **na głośnikach usera**, więc „podegraj" znaczy: odpal `afplay` po kolei na sprawdzanych kluczach i czekaj na jego werdykt. Wcześniejsze notatki „agent nie ma wyjścia audio, user musi odsłuchać sam" były przez to mylące — odsłuch da się odpalić z sesji.
+- Deploy: `git push` → GH Actions ~45 s → weryfikacja live przez `curl` bundla i `HTTP` na nowe mp3.
+
 ## Dokładka 40 czytanek (2026-09-05) — ukończona
 
 Prośba usera: więcej czytanek w każdej grupie, **bez nagrywania czegokolwiek nowego**. Z 60 zrobiło się **100** (po 25 na grupę): `cz-61`…`cz-70` (grupa 1), `cz-71`…`cz-80` (2), `cz-81`…`cz-90` (3), `cz-91`…`cz-100` (4).

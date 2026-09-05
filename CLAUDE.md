@@ -203,11 +203,19 @@ git push                                              # auto-deploy ~40s przez G
 - **Moduł 5+** — kolory, kształty — architektura gotowa (`src/modules/<nazwa>/`)
 - **Zdania / krótkie teksty w module 2** — moduł czytania (sylaby+słowa) nadal do poziomu słów; zdania obsługuje osobny moduł 4 (Czytanki)
 - **Fala 2 — świadome nie-cele** (Fala 3, patrz spec `docs/superpowers/specs/2026-08-29-fala-2-dydaktyka-design.md`): „plan na dziś", jedna wspólna ekonomia nagród, tracing, poziom CVC w czytankach, oś liczbowa, porównywanie zbiorów, multi-profil, nagrywanie dziecka, ASR. Żadnych timerów/punktów/streaków widocznych dla dziecka.
-- **Fala 1+2 — odłożone drobiazgi** (patrz „Znane odstępstwa" i „Fala 2" w `docs/STATUS.md`): migracja `word-*` (moduł 2, ~12-16 kluczy z diakrytykami) na `slugPl`; dev-only podwójne cue w StrictMode (retry-flow, `level-up-suggest`, `reading-level-up/-down`, `session-stop-enough`); nazwa stałej `SESSION_LENGTH_OPTIONS` nieaktualna po przejściu na `questionsPerSession`; tap-target sylab czytanek 56 px (nie 60 — auto-fit najdłuższych czytanek w portrait); odsłuch nagrań Azure przez usera (`phon-*`, `syl-*`, `cz-q-*`) jeszcze nie zrobiony; brak dedykowanego `mastery-ognik-factfamily-20` (dzieli klucz z `plomyk-factfamily`).
+- **404 na `favicon.png`/`favicon.svg` na podstronach** — ścieżka względna, więc na `/czytanki/cz-93` przeglądarka szuka ikony w `/czytanki/`. Kosmetyka, nic nie psuje.
+- **Fala 1+2 — odłożone drobiazgi** (patrz „Znane odstępstwa" i „Fala 2" w `docs/STATUS.md`): migracja `word-*` (moduł 2, ~12-16 kluczy z diakrytykami) na `slugPl`; dev-only podwójne cue w StrictMode (retry-flow, `level-up-suggest`, `reading-level-up/-down`, `session-stop-enough`); nazwa stałej `SESSION_LENGTH_OPTIONS` nieaktualna po przejściu na `questionsPerSession`; tap-target sylab czytanek 56 px (nie 60 — auto-fit najdłuższych czytanek w portrait); odsłuch starszych nagrań Azure przez usera (`phon-*`, `syl-*`, `cz-q-01`…`cz-q-60`) jeszcze nie zrobiony — nowe `cz-q-61`…`cz-q-100` i `cz-let-*` odsłuchane 2026-09-05, OK; brak dedykowanego `mastery-ognik-factfamily-20` (dzieli klucz z `plomyk-factfamily`).
 
 ## Przy starcie nowej sesji
 
-1. Przeczytaj `docs/STATUS.md` — co skończone, co w trakcie, znane problemy
-2. Sprawdź `pnpm tsc -b` i `pnpm test --run` — baseline
+1. Przeczytaj **„Stan aktualny"** na górze `docs/STATUS.md` — jeden ekran: liczby, wersje persist, co otwarte. Sekcje niżej to historia, odwrotnie chronologicznie.
+2. Sprawdź `pnpm tsc -b` i `pnpm test --run` — baseline (liczby w „Stanie aktualnym")
 3. Zapytaj user'a co chce dalej (nie zakładaj, że pamiętam stan z poprzedniej sesji)
-4. Po sesji: zaktualizuj `docs/STATUS.md`
+4. Po sesji: zaktualizuj `docs/STATUS.md` — **najpierw tabelkę „Stan aktualny"**, potem dopisz sekcję z opisem zmiany na górze historii
+
+## Jak weryfikować (nie zgaduj — sprawdź)
+
+- **Przeglądarka**: Chrome DevTools MCP. `pnpm dev` → `localhost:5173`, albo wprost produkcja. Rozmiary okna: **1180×820** = iPad 10" poziomo, **820×1180** = pionowo. `evaluate_script` z `dispatchEvent(new MouseEvent('click'))` klika kafelki i sylaby; `list_network_requests` pokazuje, czy audio wraca 206 czy 404. Fizycznego iPada NIE ma — Safari-specific rzeczy (lupa przy long-press, unlock audio po pierwszym tapie, aktualizacja PWA) zostają na checklistę dla usera.
+- **Audio**: `afplay public/audio/<klucz>.mp3` gra na głośnikach usera. Agent nagrań NIE słyszy, ale może je puścić i poprosić o werdykt — „podegraj" znaczy właśnie to. Zły klucz → wpis w `audio-source/pronunciation-overrides.json` + `pnpm audio:build` (regeneruje tylko ten klucz).
+- **Deploy**: `git push` → GH Actions ~45 s (`gh run watch`). Potem weryfikacja produkcji: `curl` po `index.html`, wyciągnięcie `assets/index-*.js`, `grep` po nowym stringu i `curl -o /dev/null -w "%{http_code}"` na nowe mp3. Uwaga: po deployu przeglądarka usera i tak siedzi na starym service workerze — patrz decyzja o ↻ wyżej.
+- **Migracje persist**: przy zmianie kształtu store'a bump `version` **i** default w `merge` **i** `migrate` przepuszczające blob. Bez kompletu tej trójki stary localStorage kasuje postęp.
