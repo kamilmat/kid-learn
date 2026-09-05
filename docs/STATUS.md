@@ -3,6 +3,35 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
+## Tryb „po literkach" w czytankach (2026-09-05) — ukończony
+
+Zadanie od usera: syn zapomina, jakie literki są w sylabie — potrzebny tryb, w którym tap w sylabę wymawia jej litery pojedynczo, jak w module 1.
+
+- **Guzik `A|B`** w rzędzie pod sceną (6. przełącznik, obok `KO|TA`), stan globalny `settings.czytanki.spellMode` (default `false`). Cue włączenia/wyłączenia: `czytanki-ui-letters-on/-off`.
+- **Przebieg tapu w trybie:** literka po literce (podświetlenie grającej jednostki na `#fde047`), pauza 220 ms między literkami, 380 ms przed klamrą, na końcu cała sylaba z podświetleniem wszystkich liter. Sylaba jednoliterowa (`O`, `A`) gra raz, bez klamry.
+- **Dwuznak = jedna literka** — `data/letterUnits.ts` (`splitToLetterUnits`): SZ, CZ, RZ, CH, DZ, DŹ, DŻ. `DESZCZ → D·E·SZ·CZ`, `DZIEŃ → DZ·I·E·Ń`. Miękkie „i" (NIE, CIA) zostaje osobną literką — decyzja usera.
+- **Audio:** pojedyncze litery grają `letter-*` z modułu 1 (nagrania rodzica), 7 dwuznaków to nowe `cz-let-*` (Agnieszka, `azure-ipa`, teksty „szy/czy/rzy/chy/dzy/dży/dzi" — końcowe „y" jak w fonemach modułu 1). Razem **9 nowych kluczy** (7 dwuznaków + 2 cue UI).
+- **Bez zmian:** long-press = całe słowo, ▶, echo, tempo, scalanie sylab, ❓, statystyki (jeden tap = jedno dotknięcie sylaby niezależnie od liczby liter). Każda inna akcja na ekranie przerywa literowanie.
+- **Persist:** `iskierki-state-v1` 6 → **7** (`czytanki.spellMode`; `migrate` + default w `merge`).
+
+### Liczby
+
+- `pnpm tsc -b` — czysto. `pnpm test --run` — **1074/1074** (nowe: 7 testów segmentacji/kluczy + 5 testów sekwencji literowania).
+- `pnpm audio:check` — **1390/1390**; `ls public/audio/*.mp3 | wc -l` = **1397** (te same 7 nadwyżkowych co wcześniej).
+- `pnpm build` — OK, 1423 precache entries (16672,80 KiB).
+
+### Sprawdzone w przeglądarce (Chrome DevTools, 1180×820 i 820×1180)
+
+Guzik mieści się w rzędzie w obu orientacjach (w portrait z widocznym ❓ zostaje ~73 px luzu do każdej strzałki). Sekwencja `DZIE` potwierdzona w DOM: `DZ → I → E → DZ+I+E → koniec`, pliki `cz-let-dz.mp3`, `letter-i.mp3`, `letter-e.mp3`, `cz-syl-dzie.mp3` odpowiadają 206.
+
+### Do odsłuchu przez usera
+
+9 nowych nagrań Agnieszki: `cz-let-sz/-cz/-rz/-ch/-dz/-dz-/-dz_` + `czytanki-ui-letters-on/-off`. Najbardziej ryzykowne: **`cz-let-dz_`** („dzi" — dźwięk nieużywany w żadnej czytance) i **`cz-let-ch`** (IPA `xˈɨ`). Zły klucz → `audio-source/pronunciation-overrides.json` + `pnpm audio:build`. Gdybyś wolał własny głos także dla dwuznaków, wystarczy wrzucić `audio-source/manual-overrides/cz-let-sz.mp3` itd. — override wygrywa nad TTS bez zmiany kodu.
+
+### Znane, niezałatane
+
+- `src/modules/reading/hooks/useReadingSession.meaning.test.ts` („ognik: pytanie na indeksie 2…") jest **flaky** — losowanie dystraktorów czasem daje dwa słowa o tej samej pierwszej sylabie. Wywrócił się raz na ~5 przebiegów, niezależnie od tej zmiany (moduł 2). Do naprawy przy okazji dotykania generatora.
+
 ## Fala 2 (2026-08-29) — ukończona (branch `feat/fala-2`, tip `1a25b8b`)
 
 Spec: `docs/superpowers/specs/2026-08-29-fala-2-dydaktyka-design.md`. Plan: `docs/superpowers/plans/2026-08-29-fala-2-dydaktyka.md`.

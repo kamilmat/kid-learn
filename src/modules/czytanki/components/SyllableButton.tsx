@@ -3,6 +3,8 @@ import type { KeyboardEvent } from 'react'
 import type { SyllableCue } from '@/shared/ui/syllableColors'
 import { colors } from '@/app/theme'
 import { useSyllablePress } from '../hooks/useSyllablePress'
+import { splitToLetterUnits } from '../data/letterUnits'
+import { SPELL_WHOLE } from '../hooks/useSpellSyllable'
 import './scene.css'
 
 type Props = {
@@ -15,11 +17,16 @@ type Props = {
    * zawsze (dziecko wciąż może dotknąć pojedynczej sylaby).
    */
   merged?: boolean
+  /**
+   * Tryb przypominajki: indeks aktualnie wymawianej literki, `SPELL_WHOLE`
+   * gdy gra już cała sylaba, `null` gdy ta sylaba akurat nie jest literowana.
+   */
+  spellIndex?: number | null
   onTap: () => void
   onLongPress: () => void
 }
 
-export function SyllableButton({ text, cue, fontSize, merged = false, onTap, onLongPress }: Props) {
+export function SyllableButton({ text, cue, fontSize, merged = false, spellIndex = null, onTap, onLongPress }: Props) {
   const [bounce, setBounce] = useState(0)
   const tapSize = Math.max(56, Math.min(60, Math.round(fontSize * 1.5)))
   const handleTap = useCallback(() => {
@@ -73,7 +80,26 @@ export function SyllableButton({ text, cue, fontSize, merged = false, onTap, onL
       }}
     >
       <span key={bounce} className={bounce ? 'cz-syl-bounce' : undefined} style={{ display: 'inline-block' }}>
-        {text}
+        {/* Litery są osobnymi spanami ZAWSZE (nie tylko przy literowaniu) —
+            inaczej wejście w tryb przypominajki przerysowywałoby tekst i
+            auto-fit mógłby zmienić rozmiar w trakcie czytania. */}
+        {splitToLetterUnits(text).map((unit, i) => {
+          const lit = spellIndex !== null && (spellIndex === i || spellIndex === SPELL_WHOLE)
+          return (
+            <span
+              key={i}
+              data-testid={lit ? 'spell-letter-active' : undefined}
+              style={{
+                display: 'inline-block',
+                borderRadius: '0.18em',
+                background: lit ? '#fde047' : 'transparent',
+                transition: 'background 120ms',
+              }}
+            >
+              {unit}
+            </span>
+          )
+        })}
       </span>
     </div>
   )

@@ -1,0 +1,13 @@
+{
+  "_voice": "agnieszka",
+  "_engine": "azure-ipa",
+  "_comment": "Dwuznaki do trybu przypominajki (guzik A|B w czytankach). Pojedyncze litery grają kluczami `letter-*` z modułu 1 (nagrania rodzica) — tu są TYLKO te dźwięki, których moduł 1 nie ma. Tekst z końcowym „y” celowo: tak samo brzmią litery w module 1 („by”, „sy”), więc sylaba składa się na słuch.",
+
+  "cz-let-sz": "szy",
+  "cz-let-cz": "czy",
+  "cz-let-rz": "rzy",
+  "cz-let-ch": "chy",
+  "cz-let-dz": "dzy",
+  "cz-let-dz-": "dży",
+  "cz-let-dz_": "dzi"
+}

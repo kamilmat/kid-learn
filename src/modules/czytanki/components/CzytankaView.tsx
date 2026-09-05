@@ -14,6 +14,7 @@ import { SyllableButton } from './SyllableButton'
 import { CzytankaScene } from './CzytankaScene'
 import { ComprehensionQuestion } from './ComprehensionQuestion'
 import { useReadAloud } from '../hooks/useReadAloud'
+import { useSpellSyllable } from '../hooks/useSpellSyllable'
 
 const FONT_BY_GROUP: Record<CzytankaGroup, number> = { 1: 64, 2: 54, 3: 46, 4: 40 }
 // Dłuższe czytanki dostają mniejszą scenę — tekst jest tu treścią, scena tłem.
@@ -69,13 +70,15 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   const echoMode = czytankiSettings.echoMode
   const tempo = czytankiSettings.tempo
   const merged = czytankiSettings.mergedSyllables
+  const spellMode = czytankiSettings.spellMode
   const answeredQuestionIds = useCzytanki((s) => s.answeredQuestionIds)
   const [heldWord, setHeldWord] = useState<{ s: number; w: number } | null>(null)
   // Sylaby dotknięte w TEJ wizycie — po wyjściu i powrocie dziecko przechodzi tekst od nowa.
   const [seenSyllables, setSeenSyllables] = useState<Set<string>>(() => new Set())
   const [readFinished, setReadFinished] = useState(false)
   const [questionOpen, setQuestionOpen] = useState(false)
-  const { activeWord, reading, echoing, toggle, stop, skipEcho } = useReadAloud({
+  const { spelling, spell, stop: stopSpelling } = useSpellSyllable({ audioBus })
+  const { activeWord, reading, echoing, toggle, stop: stopReading, skipEcho } = useReadAloud({
     czytanka,
     audioBus,
     echoMode,
@@ -83,6 +86,12 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     introKey: echoMode ? 'czytanki-echo-intro' : null,
     onFinished: () => setReadFinished(true),
   })
+  // Każde inne działanie na ekranie (▶, przełącznik, nawigacja, tap w inną
+  // sylabę) przerywa literowanie — dwa źródła audio naraz nie mają sensu.
+  const stop = useCallback(() => {
+    stopReading()
+    stopSpelling()
+  }, [stopReading, stopSpelling])
   const holdTimeoutRef = useRef<number | null>(null)
   // Tapy zliczamy w refie i zapisujemy batch'em na wyjściu — persist to zapis
   // do localStorage przy KAŻDYM set(), a dziecko stuka sylaby seriami.
@@ -156,8 +165,14 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     stop()
     countWordTap(syllables)
     setSeenSyllables((prev) => (prev.has(key) ? prev : new Set(prev).add(key)))
+    // Jeden tap = jedno „dotknięcie sylaby" w statystykach, niezależnie od
+    // tego, czy zabrzmiała całościowo, czy literka po literce.
+    if (spellMode) {
+      spell(key, syl)
+      return
+    }
     void audioBus.play(syllableAudioKey(syl))
-  }, [audioBus, countWordTap, stop])
+  }, [audioBus, countWordTap, spell, spellMode, stop])
 
   const holdWord = useCallback((s: number, w: number, syllables: readonly string[]) => {
     stop()
@@ -209,6 +224,16 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
       stop()
       updateSetting('czytanki', { ...czytankiSettings, tempo: next })
       void audioBus.play(next === 'turtle' ? 'czytanki-ui-slow' : 'czytanki-ui-normal')
+    },
+  })
+
+  const spellTap = useTapHandler({
+    onTap: () => {
+      const next = !spellMode
+      stop()
+      audioBus.stop()
+      updateSetting('czytanki', { ...czytankiSettings, spellMode: next })
+      void audioBus.play(next ? 'czytanki-ui-letters-on' : 'czytanki-ui-letters-off')
     },
   })
 
@@ -349,6 +374,11 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
             style={{ ...toggleBtn, fontFamily: 'var(--font-block)', fontWeight: 700, fontSize: 14, letterSpacing: '0.02em', color: colors.text, background: merged ? '#bbf7d0' : '#fff' }}>
             {merged ? 'KOTA' : 'KO|TA'}
           </button>
+          <button type="button" aria-label={spellMode ? 'Czytaj całe sylaby' : 'Czytaj po literkach'} aria-pressed={spellMode}
+            data-testid="spell-toggle" {...spellTap}
+            style={{ ...toggleBtn, fontFamily: 'var(--font-block)', fontWeight: 700, fontSize: 20, letterSpacing: '0.02em', color: colors.text, background: spellMode ? '#bbf7d0' : '#fff' }}>
+            A|B
+          </button>
           {questionReady && (
             <button type="button" aria-label="Pytanie o czytankę" data-testid="comprehension-open" {...questionTap}
               style={{ ...roundBtn, background: questionAnswered ? '#bbf7d0' : '#fff' }}>
@@ -395,6 +425,7 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
                     >
                       {word.syllables.map((syl, i) => (
                         <SyllableButton key={i} text={syl} cue={getSyllableCue(i)} fontSize={fontSize} merged={merged}
+                          spellIndex={spelling?.key === `${s}-${w}-${i}` ? spelling.index : null}
                           onTap={() => tapSyllable(syl, word.syllables, `${s}-${w}-${i}`)} onLongPress={() => holdWord(s, w, word.syllables)} />
                       ))}
                     </span>

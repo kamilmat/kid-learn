@@ -44,6 +44,10 @@ export type CzytankiSettings = {
   // czytania całościowego, gdy dziecko nie potrzebuje już podpory sylabowej.
   // Default false.
   mergedSyllables: boolean
+  // Przypominajka literek: tap w sylabę czyta ją literka po literce, a na
+  // końcu w całości. Dla dziecka, które zapomniało, jakie litery tu stoją.
+  // Default false — normalny tap w sylabę zostaje domyślnym zachowaniem.
+  spellMode: boolean
 }
 
 // Moduł 1: jak brzmi prompt litery. `phoneme` = sam dźwięk („b"), `name` =

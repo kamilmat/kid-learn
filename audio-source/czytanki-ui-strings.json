@@ -17,6 +17,9 @@
   "czytanki-ui-merge-on": "Teraz sylaby są razem.",
   "czytanki-ui-merge-off": "Teraz widzisz sylaby osobno.",
 
+  "czytanki-ui-letters-on": "Teraz przeczytam ci każdą literkę osobno.",
+  "czytanki-ui-letters-off": "Teraz czytam całe sylaby.",
+
   "czytanki-q-intro": "Mam do ciebie pytanie o tę czytankę.",
   "czytanki-q-praise": "Tak! Dobrze przeczytałeś.",
   "czytanki-q-again": "Nie to. Posłuchaj jeszcze raz.",

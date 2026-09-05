@@ -134,7 +134,7 @@ export const useSettings = create<SettingsStore>()(
         mathGateState: state.mathGateState,
         parentGateUnlockedUntil: state.parentGateUnlockedUntil,
       }),
-      version: 6,
+      version: 7,
       // Bez `migrate` zustand ODRZUCA persist przy niezgodnej wersji (merge dostaje
       // undefined) — przepuszczamy blob dalej, resztę roboty robi `merge` poniżej.
       //
@@ -165,6 +165,8 @@ export const useSettings = create<SettingsStore>()(
             letters.promptMode = 'phoneme'
           }
         }
+        // v6 → v7: `czytanki.spellMode` (przypominajka literek) — nowe pole,
+        // brak realnej migracji danych; default dokłada `merge` poniżej.
         return p
       },
       // Migration:
@@ -256,6 +258,11 @@ export const useSettings = create<SettingsStore>()(
           typeof persistedCzytanki?.mergedSyllables === 'boolean'
             ? persistedCzytanki.mergedSyllables
             : defaultSettings.czytanki.mergedSyllables
+        // v6 → v7: `spellMode` (czytanie sylaby literka po literce).
+        mergedCzytanki.spellMode =
+          typeof persistedCzytanki?.spellMode === 'boolean'
+            ? persistedCzytanki.spellMode
+            : defaultSettings.czytanki.spellMode
         sanitizedSettings.czytanki = mergedCzytanki
         // v4 → v5: `sessionLength` (5|10|15, tylko Litery) → globalne
         // `questionsPerSession` (5|8|12) wspólne dla wszystkich modułów.

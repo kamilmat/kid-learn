@@ -4,7 +4,7 @@ Webowa platforma edukacyjna dla dzieci. **Cztery moduły:**
 - **Moduł 1:** rozpoznawanie liter polskiego alfabetu dla 7-latka (zerówka)
 - **Moduł 2:** nauka czytania słów (sylaby + wyrazy, drag-drop, SRS)
 - **Moduł 3:** matematyka (liczenie, rozkłady, dodawanie/odejmowanie, mnożenie — drzewko konceptów)
-- **Moduł 4:** czytanki — 60 krótkich zdań (4 grupy trudności), tap sylaby → audio, długi tap → całe słowo, ▶ czyta całość, ❓ mini-pytanie o rozumienie
+- **Moduł 4:** czytanki — 60 krótkich zdań (4 grupy trudności), tap sylaby → audio, długi tap → całe słowo, ▶ czyta całość, ❓ mini-pytanie o rozumienie, A|B tryb przypominajki literek
 
 Tablet-first (iPad 10"), RWD wszędzie. Bez backendu, postęp w `localStorage`.
 
@@ -47,18 +47,19 @@ src/
 │   ├── hooks/              # useNumbersSession (orkiestrator; `computeMasteryProgress` = okno 8/10), pickConcept.ts (ważone losowanie konceptu + prereq gate)
 │   ├── store/              # numbersStore (Zustand + persist) — version 3 (`factsCorrect`, `recentOutcomes`)
 ├── modules/czytanki/      # moduł 4 — czytanki: tap sylaby → audio, long-press → słowo, ▶ czyta całość; 60 czytanek, 4 grupy
-│   ├── components/        # CzytankaList, CzytankaTile (⭐ + kropki przeczytań), CzytankaView (▶ 🗣 🐢 KO|TA ❓), CzytankaScene, SyllableButton
+│   ├── components/        # CzytankaList, CzytankaTile (⭐ + kropki przeczytań), CzytankaView (▶ 🗣 🐢 KO|TA A|B ❓), CzytankaScene, SyllableButton (litery jako osobne spany)
 │   │                      # ComprehensionQuestion (overlay ❓: 3 emoji, po błędzie zostają 2)
-│   ├── data/               # czytanki (60, `comprehension` w 59 — cz-12 bez), types, audioKeys (slugPl → cz-syl-*/cz-word-*, questionAudioKey → cz-q-NN)
-│   ├── hooks/              # useReadAloud (+ echo/tempo), useSyllablePress (tap/long-press, liczy tapy per słowo)
+│   ├── data/               # czytanki (60, `comprehension` w 59 — cz-12 bez), types, audioKeys (slugPl → cz-syl-*/cz-word-*, questionAudioKey → cz-q-NN, letterUnitAudioKey → letter-*/cz-let-*)
+│   │                       # letterUnits.ts (splitToLetterUnits — dwuznak SZ/CZ/RZ/CH/DZ/DŹ/DŻ = jedna literka)
+│   ├── hooks/              # useReadAloud (+ echo/tempo), useSyllablePress (tap/long-press, liczy tapy per słowo), useSpellSyllable (literka po literce + klamra całej sylaby)
 │   ├── audio/               # pendingCue — cue odtwarzane po zamontowaniu docelowego ekranu
 │   ├── store/              # czytankiStore (Zustand + persist) — persist key `iskierki-czytanki-v1`, version 3 (`readCounts`, `lastCountedAt`, `answeredQuestionIds`, `comprehensionResults`)
 │   └── index.tsx           # entry: routes czytanki/ + czytanki/:id
 ├── shared/
 │   ├── audio/             # AudioBus singleton — kolejka FIFO HTMLAudioElement; slugPl.ts (ASCII slug PL znaków dla kluczy audio); pickPraiseMixed.ts (50/50 procesowe/wynikowe)
 │   ├── srs/               # Leitner 5-box, scoring, distractors (generalized BaseItemState)
-│   ├── settings/          # store + math gate + UI; persist key `iskierki-state-v1` (persist version: 6)
-│   │                      # settings: humorMode + reading.wordAnimations + reading.wildCelebrationFreq + questionsPerSession + secondAttempt + letters.promptMode(+ByLevel) + czytanki.{echoMode,tempo,mergedSyllables}
+│   ├── settings/          # store + math gate + UI; persist key `iskierki-state-v1` (persist version: 7)
+│   │                      # settings: humorMode + reading.wordAnimations + reading.wildCelebrationFreq + questionsPerSession + secondAttempt + letters.promptMode(+ByLevel) + czytanki.{echoMode,tempo,mergedSyllables,spellMode}
 │   ├── stats/             # SessionLog/SessionEvent types (+ `SessionMode = Level|'hard'|'daily'`) + raport rodzica UI; todaySessions.ts (stopping cue: ≥2 sesje dziś, `daily` się NIE liczy)
 │   │                      # suggestions.ts (generateSuggestions) + NextStepCard + CollapsibleSection (wszystkie sekcje zwinięte domyślnie)
 │   │                      # sekcje Aktywność/Live/Anti-cheat agregują wszystkie moduły (`shared/stats/aggregate.ts`)
@@ -85,7 +86,8 @@ audio-source/              # source teksty dla TTS
 ├── czytanki-syllables.json # generowany (`pnpm audio:czytanki`); głos Agnieszka, `_engine: azure-ipa` — sylaby cz-syl-*
 ├── czytanki-words.json     # generowany (`pnpm audio:czytanki`); głos Agnieszka, `_engine: azure` (plain SSML) — słowa cz-word-*
 ├── czytanki-questions.json # generowany (`pnpm audio:czytanki`) z `comprehension.question`; głos Agnieszka, `_engine: azure` — klucze cz-q-01…cz-q-60 (59, bez cz-12)
-├── czytanki-ui-strings.json # intro, nawigacja, cue, echo/tempo (`czytanki-ui-echo-on/-off/-slow/-normal`, `czytanki-echo-intro`), `czytanki-ui-merge-on/-off`, `czytanki-q-intro/-praise/-again`; głos Agnieszka, `_engine: azure`
+├── czytanki-ui-strings.json # intro, nawigacja, cue, echo/tempo (`czytanki-ui-echo-on/-off/-slow/-normal`, `czytanki-echo-intro`), `czytanki-ui-merge-on/-off`, `czytanki-ui-letters-on/-off`, `czytanki-q-intro/-praise/-again`; głos Agnieszka, `_engine: azure`
+├── czytanki-letters.json   # 7 dwuznaków do trybu A|B (`cz-let-sz/-cz/-rz/-ch/-dz/-dz-/-dz_`); głos Agnieszka, `_engine: azure-ipa`. Pojedyncze litery grają `letter-*` z modułu 1 (nagrania rodzica) — tu ich NIE ma
 └── manual-overrides/*.mp3 # wygrywa nad TTS (jeśli istnieje plik)
 
 scripts/generate-audio.ts  # idempotentny: hash text vs manifest, trzy silniki (edge | azure | azure-ipa)
@@ -105,10 +107,11 @@ public/audio/              # build artifact: mp3 (`ls public/audio/*.mp3 | wc -l
 - **Brak fonemów IPA w Edge** — publiczny endpoint Edge TTS nie obsługuje SSML phoneme tags. Fala 1 wygenerowała fonemy liter przez `azure-ipa` (`letters-phonemes.json`), ale od 2026-08-29 **nie grają** — domyślny tryb promptu to `phoneme` = nagrania rodzica `letter-*`. `azure-ipa` zostaje dla sylab (moduły 2 i 4); Edge jest default dla reszty modułów 1-3.
 - **Theme: jeden tryb** — warm light (`#fef9f2` tło, `#2d2d33` tekst), ignoruje `prefers-color-scheme`. Brak dark mode.
 - **No-text UI dla dziecka** — tylko ikony + audio cues. Wszystkie tap-targety ≥60×60 (wyjątek świadomy: sylaby czytanek 56 px, patrz „Znane odstępstwa" w STATUS). Brak gestów (tylko tap); moduł 2 używa drag-drop (@dnd-kit) dla ćwiczenia Płomyk.
-- **Persist kilka storage** (stan po Fali 2): `iskierki-state-v1` (settings + math gate + humorMode + reading.* + `questionsPerSession` + `secondAttempt` + `letters.promptMode(+ByLevel)` + `czytanki.{echoMode,tempo,mergedSyllables}`; klucz `name` to `iskierki-state-v1`, **`version: 6`** — nie mylić jednego z drugim; `migrate` v4→v5 mapuje `sessionLength`→`questionsPerSession`, v5→v6 mapuje `promptMode: 'both'`→`'phoneme'`), `iskierki-letters-v1` (moduł 1, **`version: 2`**: `dailyLetter`, `dailyDoneDayKey`), `iskierki-reading-v1` (moduł 2 progres, `version: 1`), `iskierki-numbers-v1` (moduł 3, **`version: 3`**: `factsCorrect`, `recentOutcomes`) i `iskierki-czytanki-v1` (moduł 4 — openedIds, seenIntros, `wordTaps`, `timeMs`, **`version: 3`**: `readCounts`, `lastCountedAt`, `answeredQuestionIds`, `comprehensionResults` — bez bumpu, default w `merge`). Reset jednego nie kasuje pozostałych.
+- **Persist kilka storage** (stan po Fali 2): `iskierki-state-v1` (settings + math gate + humorMode + reading.* + `questionsPerSession` + `secondAttempt` + `letters.promptMode(+ByLevel)` + `czytanki.{echoMode,tempo,mergedSyllables,spellMode}`; klucz `name` to `iskierki-state-v1`, **`version: 7`** — nie mylić jednego z drugim; `migrate` v4→v5 mapuje `sessionLength`→`questionsPerSession`, v5→v6 mapuje `promptMode: 'both'`→`'phoneme'`, v6→v7 dokłada `czytanki.spellMode`), `iskierki-letters-v1` (moduł 1, **`version: 2`**: `dailyLetter`, `dailyDoneDayKey`), `iskierki-reading-v1` (moduł 2 progres, `version: 1`), `iskierki-numbers-v1` (moduł 3, **`version: 3`**: `factsCorrect`, `recentOutcomes`) i `iskierki-czytanki-v1` (moduł 4 — openedIds, seenIntros, `wordTaps`, `timeMs`, **`version: 3`**: `readCounts`, `lastCountedAt`, `answeredQuestionIds`, `comprehensionResults` — bez bumpu, default w `merge`). Reset jednego nie kasuje pozostałych.
 - **Tryb promptu liter = `phoneme` (default)** — „jak się czyta" (b → „by"), klucze `letter-<x>` = nagrania rodzica z `manual-overrides/`. `name` (nazwy szkolne `letter-name-*`) i `both` zostają jako opcje; fonemy Azure `phon-*` są w repo, ale nie grają. W trybie `both` samogłoski grają sam dźwięk (inaczej „a… a").
 - **Mastery konceptu to OKNO, nie seria** (Cyferki, Fala 2) — `recentOutcomes` (cap 10) + `factsCorrect`; `mastered` przy ≥`min(10, minStreakForMastery)` poprawnych z ostatnich 10 **i** `factsCorrect.length ≥ minFacts` **i** `ageMs ≥ MIN_AGE_FOR_MASTERY_MS`. Mastery nigdy się nie cofa. Miękkie odblokowanie prerekwizytu honoruje ALBO `correctStreak`, ALBO liczbę poprawnych w oknie ≥ `ceil(minStreakForMastery/2)` (przy domyślnych 8 → 4/10 = 40%).
 - **Tryby powtórki liter** — `/letters/hard` („Trudne literki": pula SRS `totalSeen>0 && (recentWrong>0 || box≤2)`, cap 8, kafelek wyszarzony przy puli <3) i `/letters/daily` („Literka dnia": 4 ekspozycje + jedna odwrotna + kotwica słowna, litera zamrożona na dobę). Obie logują `SessionLog` z `level: 'hard'`/`'daily'`, poza unią `Level`.
+- **Tryb przypominajki literek (A|B, czytanki)** — `settings.czytanki.spellMode` (globalny, default `false`). Tap w sylabę czyta ją literka po literce, podświetlając grającą jednostkę, a na końcu gra całą sylabę (klamra „SZ… Y… SZY"). Sylaba jednoliterowa nie dostaje klamry. **Dwuznak = jedna literka** (`splitToLetterUnits`): SZ/CZ/RZ/CH/DZ/DŹ/DŻ mają własne klucze `cz-let-*` (Agnieszka, `azure-ipa`, tekst z końcowym „y" jak w module 1), reszta gra `letter-*` — nagrania rodzica z modułu 1, ten sam głos, który dziecko zna z Literek. Miękkie „i" (NIE, CIA) świadomie zostaje osobną literką. Tryb nie zmienia statystyk: jeden tap = jedno dotknięcie sylaby.
 - **Ciągłość uczenia**: `BaseItemState` (generalized SRS) persistowany — w **kolejnej sesji** litery/sylaby/słowa z `recentWrong>0` lub niskim `box` mają wyższy score → częściej w pytaniach.
 - **Druga próba po błędzie** (Litery/Czytanie/Cyferki, `settings.secondAttempt`, default `true`) — pierwsza pomyłka aktualizuje SRS od razu i bez zmian (box −2 itd.); status `retry` pokazuje to samo pytanie z 2 opcjami (poprawna + wybrana); wynik idzie do logu jako `attempt: 2` i **nie dotyka SRS** (retry-correct bez boxa/iskierki/dinga; retry-wrong = hiperkorekcja). `word-assembly` (drag-drop) i `number-bond-builder`/`fact-family-triangle` retry nie mają — odpowiedź tam nie jest wyborem z listy.
 - **Koncepty ważone + `prerequisites`** (Cyferki) — `pickConcept.ts` losuje koncept ważony stanem (`0` zablokowany prerekwizytem, `2` learning+recentWrong, `1` learning, `0.4` mastered) przed `pickNextItem` na faktach tego konceptu; przy 0 dostępnych konceptów fallback na wszystkie bez prerekwizytów.
@@ -126,12 +129,12 @@ public/audio/              # build artifact: mp3 (`ls public/audio/*.mp3 | wc -l
 pnpm dev              # dev server z HMR
 pnpm build            # production build (lokalnie base='/'; CI ustawia VITE_BASE=/kid-learn/)
 pnpm tsc -b           # type check
-pnpm test --run       # testy (1062/1062 zielone: 943 src + 119 scripts, po Fali 2 + CR). `vitest.config.ts` wyklucza `**/.claude/**` — bez tego zbiera testy ze starych worktree'ów agentów
+pnpm test --run       # testy (1074/1074 zielone: 955 src + 119 scripts, po trybie A|B). `vitest.config.ts` wyklucza `**/.claude/**` — bez tego zbiera testy ze starych worktree'ów agentów
 pnpm audio:czytanki   # generuj czytanki-syllables.json (375) + czytanki-words.json (407) + czytanki-questions.json (59) z data/czytanki.ts (moduł 4)
 pnpm audio:reading    # generuj syllables.json (moduł 2) z SYLLABLE_TEXTS ∪ sylab ALL_WORDS (91 kluczy)
 pnpm audio:build      # audio:czytanki + audio:reading + generuj/aktualizuj mp3 (azure-ipa wymaga .env.local)
 pnpm audio:dry        # plan buildu bez TTS: engine + tekst + IPA + akcja (nie wymaga klucza)
-pnpm audio:check      # audio:czytanki + audio:reading + sprawdź czy wszystkie klucze mają plik (1380 wymaganych po Fali 2 + CR; działa bez klucza Azure; `ls public/audio/*.mp3 | wc -l` = 1387 — 7 nadwyżka: `correction-prefix` jest używany w runtime bez wpisu w source (nie usuwać); osierocone: `feedback-correct-suffix`, `feedback-wrong-prefix`, `still-there`, `summary-intro`, `timeout-1`, `timeout-2`, nie w żadnym source, kandydaci do sprzątnięcia)
+pnpm audio:check      # audio:czytanki + audio:reading + sprawdź czy wszystkie klucze mają plik (1390 wymaganych po trybie A|B; działa bez klucza Azure; `ls public/audio/*.mp3 | wc -l` = 1397 — 7 nadwyżka: `correction-prefix` jest używany w runtime bez wpisu w source (nie usuwać); osierocone: `feedback-correct-suffix`, `feedback-wrong-prefix`, `still-there`, `summary-intro`, `timeout-1`, `timeout-2`, nie w żadnym source, kandydaci do sprzątnięcia)
 
 # GitHub
 gh run list --repo kamilmat/kid-learn --limit 3      # status ostatnich deploy
@@ -173,6 +176,8 @@ git push                                              # auto-deploy ~40s przez G
 - **Mastery Cyferek liczy się z okna 8/10, nie ze streaka** — `factsTouched` to już wyłącznie pole migracyjne (`@deprecated`), kryterium jest `factsCorrect`. `computeMasteryProgress` jest eksportowane, bo przez hook nie da się deterministycznie wymusić 10 pytań na jednym koncepcie (`pickConcept` przeplata). Po migracji v2→v3 koncepty `learning` startują z pustym oknem — pierwsze mastery wymaga 10 nowych odpowiedzi.
 - **Feedback błędu w Cyferkach to PAS w przepływie, nie overlay** — `position: relative; flex: 0 0 28%` pod StatusBarem (nie `absolute`), żeby nie zasłonić reprezentacji, którą właśnie odsłania `revealValue` („tu było N"). `zIndex: 900` (pod `PauseOverlay` z2000). Pod pasem leży przezroczysty **scrim** `zIndex: 899` z `pointerEvents: 'auto'` — bez niego dziecko dotyka zadania w trakcie feedbacku. `correct` zostaje pełnoekranowy (nagroda, nie korekta).
 - **`CountObjectsExercise` blokuje kafelki cyfr, dopóki nie skończy się `count-objects-howmany`** — `unlockAfter(audioBus.play(...))` (`data-locked` na kontenerze). Bez tego dziecko klika liczbę zanim usłyszy pytanie o kardynalność, a do SRS idzie odpowiedź na pytanie, którego nie było. Tapy w obiekty NIE wołają `audioBus.stop()` — FIFO ma zachować kolejność „jeden, dwa, trzy".
+- **Literowanie NIE honoruje `letters.promptMode`** — tryb A|B zawsze gra fonem (`letter-<x>`, „jak się czyta"), nawet gdy rodzic przestawił Literki na nazwy szkolne. „be… o… BO" nie skleja się w sylabę, więc nazwy nie mają tu sensu. To świadome rozejście się dwóch modułów, nie przeoczenie.
+- **`SyllableButton` renderuje litery jako osobne spany ZAWSZE**, nie tylko w trybie A|B — inaczej włączenie trybu przerysowywałoby tekst i auto-fit mógłby zmienić rozmiar czcionki w środku czytania.
 - **Pytania o rozumienie (Czytanki) mają regułę anty-three-cueing** — `comprehension.test.ts` egzekwuje, że **co najmniej jeden dystraktor jest widoczny w scenie**; gdyby scena pokazywała wyłącznie poprawną odpowiedź, dziecko trafiałoby z obrazka bez czytania. Dopisując pytanie, sprawdź `sceneEmoji(id)` zanim dobierzesz opcje. `cz-12` („Pada i pada.") świadomie NIE ma pytania — brak rzeczownika w tekście, więc 59, nie 60.
 
 ## Konwencje kodu
