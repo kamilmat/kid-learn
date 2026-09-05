@@ -67,7 +67,8 @@ src/
 │   ├── engagement/        # idle, page-visibility, fast-click, anti-cheat flags (+ `antiCheatFlagText`: flagi po ludzku)
 │   └── ui/                # KidNav, Button, IskraMascot, HandwrittenLetter (+ `pair`), useReducedMotion.ts
 │                          # syllableColors.ts (getSyllableCue: paleta Okabe–Ito + underline; `syllableColorForBox`: kolor gaśnie z boxem)
-├── app/                   # App.tsx (routes), Home (4 kafelki + pasek „Literka dnia"), theme tokens
+├── app/                   # App.tsx (routes + UpdatePrompt), Home (4 kafelki + pasek „Literka dnia"), theme tokens
+│                          # swUpdate.ts (most SW→UI: `setUpdateReady`/`applyUpdate`), UpdatePrompt.tsx (↻ 44 px w prawym górnym rogu)
 └── main.tsx
 
 audio-source/              # source teksty dla TTS
@@ -112,6 +113,7 @@ public/audio/              # build artifact: mp3 (`ls public/audio/*.mp3 | wc -l
 - **Mastery konceptu to OKNO, nie seria** (Cyferki, Fala 2) — `recentOutcomes` (cap 10) + `factsCorrect`; `mastered` przy ≥`min(10, minStreakForMastery)` poprawnych z ostatnich 10 **i** `factsCorrect.length ≥ minFacts` **i** `ageMs ≥ MIN_AGE_FOR_MASTERY_MS`. Mastery nigdy się nie cofa. Miękkie odblokowanie prerekwizytu honoruje ALBO `correctStreak`, ALBO liczbę poprawnych w oknie ≥ `ceil(minStreakForMastery/2)` (przy domyślnych 8 → 4/10 = 40%).
 - **Tryby powtórki liter** — `/letters/hard` („Trudne literki": pula SRS `totalSeen>0 && (recentWrong>0 || box≤2)`, cap 8, kafelek wyszarzony przy puli <3) i `/letters/daily` („Literka dnia": 4 ekspozycje + jedna odwrotna + kotwica słowna, litera zamrożona na dobę). Obie logują `SessionLog` z `level: 'hard'`/`'daily'`, poza unią `Level`.
 - **Tryb przypominajki literek (A|B, czytanki)** — `settings.czytanki.spellMode` (globalny, default `false`). Tap w sylabę czyta ją literka po literce, podświetlając grającą jednostkę, a na końcu gra całą sylabę (klamra „SZ… Y… SZY"). Sylaba jednoliterowa nie dostaje klamry. **Dwuznak = jedna literka** (`splitToLetterUnits`): SZ/CZ/RZ/CH/DZ/DŹ/DŻ mają własne klucze `cz-let-*` (Agnieszka, `azure-ipa`, tekst z końcowym „y" jak w module 1), reszta gra `letter-*` — nagrania rodzica z modułu 1, ten sam głos, który dziecko zna z Literek. Miękkie „i" (NIE, CIA) świadomie zostaje osobną literką. Tryb nie zmienia statystyk: jeden tap = jedno dotknięcie sylaby.
+- **Aktualizacja PWA = auto na Home + ↻ wszędzie indziej** — `registerType: 'prompt'`, własna rejestracja w `main.tsx`. Nowy SW instaluje się w tle i CZEKA; przeładowanie robi się samo dopiero na Home (reload w środku sesji gubił odpowiedzi i ucinał audio). Dopóki czeka, `UpdatePrompt` pokazuje ↻ w prawym górnym rogu — bez niego jedyną drogą do nowej wersji było wejście na Home albo wyczyszczenie danych przeglądarki (twardy refresh NIE pomaga: stroną steruje wciąż stary, aktywny SW).
 - **Ciągłość uczenia**: `BaseItemState` (generalized SRS) persistowany — w **kolejnej sesji** litery/sylaby/słowa z `recentWrong>0` lub niskim `box` mają wyższy score → częściej w pytaniach.
 - **Druga próba po błędzie** (Litery/Czytanie/Cyferki, `settings.secondAttempt`, default `true`) — pierwsza pomyłka aktualizuje SRS od razu i bez zmian (box −2 itd.); status `retry` pokazuje to samo pytanie z 2 opcjami (poprawna + wybrana); wynik idzie do logu jako `attempt: 2` i **nie dotyka SRS** (retry-correct bez boxa/iskierki/dinga; retry-wrong = hiperkorekcja). `word-assembly` (drag-drop) i `number-bond-builder`/`fact-family-triangle` retry nie mają — odpowiedź tam nie jest wyborem z listy.
 - **Koncepty ważone + `prerequisites`** (Cyferki) — `pickConcept.ts` losuje koncept ważony stanem (`0` zablokowany prerekwizytem, `2` learning+recentWrong, `1` learning, `0.4` mastered) przed `pickNextItem` na faktach tego konceptu; przy 0 dostępnych konceptów fallback na wszystkie bez prerekwizytów.
@@ -129,7 +131,7 @@ public/audio/              # build artifact: mp3 (`ls public/audio/*.mp3 | wc -l
 pnpm dev              # dev server z HMR
 pnpm build            # production build (lokalnie base='/'; CI ustawia VITE_BASE=/kid-learn/)
 pnpm tsc -b           # type check
-pnpm test --run       # testy (1074/1074 zielone: 955 src + 119 scripts, po trybie A|B). `vitest.config.ts` wyklucza `**/.claude/**` — bez tego zbiera testy ze starych worktree'ów agentów
+pnpm test --run       # testy (1078/1078 zielone: 959 src + 119 scripts, po trybie A|B + ↻ aktualizacji + fix raportu). `vitest.config.ts` wyklucza `**/.claude/**` — bez tego zbiera testy ze starych worktree'ów agentów
 pnpm audio:czytanki   # generuj czytanki-syllables.json (375) + czytanki-words.json (407) + czytanki-questions.json (59) z data/czytanki.ts (moduł 4)
 pnpm audio:reading    # generuj syllables.json (moduł 2) z SYLLABLE_TEXTS ∪ sylab ALL_WORDS (91 kluczy)
 pnpm audio:build      # audio:czytanki + audio:reading + generuj/aktualizuj mp3 (azure-ipa wymaga .env.local)
@@ -161,6 +163,7 @@ git push                                              # auto-deploy ~40s przez G
 - **Feedback duration vs audio length** — duration musi pokrywać CAŁĄ kolejkę audio dla wariantu, inaczej audio gra po pojawieniu się następnego pytania. Moduł 1: `FEEDBACK_DURATION_BASE_MS` w `useSession.ts`. Moduł 3: `FEEDBACK_DURATION_MS` w `numbers/components/SessionView.tsx`. Moduł 2: feedback auto-advance po zakończeniu audio (`await audioBus.play()` + `MIN_FEEDBACK_MS`), tap = skip. Moduł 3 od CR 2026-08-28: advance po zakończeniu audio feedbacku, nie po sztywnym timerze.
 - **`tilesPerQuestion` per-level (moduł 1)** — `Partial<Record<Level, TilesPerQuestion>>` z fallback do `levelDefaults`. Domyślnie: Iskierka/Płomyk = 4, Ognik = 5, Pochodnia = 6.
 - **persist `merge` + `migrate`** — wszystkie pięć store'ów (`settingsStore`, `lettersStore`, `readingStore`, `numbersStore`, `czytankiStore`). Gdy dodajesz nowe pole, dopisz default w `merge`, inaczej stary localStorage da `undefined`. Każdy store ma też `migrate: (persisted) => persisted` — bez niego zustand ODRZUCA persist przy bumpie `version` (merge dostaje `undefined` → skasowany postęp).
+- **Hooki w `ReportScreen` MUSZĄ stać nad `if (!unlocked) return <MathGate/>`** — bramka rozwiązana na żywo to drugi render tego samego komponentu; hook dopisany pod early returnem zmienia ich liczbę i React wywala ekran w `ErrorBoundary`. Testy, które ustawiają `parentGateUnlockedUntil` PRZED renderem, tego nie złapią.
 - **`level` może być nieprawidłowy z URL** — sesje obu modułów filtrują przez `VALID_LEVELS`, redirectują na `index` jeśli zły.
 - **`.test.ts` excludowany z `tsconfig.app.json`** — testy mogą mieć type errors bez zatrzymywania `pnpm build`. Test errors trzeba sprawdzać przez `pnpm test --run`.
 - **@dnd-kit w moduł 2 (Płomyk)** — drag-drop z `useDraggable`/`useDroppable`. DndContext musi opakowywać cały ekran ćwiczenia; `over?.id` to null gdy upuścimy poza target. Nie używać `onDragEnd` do mutacji store — tylko do lokalnego state syllableSlots.

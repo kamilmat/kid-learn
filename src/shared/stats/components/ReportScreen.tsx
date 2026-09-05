@@ -374,6 +374,16 @@ export function ReportScreen({
     ],
   )
 
+  // MUSI stać nad `if (!unlocked) return` — każdy hook pod early returnem
+  // znika z pierwszego renderu (bramka zamknięta) i pojawia się w drugim
+  // (bramka rozwiązana na żywo), a React wywraca się wtedy na „Rendered more
+  // hooks than during the previous render". Rodzic dostawał ErrorBoundary
+  // zamiast raportu. Dokładając kolejny hook, dokładaj go TUTAJ.
+  const flagCount = useMemo(
+    () => collectFlagsForRecentSessions(allSessions, 5).length,
+    [allSessions],
+  )
+
   const handleCopy = useCallback(async () => {
     const numbersSnapshot = {
       facts: useNumbers.getState().facts,
@@ -451,10 +461,6 @@ export function ReportScreen({
       ? `${nextSteps.length - 1} dodatkowych wskazówek`
       : 'Wskazówki dla rodzica'
 
-  const flagCount = useMemo(
-    () => collectFlagsForRecentSessions(allSessions, 5).length,
-    [allSessions],
-  )
   const flagsSummary =
     flagCount === 0
       ? 'Brak flag w ostatnich sesjach'

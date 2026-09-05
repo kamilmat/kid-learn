@@ -105,6 +105,28 @@ describe('ReportScreen', () => {
     expect(screen.queryByTestId('letters-section')).not.toBeInTheDocument()
   })
 
+  it('rozwiązanie bramki NA ŻYWO pokazuje raport (nie wywala się na hookach)', () => {
+    // Regresja: `flagCount = useMemo(...)` stał POD `if (!unlocked) return`,
+    // więc render po odblokowaniu miał więcej hooków niż poprzedni i React
+    // rzucał „Rendered more hooks than during the previous render". Wejście na
+    // /report przy JUŻ odblokowanej bramce działało, więc błąd był niewidoczny
+    // dla testów, które ustawiają unlock przed renderem.
+    render(<ReportScreen now={() => fixedNow} />)
+    expect(screen.getByTestId('math-gate')).toBeInTheDocument()
+
+    const expression = screen.getByTestId('math-gate-expression').textContent ?? ''
+    const [, a, b, c] = expression.match(/(\d+)\s*\+\s*(\d+)\s*-\s*(\d+)/) ?? []
+    const answer = Number(a) + Number(b) - Number(c)
+
+    fireEvent.change(screen.getByTestId('math-gate-input'), {
+      target: { value: String(answer) },
+    })
+    fireEvent.click(screen.getByTestId('math-gate-submit'))
+
+    expect(screen.getByTestId('report-screen')).toBeInTheDocument()
+    expect(screen.queryByTestId('math-gate')).not.toBeInTheDocument()
+  })
+
   it('kliknięcie nagłówka rozwija sekcję', () => {
     useSettings.setState({ parentGateUnlockedUntil: fixedNow + 60_000 })
 

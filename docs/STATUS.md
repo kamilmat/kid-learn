@@ -28,7 +28,23 @@ Guzik mieści się w rzędzie w obu orientacjach (w portrait z widocznym ❓ zos
 
 9 nowych nagrań Agnieszki: `cz-let-sz/-cz/-rz/-ch/-dz/-dz-/-dz_` + `czytanki-ui-letters-on/-off`. Najbardziej ryzykowne: **`cz-let-dz_`** („dzi" — dźwięk nieużywany w żadnej czytance) i **`cz-let-ch`** (IPA `xˈɨ`). Zły klucz → `audio-source/pronunciation-overrides.json` + `pnpm audio:build`. Gdybyś wolał własny głos także dla dwuznaków, wystarczy wrzucić `audio-source/manual-overrides/cz-let-sz.mp3` itd. — override wygrywa nad TTS bez zmiany kodu.
 
-### Znane, niezałatane
+### Guzik ↻ „nowa wersja" (dorobione tego samego dnia)
+
+User zgłosił: po deployu twardy refresh nie pokazuje nowej wersji, pomaga dopiero tryb prywatny. **Przyczyna:** `main.tsx` przeładowywał stronę na nową wersję TYLKO na ekranie głównym — na każdym innym ekranie nowy SW instalował się i czekał w nieskończoność (polling co 10 s sprawdzał ścieżkę). Twardy refresh tego nie omija, bo stroną steruje wciąż stary, aktywny SW; w trybie prywatnym SW nie ma, stąd „tam działa".
+
+- `src/app/swUpdate.ts` — mały store poza Reactem (`setUpdateReady` / `applyUpdate` / `subscribeUpdate`), most między rejestracją SW a UI.
+- `src/app/UpdatePrompt.tsx` — ↻ 44 px w prawym górnym rogu, `zIndex: 3000`, `opacity: 0.85`, widoczny tylko gdy czeka nowa wersja. Celowo MNIEJSZY niż dziecięce minimum 60 px i w rogu: adresatem jest rodzic.
+- Auto-przeładowanie na Home zostaje bez zmian; gdy zadziała, guzik gaśnie (`clearUpdateReady`).
+- Sprawdzone w Chrome (820×1180) na raporcie, sesji Literek i czytance — ↻ nie nachodzi na żaden element interaktywny (KidNav jest po lewej, ⏸ StatusBara niżej).
+- **Uwaga:** guzik działa dopiero od NASTĘPNEGO deployu — wersja zainstalowana wcześniej go nie ma i wciąż aktualizuje się tylko na Home.
+
+### Raport rodzica — crash przy odblokowaniu bramki (naprawione)
+
+Znalezione przy okazji ↻: rozwiązanie bramki matematycznej **na żywo** wywalało `ReportScreen` w `ErrorBoundary` (↻ 🏠 zamiast raportu). Przyczyna: `flagCount = useMemo(...)` stał POD `if (!unlocked) return <MathGate/>`, więc render po odblokowaniu miał 64 hooki zamiast 63 → `Rendered more hooks than during the previous render`. Wejście na `/report` przy JUŻ odblokowanej bramce działało, dlatego żaden test tego nie łapał (wszystkie ustawiały `parentGateUnlockedUntil` przed renderem).
+
+- Fix: `flagCount` przeniesiony nad early return, z komentarzem „dokładając kolejny hook, dokładaj go TUTAJ".
+- Test regresyjny w `ReportScreen.test.tsx` przechodzi **całą drogę rodzica**: render z zamkniętą bramką → odczyt działania z `math-gate-expression` → wpisanie wyniku → submit → `report-screen` w DOM. Bez fixu test wywala się dokładnie tym samym błędem co produkcja.
+- Potwierdzone w przeglądarce: `5 + 8 - 3` → 10 → raport z kartą „Następny krok", bez fallbacku.
 
 - `src/modules/reading/hooks/useReadingSession.meaning.test.ts` („ognik: pytanie na indeksie 2…") jest **flaky** — losowanie dystraktorów czasem daje dwa słowa o tej samej pierwszej sylabie. Wywrócił się raz na ~5 przebiegów, niezależnie od tej zmiany (moduł 2). Do naprawy przy okazji dotykania generatora.
 

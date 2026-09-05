@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { registerSW } from 'virtual:pwa-register'
 import { App } from '@/app/App'
+import { clearUpdateReady, setUpdateReady } from '@/app/swUpdate'
 import '@/index.css'
 
 const rootElement = document.getElementById('root')
@@ -16,7 +17,9 @@ const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
 
 // Nowa wersja z GitHub Pages: SW pobiera ją w tle, ale przeładowanie strony
 // robimy dopiero na Home. Reload w środku sesji gubił odpowiedzi dziecka
-// i ucinał audio w połowie zdania.
+// i ucinał audio w połowie zdania. Do tego czasu w rogu wisi ↻ (`UpdatePrompt`) —
+// bez niego czekanie na powrót na Home wyglądało jak „nowa wersja nie wchodzi",
+// a twardy refresh nic nie dawał: stroną steruje wciąż stary, aktywny SW.
 const HOME_CHECK_INTERVAL_MS = 10_000
 
 function isOnHome(): boolean {
@@ -30,11 +33,15 @@ let updateTimer: number | null = null
 const updateSW = registerSW({
   immediate: true,
   onNeedRefresh() {
+    setUpdateReady(() => {
+      void updateSW()
+    })
     if (isOnHome()) {
       if (updateTimer !== null) {
         window.clearInterval(updateTimer)
         updateTimer = null
       }
+      clearUpdateReady()
       void updateSW()
       return
     }
@@ -51,6 +58,7 @@ const updateSW = registerSW({
         window.clearInterval(updateTimer)
         updateTimer = null
       }
+      clearUpdateReady()
       void updateSW()
     }, HOME_CHECK_INTERVAL_MS)
   },
