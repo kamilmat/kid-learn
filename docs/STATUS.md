@@ -3,6 +3,30 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
+## Dokładka 40 czytanek (2026-09-05) — ukończona
+
+Prośba usera: więcej czytanek w każdej grupie, **bez nagrywania czegokolwiek nowego**. Z 60 zrobiło się **100** (po 25 na grupę): `cz-61`…`cz-70` (grupa 1), `cz-71`…`cz-80` (2), `cz-81`…`cz-90` (3), `cz-91`…`cz-100` (4).
+
+- **Zero nowych słów i sylab.** ▶ oraz long-press grają nagranie CAŁEGO słowa (`cz-word-*`), więc każde zdanie jest poskładane z form, które już mają plik — 407 gotowych słów, w tym 80 wyłącznie z sylab otwartych (grupa 1). Po `pnpm audio:czytanki` liczby się nie ruszyły: sylaby **375**, słowa **407**.
+- **Test pilnujący kontraktu** — `czytanki.test.ts` sprawdza każdy klucz `cz-word-*`/`cz-syl-*` względem `public/audio/.manifest.json`. To jedyne wiarygodne źródło: `audio-source/czytanki-*.json` są GENEROWANE z danych, więc nowe słowo po prostu dopisałyby jako nowy klucz zamiast zgłosić brak.
+- **Pytania ❓** — wszystkie 40 mają `comprehension` (razem 99 na 100 czytanek; `cz-12` dalej świadomie bez). To jedyne nowe audio: 40 kluczy `cz-q-61`…`cz-q-100` (Agnieszka, `azure`).
+- **Rozkład poprawnych odpowiedzi** wyrównany do **[33, 33, 33]** — test wymaga ≥15 na indeks i rozstępu ≤5. Nowe 40 rozłożone jako 13/14/13.
+- **Poprawka w `comprehension.test.ts`:** zakaz przeczeń używał `/\bnie\b/`, a `\b` liczy tylko ASCII — „Co rośnie w sadzie?" wyglądało jak przeczenie (granica słowa wypadała po „ś"). Teraz `/(?<!\p{L})nie(?!\p{L})/iu`.
+
+### Liczby
+
+- `pnpm tsc -b` czysto, `pnpm test --run` — **1079/1079**.
+- `pnpm audio:check` — **1430/1430**; `ls public/audio/*.mp3 | wc -l` = **1437** (te same 7 nadwyżkowych).
+- `pnpm build` OK.
+
+### Sprawdzone w przeglądarce
+
+`cz-97` (6 zdań, grupa 4) mieści się w portrait 820×1180 bez scrolla — auto-fit zszedł z czcionką. ▶ przeczytało całą nową czytankę: wszystkie `cz-word-*` odpowiedziały 206, ani jednego 404. W `cz-93` ❓ otwiera się poprawnie i gra `cz-q-93.mp3`.
+
+### Do odsłuchu przez usera
+
+40 nowych pytań `cz-q-61`…`cz-q-100` (Agnieszka). Nowe czytanki nie dodały żadnych nagrań słów ani sylab, więc reszta audio jest ta sama co wcześniej.
+
 ## Tryb „po literkach" w czytankach (2026-09-05) — ukończony
 
 Zadanie od usera: syn zapomina, jakie literki są w sylabie — potrzebny tryb, w którym tap w sylabę wymawia jej litery pojedynczo, jak w module 1.

@@ -4,7 +4,7 @@ Webowa platforma edukacyjna dla dzieci. **Cztery moduły:**
 - **Moduł 1:** rozpoznawanie liter polskiego alfabetu dla 7-latka (zerówka)
 - **Moduł 2:** nauka czytania słów (sylaby + wyrazy, drag-drop, SRS)
 - **Moduł 3:** matematyka (liczenie, rozkłady, dodawanie/odejmowanie, mnożenie — drzewko konceptów)
-- **Moduł 4:** czytanki — 60 krótkich zdań (4 grupy trudności), tap sylaby → audio, długi tap → całe słowo, ▶ czyta całość, ❓ mini-pytanie o rozumienie, A|B tryb przypominajki literek
+- **Moduł 4:** czytanki — 100 krótkich zdań (4 grupy trudności, po 25), tap sylaby → audio, długi tap → całe słowo, ▶ czyta całość, ❓ mini-pytanie o rozumienie, A|B tryb przypominajki literek
 
 Tablet-first (iPad 10"), RWD wszędzie. Bez backendu, postęp w `localStorage`.
 
@@ -46,10 +46,10 @@ src/
 │   ├── data/               # concepts (z `prerequisites?`), facts, strategyAudio.ts (strategia po błędzie), masteryAudio.ts (mastery-* przy `mastered`)
 │   ├── hooks/              # useNumbersSession (orkiestrator; `computeMasteryProgress` = okno 8/10), pickConcept.ts (ważone losowanie konceptu + prereq gate)
 │   ├── store/              # numbersStore (Zustand + persist) — version 3 (`factsCorrect`, `recentOutcomes`)
-├── modules/czytanki/      # moduł 4 — czytanki: tap sylaby → audio, long-press → słowo, ▶ czyta całość; 60 czytanek, 4 grupy
+├── modules/czytanki/      # moduł 4 — czytanki: tap sylaby → audio, long-press → słowo, ▶ czyta całość; 100 czytanek, 4 grupy po 25
 │   ├── components/        # CzytankaList, CzytankaTile (⭐ + kropki przeczytań), CzytankaView (▶ 🗣 🐢 KO|TA A|B ❓), CzytankaScene, SyllableButton (litery jako osobne spany)
 │   │                      # ComprehensionQuestion (overlay ❓: 3 emoji, po błędzie zostają 2)
-│   ├── data/               # czytanki (60, `comprehension` w 59 — cz-12 bez), types, audioKeys (slugPl → cz-syl-*/cz-word-*, questionAudioKey → cz-q-NN, letterUnitAudioKey → letter-*/cz-let-*)
+│   ├── data/               # czytanki (100, `comprehension` w 99 — cz-12 bez), types, audioKeys (slugPl → cz-syl-*/cz-word-*, questionAudioKey → cz-q-NN, letterUnitAudioKey → letter-*/cz-let-*)
 │   │                       # letterUnits.ts (splitToLetterUnits — dwuznak SZ/CZ/RZ/CH/DZ/DŹ/DŻ = jedna literka)
 │   ├── hooks/              # useReadAloud (+ echo/tempo), useSyllablePress (tap/long-press, liczy tapy per słowo), useSpellSyllable (literka po literce + klamra całej sylaby)
 │   ├── audio/               # pendingCue — cue odtwarzane po zamontowaniu docelowego ekranu
@@ -86,7 +86,7 @@ audio-source/              # source teksty dla TTS
 │                          # `mastery-*` (19 kluczy na 20 konceptów), `count-objects-prompt/-howmany/-recount` (moduł 3)
 ├── czytanki-syllables.json # generowany (`pnpm audio:czytanki`); głos Agnieszka, `_engine: azure-ipa` — sylaby cz-syl-*
 ├── czytanki-words.json     # generowany (`pnpm audio:czytanki`); głos Agnieszka, `_engine: azure` (plain SSML) — słowa cz-word-*
-├── czytanki-questions.json # generowany (`pnpm audio:czytanki`) z `comprehension.question`; głos Agnieszka, `_engine: azure` — klucze cz-q-01…cz-q-60 (59, bez cz-12)
+├── czytanki-questions.json # generowany (`pnpm audio:czytanki`) z `comprehension.question`; głos Agnieszka, `_engine: azure` — klucze cz-q-01…cz-q-100 (99, bez cz-12)
 ├── czytanki-ui-strings.json # intro, nawigacja, cue, echo/tempo (`czytanki-ui-echo-on/-off/-slow/-normal`, `czytanki-echo-intro`), `czytanki-ui-merge-on/-off`, `czytanki-ui-letters-on/-off`, `czytanki-q-intro/-praise/-again`; głos Agnieszka, `_engine: azure`
 ├── czytanki-letters.json   # 7 dwuznaków do trybu A|B (`cz-let-sz/-cz/-rz/-ch/-dz/-dz-/-dz_`); głos Agnieszka, `_engine: azure-ipa`. Pojedyncze litery grają `letter-*` z modułu 1 (nagrania rodzica) — tu ich NIE ma
 └── manual-overrides/*.mp3 # wygrywa nad TTS (jeśli istnieje plik)
@@ -131,12 +131,12 @@ public/audio/              # build artifact: mp3 (`ls public/audio/*.mp3 | wc -l
 pnpm dev              # dev server z HMR
 pnpm build            # production build (lokalnie base='/'; CI ustawia VITE_BASE=/kid-learn/)
 pnpm tsc -b           # type check
-pnpm test --run       # testy (1078/1078 zielone: 959 src + 119 scripts, po trybie A|B + ↻ aktualizacji + fix raportu). `vitest.config.ts` wyklucza `**/.claude/**` — bez tego zbiera testy ze starych worktree'ów agentów
-pnpm audio:czytanki   # generuj czytanki-syllables.json (375) + czytanki-words.json (407) + czytanki-questions.json (59) z data/czytanki.ts (moduł 4)
+pnpm test --run       # testy (1079/1079 zielone: 960 src + 119 scripts, po dokładce 40 czytanek). `vitest.config.ts` wyklucza `**/.claude/**` — bez tego zbiera testy ze starych worktree'ów agentów
+pnpm audio:czytanki   # generuj czytanki-syllables.json (375) + czytanki-words.json (407) + czytanki-questions.json (99) z data/czytanki.ts (moduł 4)
 pnpm audio:reading    # generuj syllables.json (moduł 2) z SYLLABLE_TEXTS ∪ sylab ALL_WORDS (91 kluczy)
 pnpm audio:build      # audio:czytanki + audio:reading + generuj/aktualizuj mp3 (azure-ipa wymaga .env.local)
 pnpm audio:dry        # plan buildu bez TTS: engine + tekst + IPA + akcja (nie wymaga klucza)
-pnpm audio:check      # audio:czytanki + audio:reading + sprawdź czy wszystkie klucze mają plik (1390 wymaganych po trybie A|B; działa bez klucza Azure; `ls public/audio/*.mp3 | wc -l` = 1397 — 7 nadwyżka: `correction-prefix` jest używany w runtime bez wpisu w source (nie usuwać); osierocone: `feedback-correct-suffix`, `feedback-wrong-prefix`, `still-there`, `summary-intro`, `timeout-1`, `timeout-2`, nie w żadnym source, kandydaci do sprzątnięcia)
+pnpm audio:check      # audio:czytanki + audio:reading + sprawdź czy wszystkie klucze mają plik (1430 wymaganych po dokładce czytanek; działa bez klucza Azure; `ls public/audio/*.mp3 | wc -l` = 1437 — 7 nadwyżka: `correction-prefix` jest używany w runtime bez wpisu w source (nie usuwać); osierocone: `feedback-correct-suffix`, `feedback-wrong-prefix`, `still-there`, `summary-intro`, `timeout-1`, `timeout-2`, nie w żadnym source, kandydaci do sprzątnięcia)
 
 # GitHub
 gh run list --repo kamilmat/kid-learn --limit 3      # status ostatnich deploy
@@ -181,6 +181,7 @@ git push                                              # auto-deploy ~40s przez G
 - **`CountObjectsExercise` blokuje kafelki cyfr, dopóki nie skończy się `count-objects-howmany`** — `unlockAfter(audioBus.play(...))` (`data-locked` na kontenerze). Bez tego dziecko klika liczbę zanim usłyszy pytanie o kardynalność, a do SRS idzie odpowiedź na pytanie, którego nie było. Tapy w obiekty NIE wołają `audioBus.stop()` — FIFO ma zachować kolejność „jeden, dwa, trzy".
 - **Literowanie NIE honoruje `letters.promptMode`** — tryb A|B zawsze gra fonem (`letter-<x>`, „jak się czyta"), nawet gdy rodzic przestawił Literki na nazwy szkolne. „be… o… BO" nie skleja się w sylabę, więc nazwy nie mają tu sensu. To świadome rozejście się dwóch modułów, nie przeoczenie.
 - **`SyllableButton` renderuje litery jako osobne spany ZAWSZE**, nie tylko w trybie A|B — inaczej włączenie trybu przerysowywałoby tekst i auto-fit mógłby zmienić rozmiar czcionki w środku czytania.
+- **Nowe czytanki (cz-61…cz-100) powstały WYŁĄCZNIE z nagranych już form** — ▶ i long-press grają `cz-word-<całe słowo>`, więc odmiana wyrazu, którego nie ma w nagraniach, daje ciszę, nie 404 z komunikatem. Pilnuje tego test „KAŻDE słowo i sylaba mają już nagranie" (`czytanki.test.ts`) sprawdzający klucze względem `public/audio/.manifest.json` — pliki źródłowe audio są GENEROWANE z tych danych, więc same braku nie zgłoszą, tylko dogenerują nowy klucz.
 - **Pytania o rozumienie (Czytanki) mają regułę anty-three-cueing** — `comprehension.test.ts` egzekwuje, że **co najmniej jeden dystraktor jest widoczny w scenie**; gdyby scena pokazywała wyłącznie poprawną odpowiedź, dziecko trafiałoby z obrazka bez czytania. Dopisując pytanie, sprawdź `sceneEmoji(id)` zanim dobierzesz opcje. `cz-12` („Pada i pada.") świadomie NIE ma pytania — brak rzeczownika w tekście, więc 59, nie 60.
 
 ## Konwencje kodu

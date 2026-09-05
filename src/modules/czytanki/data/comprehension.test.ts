@@ -15,8 +15,8 @@ function sceneEmoji(id: string): string[] {
 
 describe('comprehension', () => {
   it('każda czytanka z rzeczownikiem ma pytanie', () => {
-    expect(CZYTANKI.length).toBe(60)
-    expect(withQuestion.length).toBe(60 - WITHOUT_QUESTION.length)
+    expect(CZYTANKI.length).toBe(100)
+    expect(withQuestion.length).toBe(100 - WITHOUT_QUESTION.length)
     const missing = CZYTANKI.filter((c) => !c.comprehension).map((c) => c.id)
     expect(missing).toEqual(WITHOUT_QUESTION)
   })
@@ -29,7 +29,10 @@ describe('comprehension', () => {
       expect([0, 1, 2]).toContain(q.answer)
       expect(q.question.trim().split(/\s+/).length, c.id).toBeLessThanOrEqual(5)
       expect(q.question.endsWith('?'), c.id).toBe(true)
-      expect(/\bnie\b|dlaczego/i.test(q.question), c.id).toBe(false)
+      // `\b` liczy tylko ASCII-słowa, więc „rośnie"/„ciepłe" wyglądały jak
+      // przeczenie „nie" (granica wypada po diakrytyku). Lookaround po \p{L}
+      // patrzy na litery WSZYSTKICH alfabetów i łapie realne „nie".
+      expect(/(?<!\p{L})nie(?!\p{L})|dlaczego/iu.test(q.question), c.id).toBe(false)
       expect(questionAudioKey(c.id)).toMatch(AUDIO_KEY_RE)
       for (const o of q.options) expect(/[\u{1F3FB}-\u{1F3FF}]/u.test(o), `${c.id} ${o}`).toBe(false)
     }

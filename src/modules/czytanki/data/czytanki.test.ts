@@ -1,16 +1,18 @@
 import { describe, it, expect } from 'vitest'
 import { CZYTANKI, getCzytankiByGroup, getCzytankaById } from './czytanki'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { AUDIO_KEY_RE, syllableAudioKey, wordAudioKey } from './audioKeys'
 
 const OPEN_CV = /^[BCDFGHJKLŁMNPRSTWZ]?[AEIOUYÓ]$/u
 
 describe('CZYTANKI', () => {
-  it('60 sztuk, unikalne id cz-NN, 15 na grupę', () => {
-    expect(CZYTANKI).toHaveLength(60)
+  it('100 sztuk, unikalne id cz-NN, 25 na grupę', () => {
+    expect(CZYTANKI).toHaveLength(100)
     const ids = new Set(CZYTANKI.map((c) => c.id))
-    expect(ids.size).toBe(60)
-    for (const c of CZYTANKI) expect(c.id).toMatch(/^cz-\d{2}$/)
-    for (const g of [1, 2, 3, 4] as const) expect(getCzytankiByGroup(g)).toHaveLength(15)
+    expect(ids.size).toBe(100)
+    for (const c of CZYTANKI) expect(c.id).toMatch(/^cz-\d{2,3}$/)
+    for (const g of [1, 2, 3, 4] as const) expect(getCzytankiByGroup(g)).toHaveLength(25)
   })
   it('grupa 1: dokładnie 1 zdanie × 3 słowa, tylko sylaby otwarte', () => {
     for (const c of getCzytankiByGroup(1)) {
@@ -46,6 +48,31 @@ describe('CZYTANKI', () => {
       }
     }
   })
+  it('KAŻDE słowo i sylaba mają już nagranie — czytanki nie tworzą nowych kluczy', () => {
+    // Kontrakt tej porcji czytanek: powstały WYŁĄCZNIE z form, które są już
+    // nagrane, więc dołożenie ich nie wymagało ani jednego nowego pliku audio.
+    // Manifest to jedyne miejsce, które o tym wie — pliki źródłowe audio są
+    // GENEROWANE z tych danych, więc same z siebie nigdy nie zgłoszą braku.
+    const manifest = JSON.parse(
+      readFileSync(join(process.cwd(), 'public/audio/.manifest.json'), 'utf8'),
+    ) as Record<string, unknown>
+    const entries = (manifest.entries ?? manifest) as Record<string, unknown>
+    const missing: string[] = []
+    for (const c of CZYTANKI) {
+      for (const sent of c.sentences) {
+        for (const word of sent) {
+          if (!(wordAudioKey(word.syllables) in entries)) {
+            missing.push(`${c.id}: ${wordAudioKey(word.syllables)}`)
+          }
+          for (const syl of word.syllables) {
+            if (!(syllableAudioKey(syl) in entries)) missing.push(`${c.id}: ${syllableAudioKey(syl)}`)
+          }
+        }
+      }
+    }
+    expect(missing).toEqual([])
+  })
+
   it('getCzytankaById', () => {
     expect(getCzytankaById('cz-01')?.group).toBe(1)
     expect(getCzytankaById('nope')).toBeUndefined()

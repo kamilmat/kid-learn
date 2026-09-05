@@ -171,6 +171,108 @@ export const CZYTANKI: readonly Czytanka[] = [
     ] },
     comprehension: { question: 'Co je Ela?', options: ['🍎', '🍌', '🥕'], answer: 1 },
   },
+  // — dokładka do grupy 1 (cz-61…cz-70): te same reguły, nowe zdania —
+  {
+    id: 'cz-61', group: 1, title: 'Lody Oli', emoji: '🍦',
+    sentences: [[w('O', 'LA'), w('JE'), w('LO', 'DY', '.')]],
+    scene: { bg: 'kitchen', actors: [
+      { emoji: '👧', x: 32, y: 60, size: 110, anim: 'bob' },
+      { emoji: '🍦', x: 62, y: 68, size: 86, anim: 'pulse', delay: 0.4 },
+      { emoji: '🍌', x: 85, y: 72, size: 70, anim: 'wiggle', delay: 0.9 },
+    ] },
+    comprehension: { question: 'Co je Ola?', options: ['🍌', '🍦', '🥛'], answer: 1 },
+  },
+  {
+    id: 'cz-62', group: 1, title: 'Kakao taty', emoji: '☕',
+    sentences: [[w('TA', 'TA'), w('PI', 'JE'), w('KA', 'KA', 'O', '.')]],
+    scene: { bg: 'kitchen', actors: [
+      { emoji: '🧔', x: 32, y: 58, size: 110, anim: 'sway' },
+      { emoji: '☕', x: 60, y: 70, size: 84, anim: 'pulse', delay: 0.4 },
+      { emoji: '🧃', x: 84, y: 70, size: 70, anim: 'bob', delay: 0.9 },
+    ] },
+    comprehension: { question: 'Co pije tata?', options: ['🧃', '🥛', '☕'], answer: 2 },
+  },
+  {
+    id: 'cz-63', group: 1, title: 'Banany od mamy', emoji: '🍌',
+    sentences: [[w('MA', 'MA'), w('KU', 'PI', 'ŁA'), w('BA', 'NA', 'NY', '.')]],
+    scene: { bg: 'kitchen', actors: [
+      { emoji: '👩', x: 30, y: 58, size: 110, anim: 'sway' },
+      { emoji: '🍌', x: 58, y: 70, size: 84, anim: 'wiggle', delay: 0.3 },
+      { emoji: '🍅', x: 82, y: 72, size: 70, anim: 'pulse', delay: 0.8 },
+    ] },
+    comprehension: { question: 'Co kupiła mama?', options: ['🍌', '🍅', '🍐'], answer: 0 },
+  },
+  {
+    id: 'cz-64', group: 1, title: 'Ula maluje koty', emoji: '🎨',
+    sentences: [[w('U', 'LA'), w('MA', 'LU', 'JE'), w('KO', 'TY', '.')]],
+    scene: { bg: 'room', actors: [
+      { emoji: '👧', x: 30, y: 60, size: 105, anim: 'bob' },
+      { emoji: '🐱', x: 60, y: 68, size: 80, anim: 'wiggle', delay: 0.4 },
+      { emoji: '🐶', x: 84, y: 70, size: 74, anim: 'bob', delay: 0.9 },
+    ] },
+    comprehension: { question: 'Co maluje Ula?', options: ['🐶', '🐱', '🐴'], answer: 1 },
+  },
+  {
+    id: 'cz-65', group: 1, title: 'Lale Ady', emoji: '🪆',
+    sentences: [[w('A', 'DA'), w('MA'), w('LA', 'LE', '.')]],
+    scene: { bg: 'room', actors: [
+      { emoji: '👧', x: 32, y: 62, size: 105, anim: 'sway' },
+      { emoji: '🪆', x: 60, y: 70, size: 80, anim: 'pulse', delay: 0.4 },
+      { emoji: '🧸', x: 84, y: 70, size: 72, anim: 'bob', delay: 0.9 },
+    ] },
+    comprehension: { question: 'Co ma Ada?', options: ['🧸', '🎈', '🪆'], answer: 2 },
+  },
+  {
+    id: 'cz-66', group: 1, title: 'Maliny Loli', emoji: '🫐',
+    sentences: [[w('LO', 'LA'), w('LU', 'BI'), w('MA', 'LI', 'NY', '.')]],
+    scene: { bg: 'meadow', actors: [
+      { emoji: '👧', x: 30, y: 62, size: 105, anim: 'bob' },
+      { emoji: '🫐', x: 60, y: 70, size: 76, anim: 'pulse', delay: 0.4 },
+      { emoji: '🍌', x: 84, y: 68, size: 70, anim: 'wiggle', delay: 0.9 },
+    ] },
+    comprehension: { question: 'Co lubi Lola?', options: ['🫐', '🍌', '🍦'], answer: 0 },
+  },
+  {
+    id: 'cz-67', group: 1, title: 'Tola myje pomidory', emoji: '🍅',
+    sentences: [[w('TO', 'LA'), w('MY', 'JE'), w('PO', 'MI', 'DO', 'RY', '.')]],
+    scene: { bg: 'kitchen', actors: [
+      { emoji: '👧', x: 32, y: 60, size: 105, anim: 'sway' },
+      { emoji: '🍅', x: 60, y: 70, size: 80, anim: 'pulse', delay: 0.4 },
+      { emoji: '🥛', x: 84, y: 70, size: 70, anim: 'bob', delay: 0.9 },
+    ] },
+    comprehension: { question: 'Co myje Tola?', options: ['🥛', '🍅', '🍐'], answer: 1 },
+  },
+  {
+    id: 'cz-68', group: 1, title: 'Ada rysuje domy', emoji: '🏠',
+    sentences: [[w('A', 'DA'), w('RY', 'SU', 'JE'), w('DO', 'MY', '.')]],
+    scene: { bg: 'room', actors: [
+      { emoji: '👧', x: 30, y: 60, size: 105, anim: 'bob' },
+      { emoji: '🏠', x: 62, y: 66, size: 86, anim: 'pulse', delay: 0.4 },
+      { emoji: '🐱', x: 86, y: 72, size: 70, anim: 'wiggle', delay: 0.9 },
+    ] },
+    comprehension: { question: 'Co rysuje Ada?', options: ['🐱', '🚗', '🏠'], answer: 2 },
+  },
+  {
+    id: 'cz-69', group: 1, title: 'To moja mama', emoji: '👩',
+    sentences: [[w('TO'), w('MO', 'JA'), w('MA', 'MA', '.')]],
+    scene: { bg: 'room', actors: [
+      { emoji: '👩', x: 42, y: 58, size: 120, anim: 'sway' },
+      { emoji: '👧', x: 70, y: 66, size: 90, anim: 'bob', delay: 0.5 },
+      { emoji: '🐱', x: 88, y: 74, size: 66, anim: 'wiggle', delay: 1 },
+    ] },
+    comprehension: { question: 'Kto to jest?', options: ['👩', '👧', '🧔'], answer: 0 },
+  },
+  {
+    id: 'cz-70', group: 1, title: 'Pani pokazuje kota', emoji: '🐱',
+    sentences: [[w('PA', 'NI'), w('PO', 'KA', 'ZU', 'JE'), w('KO', 'TA', '.')]],
+    scene: { bg: 'room', actors: [
+      { emoji: '👩', x: 32, y: 58, size: 110, anim: 'sway' },
+      { emoji: '🐱', x: 62, y: 70, size: 82, anim: 'wiggle', delay: 0.4 },
+      { emoji: '🐐', x: 86, y: 70, size: 72, anim: 'bob', delay: 0.9 },
+    ] },
+    comprehension: { question: 'Kogo pokazuje pani?', options: ['🐐', '🐱', '🦉'], answer: 1 },
+  },
+
   // — grupa 2: 2 zdania po 3–4 słowa, sylaby zamknięte dozwolone —
   {
     id: 'cz-16', group: 2, title: 'Dom i pies', emoji: '🏠',
@@ -373,6 +475,143 @@ export const CZYTANKI: readonly Czytanka[] = [
     ] },
     comprehension: { question: 'Co robi babcia?', options: ['🍪', '🍦', '🍰'], answer: 2 },
   },
+  // — dokładka do grupy 2 (cz-71…cz-80) —
+  {
+    id: 'cz-71', group: 2, title: 'Burek na dywanie', emoji: '🐶',
+    sentences: [
+      [w('BU', 'REK'), w('ŚPI'), w('NA'), w('DY', 'WA', 'NIE', '.')],
+      [w('PIES'), w('MA'), w('CIE', 'PŁY'), w('KOC', '.')],
+    ],
+    scene: { bg: 'room', actors: [
+      { emoji: '🐶', x: 38, y: 68, size: 112, anim: 'bob' },
+      { emoji: '🧸', x: 68, y: 72, size: 74, anim: 'pulse', delay: 0.5 },
+      { emoji: '🐱', x: 86, y: 64, size: 70, anim: 'wiggle', delay: 1 },
+    ] },
+    comprehension: { question: 'Kto śpi na dywanie?', options: ['🐱', '🧸', '🐶'], answer: 2 },
+  },
+  {
+    id: 'cz-72', group: 2, title: 'Sowa i księżyc', emoji: '🦉',
+    sentences: [
+      [w('W'), w('LE', 'SIE'), w('SIE', 'DZI'), w('SO', 'WA', '.')],
+      [w('SO', 'WA'), w('PA', 'TRZY'), w('NA'), w('KSIĘ', 'ŻYC', '.')],
+    ],
+    scene: { bg: 'night', actors: [
+      { emoji: '🦉', x: 34, y: 62, size: 108, anim: 'bob' },
+      { emoji: '🌙', x: 68, y: 30, size: 84, anim: 'float', delay: 0.4 },
+      { emoji: '⭐', x: 86, y: 42, size: 58, anim: 'pulse', delay: 0.9 },
+      { emoji: '🌳', x: 14, y: 70, size: 80, anim: 'sway', delay: 1.3 },
+    ] },
+    comprehension: { question: 'Na co patrzy sowa?', options: ['🌙', '⭐', '🌳'], answer: 0 },
+  },
+  {
+    id: 'cz-73', group: 2, title: 'Grusze w sadzie', emoji: '🍐',
+    sentences: [
+      [w('W'), w('SA', 'DZIE'), w('RO', 'SNĄ'), w('GRU', 'SZE', '.')],
+      [w('GRUSZ', 'KI'), w('SĄ'), w('DOJ', 'RZA', 'ŁE', '.')],
+    ],
+    scene: { bg: 'meadow', actors: [
+      { emoji: '🌳', x: 30, y: 58, size: 118, anim: 'sway' },
+      { emoji: '🍐', x: 60, y: 66, size: 78, anim: 'pulse', delay: 0.5 },
+      { emoji: '🍅', x: 84, y: 74, size: 66, anim: 'bob', delay: 1 },
+    ] },
+    comprehension: { question: 'Co rośnie w sadzie?', options: ['🍅', '🍐', '🍌'], answer: 1 },
+  },
+  {
+    id: 'cz-74', group: 2, title: 'Małpy w zoo', emoji: '🐒',
+    sentences: [
+      [w('W'), w('ZO', 'O'), w('SĄ'), w('MAŁ', 'PY', '.')],
+      [w('O', 'LA'), w('PA', 'TRZY'), w('NA'), w('MAŁ', 'PY', '.')],
+    ],
+    scene: { bg: 'meadow', actors: [
+      { emoji: '🐒', x: 40, y: 56, size: 100, anim: 'wiggle' },
+      { emoji: '🐘', x: 72, y: 66, size: 96, anim: 'bob', delay: 0.6 },
+      { emoji: '👧', x: 16, y: 70, size: 92, anim: 'sway', delay: 1 },
+    ] },
+    comprehension: { question: 'Kogo Ola widzi w zoo?', options: ['🐘', '🦉', '🐒'], answer: 2 },
+  },
+  {
+    id: 'cz-75', group: 2, title: 'Piłka i Burek', emoji: '⚽',
+    sentences: [
+      [w('TO', 'MEK'), w('RZU', 'CA'), w('PIŁ', 'KĘ', '.')],
+      [w('BU', 'REK'), w('BIE', 'GA'), w('ZA'), w('PIŁ', 'KĄ', '.')],
+    ],
+    scene: { bg: 'meadow', actors: [
+      { emoji: '👦', x: 24, y: 62, size: 104, anim: 'bob' },
+      { emoji: '⚽', x: 56, y: 74, size: 68, anim: 'pulse', delay: 0.4 },
+      { emoji: '🐶', x: 80, y: 68, size: 92, anim: 'wiggle', delay: 0.8 },
+      { emoji: '🎈', x: 92, y: 34, size: 56, anim: 'float', delay: 1.2 },
+    ] },
+    comprehension: { question: 'Za czym biega Burek?', options: ['⚽', '🎈', '🐱'], answer: 0 },
+  },
+  {
+    id: 'cz-76', group: 2, title: 'Pociąg jedzie', emoji: '🚂',
+    sentences: [
+      [w('PO', 'CIĄG'), w('JE', 'DZIE'), w('DA', 'LE', 'KO', '.')],
+      [w('JE', 'DZIE', 'MY'), w('DO'), w('BAB', 'CI', '.')],
+    ],
+    scene: { bg: 'meadow', actors: [
+      { emoji: '🚂', x: 36, y: 66, size: 116, anim: 'bob' },
+      { emoji: '🚌', x: 74, y: 72, size: 80, anim: 'sway', delay: 0.6 },
+      { emoji: '👵', x: 92, y: 60, size: 70, anim: 'wiggle', delay: 1.1 },
+    ] },
+    comprehension: { question: 'Czym jedziemy do babci?', options: ['🚌', '🚂', '🚗'], answer: 1 },
+  },
+  {
+    id: 'cz-77', group: 2, title: 'Muszelki nad morzem', emoji: '🐚',
+    sentences: [
+      [w('NAD'), w('MO', 'RZEM'), w('SĄ'), w('FA', 'LE', '.')],
+      [w('O', 'LA'), w('ZBIE', 'RA'), w('MU', 'SZEL', 'KI', '.')],
+    ],
+    scene: { bg: 'beach', actors: [
+      { emoji: '🌊', x: 30, y: 52, size: 110, anim: 'sway' },
+      { emoji: '👧', x: 60, y: 68, size: 100, anim: 'bob', delay: 0.5 },
+      { emoji: '🐚', x: 82, y: 78, size: 62, anim: 'pulse', delay: 0.9 },
+      { emoji: '🪣', x: 16, y: 78, size: 62, anim: 'wiggle', delay: 1.3 },
+    ] },
+    comprehension: { question: 'Co zbiera Ola?', options: ['🌊', '🪣', '🐚'], answer: 2 },
+  },
+  {
+    id: 'cz-78', group: 2, title: 'Lampa i książka', emoji: '💡',
+    sentences: [
+      [w('WIE', 'CZO', 'REM'), w('ŚWIE', 'CI'), w('LAM', 'PA', '.')],
+      [w('O', 'LA'), w('CZY', 'TA'), w('W'), w('ŁÓŻ', 'KU', '.')],
+    ],
+    scene: { bg: 'night', actors: [
+      { emoji: '💡', x: 26, y: 40, size: 76, anim: 'pulse' },
+      { emoji: '👧', x: 56, y: 66, size: 104, anim: 'bob', delay: 0.5 },
+      { emoji: '📖', x: 78, y: 72, size: 72, anim: 'sway', delay: 0.9 },
+      { emoji: '🎨', x: 92, y: 80, size: 58, anim: 'wiggle', delay: 1.4 },
+    ] },
+    comprehension: { question: 'Co robi Ola w łóżku?', options: ['📖', '🎨', '⚽'], answer: 0 },
+  },
+  {
+    id: 'cz-79', group: 2, title: 'Marchewki', emoji: '🥕',
+    sentences: [
+      [w('MA', 'MA'), w('MY', 'JE'), w('MAR', 'CHEW', 'KI', '.')],
+      [w('O', 'LA'), w('JE'), w('MAR', 'CHEW', 'KĘ', '.')],
+    ],
+    scene: { bg: 'kitchen', actors: [
+      { emoji: '👩', x: 28, y: 58, size: 108, anim: 'sway' },
+      { emoji: '🥕', x: 58, y: 70, size: 78, anim: 'pulse', delay: 0.4 },
+      { emoji: '👧', x: 82, y: 64, size: 92, anim: 'bob', delay: 0.8 },
+      { emoji: '🍅', x: 94, y: 78, size: 58, anim: 'wiggle', delay: 1.2 },
+    ] },
+    comprehension: { question: 'Co je Ola?', options: ['🍅', '🥕', '🍐'], answer: 1 },
+  },
+  {
+    id: 'cz-80', group: 2, title: 'Ptak na drzewie', emoji: '🌳',
+    sentences: [
+      [w('W'), w('PAR', 'KU'), w('RO', 'SNĄ'), w('DRZE', 'WA', '.')],
+      [w('NA'), w('DRZE', 'WIE'), w('ŚPIE', 'WA'), w('PTAK', '.')],
+    ],
+    scene: { bg: 'forest', actors: [
+      { emoji: '🌳', x: 32, y: 56, size: 124, anim: 'sway' },
+      { emoji: '🐦', x: 58, y: 40, size: 66, anim: 'float', delay: 0.5 },
+      { emoji: '🐿️', x: 82, y: 72, size: 70, anim: 'wiggle', delay: 1 },
+    ] },
+    comprehension: { question: 'Kto śpiewa na drzewie?', options: ['🐿️', '🦉', '🐦'], answer: 2 },
+  },
+
   // — grupa 3: 3–4 zdania po 3–5 słów, dwuznaki i ę/ą/ó —
   {
     id: 'cz-31', group: 3, title: 'Myszka w norce', emoji: '🐭',
@@ -610,6 +849,169 @@ export const CZYTANKI: readonly Czytanka[] = [
     ] },
     comprehension: { question: 'Co świeci na niebie?', options: ['🕯️', '💡', '🌙'], answer: 2 },
   },
+  // — dokładka do grupy 3 (cz-81…cz-90) —
+  {
+    id: 'cz-81', group: 3, title: 'Myszka w kuchni', emoji: '🐭',
+    sentences: [
+      [w('W'), w('KUCH', 'NI'), w('MIESZ', 'KA'), w('MYSZ', 'KA', '.')],
+      [w('MYSZ', 'KA'), w('JE'), w('ZIAR', 'NO', '.')],
+      [w('KOT'), w('ŚPI'), w('NA'), w('KA', 'NA', 'PIE', '.')],
+      [w('MYSZ', 'KA'), w('SZYB', 'KO'), w('U', 'CIE', 'KA', '.')],
+    ],
+    scene: { bg: 'kitchen', actors: [
+      { emoji: '🐭', x: 30, y: 74, size: 76, anim: 'wiggle' },
+      { emoji: '🌾', x: 52, y: 78, size: 62, anim: 'pulse', delay: 0.5 },
+      { emoji: '🐱', x: 78, y: 62, size: 100, anim: 'bob', delay: 0.9 },
+    ] },
+    comprehension: { question: 'Kto śpi na kanapie?', options: ['🐱', '🐭', '🐶'], answer: 0 },
+  },
+  {
+    id: 'cz-82', group: 3, title: 'Śniadanie', emoji: '🥪',
+    sentences: [
+      [w('RA', 'NO'), w('MA', 'MA'), w('RO', 'BI'), w('KA', 'NAP', 'KI', '.')],
+      [w('NA'), w('CHLEB'), w('DA', 'JE'), w('MA', 'SŁO', '.')],
+      [w('O', 'LA'), w('PI', 'JE'), w('KA', 'KA', 'O', '.')],
+      [w('TA', 'TA'), w('PI', 'JE'), w('HER', 'BA', 'TĘ', '.')],
+    ],
+    scene: { bg: 'kitchen', actors: [
+      { emoji: '👩', x: 24, y: 58, size: 104, anim: 'sway' },
+      { emoji: '🥪', x: 50, y: 72, size: 70, anim: 'pulse', delay: 0.4 },
+      { emoji: '☕', x: 72, y: 70, size: 66, anim: 'bob', delay: 0.8 },
+      { emoji: '🥛', x: 90, y: 76, size: 58, anim: 'wiggle', delay: 1.2 },
+    ] },
+    comprehension: { question: 'Co pije Ola?', options: ['🥛', '☕', '🧃'], answer: 1 },
+  },
+  {
+    id: 'cz-83', group: 3, title: 'Spacer z Burkiem', emoji: '🐶',
+    sentences: [
+      [w('BU', 'REK'), w('I', 'DZIE'), w('NA'), w('SPA', 'CER', '.')],
+      [w('BIE', 'GA'), w('PO'), w('PAR', 'KU', '.')],
+      [w('TO', 'MEK'), w('RZU', 'CA'), w('PIŁ', 'KĘ'), w('DA', 'LE', 'KO', '.')],
+      [w('BU', 'REK'), w('MER', 'DA'), w('O', 'GO', 'NEM', '.')],
+    ],
+    scene: { bg: 'meadow', actors: [
+      { emoji: '🐶', x: 34, y: 68, size: 106, anim: 'bob' },
+      { emoji: '👦', x: 12, y: 64, size: 96, anim: 'sway', delay: 0.4 },
+      { emoji: '⚽', x: 66, y: 76, size: 64, anim: 'pulse', delay: 0.8 },
+      { emoji: '🎈', x: 88, y: 36, size: 58, anim: 'float', delay: 1.2 },
+    ] },
+    comprehension: { question: 'Co rzuca Tomek?', options: ['🎈', '🐱', '⚽'], answer: 2 },
+  },
+  {
+    id: 'cz-84', group: 3, title: 'Bałwan na podwórku', emoji: '⛄',
+    sentences: [
+      [w('W'), w('NO', 'CY'), w('SPADŁ'), w('ŚNIEG', '.')],
+      [w('DZIE', 'CI'), w('LE', 'PIĄ'), w('BAŁ', 'WA', 'NA', '.')],
+      [w('DA', 'JĄ'), w('MU'), w('MAR', 'CHEW', 'KĘ', '.')],
+      [w('PO', 'TEM'), w('PI', 'JĄ'), w('HER', 'BA', 'TĘ', '.')],
+    ],
+    scene: { bg: 'snow', actors: [
+      { emoji: '⛄', x: 38, y: 62, size: 116, anim: 'bob' },
+      { emoji: '🥕', x: 62, y: 70, size: 56, anim: 'pulse', delay: 0.5 },
+      { emoji: '👦', x: 14, y: 68, size: 92, anim: 'sway', delay: 0.9 },
+      { emoji: '🍅', x: 88, y: 78, size: 52, anim: 'wiggle', delay: 1.3 },
+    ] },
+    comprehension: { question: 'Co dzieci dają bałwanowi?', options: ['🥕', '🍅', '🧣'], answer: 0 },
+  },
+  {
+    id: 'cz-85', group: 3, title: 'Rower Tomka', emoji: '🚲',
+    sentences: [
+      [w('TO', 'MEK'), w('MA'), w('NO', 'WY'), w('RO', 'WER', '.')],
+      [w('JE', 'DZIE'), w('NA'), w('RO', 'WE', 'RZE'), w('DO'), w('PAR', 'KU', '.')],
+      [w('W'), w('PAR', 'KU'), w('BIE', 'GA'), w('BU', 'REK', '.')],
+      [w('PO', 'TEM'), w('I', 'DZIE'), w('DO'), w('DO', 'MU', '.')],
+    ],
+    scene: { bg: 'meadow', actors: [
+      { emoji: '🚲', x: 36, y: 68, size: 108, anim: 'bob' },
+      { emoji: '👦', x: 14, y: 62, size: 96, anim: 'sway', delay: 0.4 },
+      { emoji: '🐶', x: 70, y: 72, size: 86, anim: 'wiggle', delay: 0.9 },
+      { emoji: '⚽', x: 90, y: 80, size: 56, anim: 'pulse', delay: 1.3 },
+    ] },
+    comprehension: { question: 'Co ma Tomek?', options: ['⚽', '🚲', '🚗'], answer: 1 },
+  },
+  {
+    id: 'cz-86', group: 3, title: 'Wieczorna bajka', emoji: '📖',
+    sentences: [
+      [w('WIE', 'CZO', 'REM'), w('MA', 'MA'), w('CZY', 'TA'), w('BAJ', 'KĘ', '.')],
+      [w('O', 'LA'), w('SIE', 'DZI'), w('NA'), w('ŁÓŻ', 'KU', '.')],
+      [w('KOT'), w('ŚPI'), w('O', 'BOK', '.')],
+      [w('PO', 'TEM'), w('O', 'LA'), w('I', 'DZIE'), w('SPAĆ', '.')],
+    ],
+    scene: { bg: 'night', actors: [
+      { emoji: '👩', x: 28, y: 60, size: 106, anim: 'sway' },
+      { emoji: '👧', x: 54, y: 66, size: 96, anim: 'bob', delay: 0.4 },
+      { emoji: '🐱', x: 78, y: 74, size: 72, anim: 'wiggle', delay: 0.9 },
+      { emoji: '🧸', x: 92, y: 78, size: 60, anim: 'pulse', delay: 1.3 },
+    ] },
+    comprehension: { question: 'Kto śpi obok Oli?', options: ['🧸', '🐶', '🐱'], answer: 2 },
+  },
+  {
+    id: 'cz-87', group: 3, title: 'Chleb dla kaczek', emoji: '🦆',
+    sentences: [
+      [w('KACZ', 'KI'), w('PŁY', 'WA', 'JĄ'), w('PO'), w('STA', 'WIE', '.')],
+      [w('O', 'LA'), w('MA'), w('CHLEB', '.')],
+      [w('DZIE', 'CI'), w('DA', 'JĄ'), w('IM'), w('CHLEB', '.')],
+      [w('KACZ', 'KI'), w('GŁO', 'ŚNO'), w('KWA', 'CZĄ', '.')],
+    ],
+    scene: { bg: 'meadow', actors: [
+      { emoji: '🦆', x: 40, y: 68, size: 96, anim: 'bob' },
+      { emoji: '🦆', x: 62, y: 74, size: 78, anim: 'bob', delay: 0.6 },
+      { emoji: '👧', x: 16, y: 62, size: 96, anim: 'sway', delay: 1 },
+      { emoji: '🍞', x: 86, y: 76, size: 58, anim: 'pulse', delay: 1.4 },
+      { emoji: '🥕', x: 94, y: 60, size: 48, anim: 'wiggle', delay: 1.8 },
+    ] },
+    comprehension: { question: 'Co ma Ola?', options: ['🍞', '🥕', '🐚'], answer: 0 },
+  },
+  {
+    id: 'cz-88', group: 3, title: 'Zamek z klocków', emoji: '🧱',
+    sentences: [
+      [w('O', 'LA'), w('MA'), w('DU', 'ŻO'), w('KLOC', 'KÓW', '.')],
+      [w('Z'), w('KLOC', 'KÓW'), w('RO', 'BI'), w('ZA', 'MEK', '.')],
+      [w('ZA', 'MEK'), w('MA'), w('WY', 'SO', 'KĄ'), w('WIE', 'ŻĘ', '.')],
+      [w('TO', 'MEK'), w('RO', 'BI'), w('DOM', '.')],
+    ],
+    scene: { bg: 'room', actors: [
+      { emoji: '🧱', x: 30, y: 74, size: 74, anim: 'pulse' },
+      { emoji: '🏰', x: 56, y: 62, size: 100, anim: 'bob', delay: 0.5 },
+      { emoji: '👧', x: 14, y: 62, size: 92, anim: 'sway', delay: 0.9 },
+      { emoji: '👦', x: 80, y: 66, size: 88, anim: 'wiggle', delay: 1.3 },
+      { emoji: '🏠', x: 94, y: 78, size: 58, anim: 'pulse', delay: 1.7 },
+    ] },
+    comprehension: { question: 'Co robi Tomek?', options: ['🏰', '🏠', '🚗'], answer: 1 },
+  },
+  {
+    id: 'cz-89', group: 3, title: 'Herbata dla babci', emoji: '☕',
+    sentences: [
+      [w('BAB', 'CIA'), w('SIE', 'DZI'), w('PRZY'), w('STO', 'LE', '.')],
+      [w('MA', 'MA'), w('SZY', 'KU', 'JE'), w('HER', 'BA', 'TĘ', '.')],
+      [w('HER', 'BA', 'TA'), w('JEST'), w('CIE', 'PŁA', '.')],
+      [w('BAB', 'CIA'), w('PI', 'JE'), w('HER', 'BA', 'TĘ', '.')],
+    ],
+    scene: { bg: 'kitchen', actors: [
+      { emoji: '👵', x: 32, y: 60, size: 108, anim: 'sway' },
+      { emoji: '🍵', x: 60, y: 70, size: 72, anim: 'pulse', delay: 0.5 },
+      { emoji: '👩', x: 82, y: 62, size: 96, anim: 'bob', delay: 0.9 },
+      { emoji: '🥛', x: 94, y: 78, size: 54, anim: 'wiggle', delay: 1.3 },
+    ] },
+    comprehension: { question: 'Co pije babcia?', options: ['🥛', '🧃', '🍵'], answer: 2 },
+  },
+  {
+    id: 'cz-90', group: 3, title: 'Obrazek dla babci', emoji: '🎨',
+    sentences: [
+      [w('O', 'LA'), w('MA', 'LU', 'JE'), w('O', 'BRA', 'ZEK', '.')],
+      [w('O', 'BRA', 'ZEK'), w('JEST'), w('NIE', 'BIE', 'SKI', '.')],
+      [w('MA', 'LU', 'JE'), w('NA'), w('NIM'), w('DOM', '.')],
+      [w('DA', 'JE'), w('O', 'BRA', 'ZEK'), w('BAB', 'CI', '.')],
+    ],
+    scene: { bg: 'room', actors: [
+      { emoji: '👧', x: 30, y: 62, size: 104, anim: 'bob' },
+      { emoji: '🎨', x: 56, y: 72, size: 72, anim: 'pulse', delay: 0.5 },
+      { emoji: '🏠', x: 78, y: 60, size: 78, anim: 'sway', delay: 0.9 },
+      { emoji: '🌳', x: 94, y: 70, size: 62, anim: 'wiggle', delay: 1.3 },
+    ] },
+    comprehension: { question: 'Co Ola maluje na obrazku?', options: ['🏠', '🌳', '🐱'], answer: 0 },
+  },
+
   // — grupa 4: 5–6 zdań po 3–6 słów, słowa 3-sylabowe i zbitki spółgłoskowe —
   {
     id: 'cz-46', group: 4, title: 'Krowa na łące', emoji: '🐮',
@@ -887,6 +1289,193 @@ export const CZYTANKI: readonly Czytanka[] = [
     ] },
     comprehension: { question: 'Kto pokazuje Wielki Wóz?', options: ['👧', '🧔', '👵'], answer: 1 },
   },
+  // — dokładka do grupy 4 (cz-91…cz-100) —
+  {
+    id: 'cz-91', group: 4, title: 'Dzień nad morzem', emoji: '🌊',
+    sentences: [
+      [w('NAD'), w('MO', 'RZEM'), w('ŚWIE', 'CI'), w('SŁOŃ', 'CE', '.')],
+      [w('O', 'LA'), w('ZBIE', 'RA'), w('MU', 'SZEL', 'KI', '.')],
+      [w('TO', 'MEK'), w('RZU', 'CA'), w('PIŁ', 'KĘ'), w('DA', 'LE', 'KO', '.')],
+      [w('FA', 'LE'), w('SĄ'), w('ZIM', 'NE', '.')],
+      [w('MA', 'MA'), w('DA', 'JE'), w('NAM'), w('KA', 'NAP', 'KI', '.')],
+      [w('PO', 'TEM'), w('WRA', 'CA', 'MY'), w('DO'), w('DO', 'MU', '.')],
+    ],
+    scene: { bg: 'beach', actors: [
+      { emoji: '🌊', x: 26, y: 50, size: 104, anim: 'sway' },
+      { emoji: '👧', x: 52, y: 66, size: 96, anim: 'bob', delay: 0.5 },
+      { emoji: '🐚', x: 72, y: 80, size: 56, anim: 'pulse', delay: 0.9 },
+      { emoji: '⚽', x: 88, y: 68, size: 60, anim: 'wiggle', delay: 1.3 },
+      { emoji: '🥪', x: 14, y: 80, size: 54, anim: 'pulse', delay: 1.7 },
+    ] },
+    comprehension: { question: 'Co zbiera Ola?', options: ['⚽', '🐚', '🥪'], answer: 1 },
+  },
+  {
+    id: 'cz-92', group: 4, title: 'Poranek w domu', emoji: '🥪',
+    sentences: [
+      [w('RA', 'NO'), w('O', 'LA'), w('ZA', 'KŁA', 'DA'), w('BU', 'TY', '.')],
+      [w('MA', 'MA'), w('RO', 'BI'), w('KA', 'NAP', 'KI', '.')],
+      [w('JE', 'MY'), w('KA', 'NAP', 'KI'), w('I'), w('JO', 'GURT', '.')],
+      [w('PI', 'JE', 'MY'), w('CIE', 'PŁĄ'), w('HER', 'BA', 'TĘ', '.')],
+      [w('PO', 'TEM'), w('I', 'DZIE', 'MY'), w('DO'), w('PRZED', 'SZKO', 'LA', '.')],
+      [w('TA', 'TA'), w('JE', 'DZIE'), w('DO'), w('SKLE', 'PU', '.')],
+    ],
+    scene: { bg: 'room', actors: [
+      { emoji: '👧', x: 28, y: 62, size: 100, anim: 'bob' },
+      { emoji: '👟', x: 50, y: 78, size: 62, anim: 'pulse', delay: 0.5 },
+      { emoji: '🧦', x: 66, y: 80, size: 52, anim: 'wiggle', delay: 0.9 },
+      { emoji: '🥪', x: 84, y: 70, size: 62, anim: 'pulse', delay: 1.3 },
+      { emoji: '👩', x: 12, y: 60, size: 96, anim: 'sway', delay: 1.7 },
+    ] },
+    comprehension: { question: 'Co Ola zakłada rano?', options: ['🧦', '🧣', '👟'], answer: 2 },
+  },
+  {
+    id: 'cz-93', group: 4, title: 'Burek i kotek', emoji: '🐕',
+    sentences: [
+      [w('BU', 'REK'), w('LU', 'BI'), w('BIE', 'GAĆ', '.')],
+      [w('W'), w('O', 'GRO', 'DZIE'), w('SIE', 'DZI'), w('KO', 'TEK', '.')],
+      [w('BU', 'REK'), w('SZU', 'KA'), w('KOT', 'KA', '.')],
+      [w('KO', 'TEK'), w('WSZEDŁ'), w('NA'), w('DRZE', 'WO', '.')],
+      [w('BU', 'REK'), w('MER', 'DA'), w('O', 'GO', 'NEM', '.')],
+      [w('PO', 'TEM'), w('KO', 'TEK'), w('ŚPI'), w('NA'), w('KA', 'NA', 'PIE', '.')],
+    ],
+    scene: { bg: 'meadow', actors: [
+      { emoji: '🐶', x: 30, y: 70, size: 104, anim: 'bob' },
+      { emoji: '🐱', x: 62, y: 46, size: 74, anim: 'wiggle', delay: 0.6 },
+      { emoji: '🌳', x: 74, y: 62, size: 118, anim: 'sway', delay: 1 },
+      { emoji: '🏠', x: 12, y: 64, size: 78, anim: 'pulse', delay: 1.4 },
+    ] },
+    comprehension: { question: 'Gdzie wszedł kotek?', options: ['🌳', '🏠', '🛏️'], answer: 0 },
+  },
+  {
+    id: 'cz-94', group: 4, title: 'W ogrodzie u dziadka', emoji: '🥕',
+    sentences: [
+      [w('W'), w('O', 'GRO', 'DZIE'), w('RO', 'SNĄ'), w('MAR', 'CHEW', 'KI', '.')],
+      [w('DZIA', 'DEK'), w('MA'), w('KO', 'SZYK', '.')],
+      [w('O', 'LA'), w('ZBIE', 'RA'), w('PO', 'MI', 'DO', 'RY', '.')],
+      [w('MAR', 'CHEW', 'KI'), w('SĄ'), w('DOJ', 'RZA', 'ŁE', '.')],
+      [w('BAB', 'CIA'), w('MY', 'JE'), w('MAR', 'CHEW', 'KI', '.')],
+      [w('PO', 'TEM'), w('JE', 'MY'), w('O', 'BIAD', '.')],
+    ],
+    scene: { bg: 'meadow', actors: [
+      { emoji: '🥕', x: 30, y: 74, size: 68, anim: 'pulse' },
+      { emoji: '🍅', x: 52, y: 70, size: 66, anim: 'wiggle', delay: 0.5 },
+      { emoji: '👴', x: 14, y: 62, size: 100, anim: 'sway', delay: 0.9 },
+      { emoji: '👧', x: 76, y: 64, size: 94, anim: 'bob', delay: 1.3 },
+      { emoji: '🧺', x: 92, y: 78, size: 58, anim: 'pulse', delay: 1.7 },
+    ] },
+    comprehension: { question: 'Co zbiera Ola?', options: ['🥕', '🍅', '🍐'], answer: 1 },
+  },
+  {
+    id: 'cz-95', group: 4, title: 'Deszcz i farby', emoji: '🖌️',
+    sentences: [
+      [w('ZA'), w('OK', 'NEM'), w('PA', 'DA'), w('DESZCZ', '.')],
+      [w('SIA', 'DA', 'MY'), w('PRZY'), w('STO', 'LE', '.')],
+      [w('MA', 'LU', 'JE', 'MY'), w('O', 'BRA', 'ZEK'), w('FAR', 'BA', 'MI', '.')],
+      [w('MÓJ'), w('O', 'BRA', 'ZEK'), w('JEST'), w('ŻÓŁ', 'TY', '.')],
+      [w('O', 'LA'), w('MA', 'LU', 'JE'), w('DU', 'ŻE'), w('DRZE', 'WO', '.')],
+      [w('PO', 'TEM'), w('PI', 'JE', 'MY'), w('KA', 'KA', 'O', '.')],
+    ],
+    scene: { bg: 'room', actors: [
+      { emoji: '🌧️', x: 22, y: 34, size: 74, anim: 'float' },
+      { emoji: '🎨', x: 48, y: 70, size: 76, anim: 'pulse', delay: 0.5 },
+      { emoji: '👧', x: 70, y: 62, size: 96, anim: 'bob', delay: 0.9 },
+      { emoji: '🌳', x: 88, y: 72, size: 66, anim: 'sway', delay: 1.3 },
+      { emoji: '🏠', x: 12, y: 74, size: 58, anim: 'wiggle', delay: 1.7 },
+    ] },
+    comprehension: { question: 'Co maluje Ola?', options: ['🏠', '🐱', '🌳'], answer: 2 },
+  },
+  {
+    id: 'cz-96', group: 4, title: 'Urodziny babci', emoji: '🎂',
+    sentences: [
+      [w('DZI', 'SIAJ'), w('BAB', 'CIA'), w('MA'), w('U', 'RO', 'DZI', 'NY', '.')],
+      [w('MA', 'MA'), w('PIE', 'CZE'), w('SER', 'NIK', '.')],
+      [w('O', 'LA'), w('MA', 'LU', 'JE'), w('O', 'BRA', 'ZEK', '.')],
+      [w('NA'), w('STO', 'LE'), w('STO', 'I'), w('TORT', '.')],
+      [w('NA'), w('TOR', 'CIE'), w('PA', 'LĄ'), w('SIĘ'), w('ŚWIECZ', 'KI', '.')],
+      [w('BAB', 'CIA'), w('ZDMU', 'CHU', 'JE'), w('ŚWIECZ', 'KI', '.')],
+    ],
+    scene: { bg: 'kitchen', actors: [
+      { emoji: '👵', x: 30, y: 60, size: 106, anim: 'sway' },
+      { emoji: '🎂', x: 58, y: 70, size: 84, anim: 'pulse', delay: 0.5 },
+      { emoji: '🍰', x: 80, y: 74, size: 62, anim: 'wiggle', delay: 0.9 },
+      { emoji: '👩', x: 12, y: 62, size: 94, anim: 'bob', delay: 1.3 },
+      { emoji: '👧', x: 94, y: 64, size: 82, anim: 'bob', delay: 1.7 },
+    ] },
+    comprehension: { question: 'Co piecze mama?', options: ['🍰', '🎂', '🍪'], answer: 0 },
+  },
+  {
+    id: 'cz-97', group: 4, title: 'Zima w przedszkolu', emoji: '⛄',
+    sentences: [
+      [w('ZI', 'MĄ'), w('I', 'DZIE', 'MY'), w('DO'), w('PRZED', 'SZKO', 'LA', '.')],
+      [w('NA'), w('PO', 'DWÓR', 'KU'), w('JEST'), w('ŚNIEG', '.')],
+      [w('DZIE', 'CI'), w('LE', 'PIĄ'), w('BAŁ', 'WA', 'NA', '.')],
+      [w('PA', 'NI'), w('DA', 'JE'), w('NAM'), w('CIE', 'PŁĄ'), w('HER', 'BA', 'TĘ', '.')],
+      [w('PO', 'TEM'), w('CZY', 'TA'), w('NAM'), w('BAJ', 'KĘ', '.')],
+      [w('W'), w('DO', 'MU'), w('CZE', 'KA'), w('MA', 'MA', '.')],
+    ],
+    scene: { bg: 'snow', actors: [
+      { emoji: '⛄', x: 36, y: 62, size: 112, anim: 'bob' },
+      { emoji: '👦', x: 14, y: 66, size: 92, anim: 'sway', delay: 0.5 },
+      { emoji: '👧', x: 62, y: 68, size: 90, anim: 'bob', delay: 0.9 },
+      { emoji: '🐶', x: 86, y: 74, size: 70, anim: 'wiggle', delay: 1.3 },
+    ] },
+    comprehension: { question: 'Co lepią dzieci?', options: ['🐶', '⛄', '🏰'], answer: 1 },
+  },
+  {
+    id: 'cz-98', group: 4, title: 'Ptaki zimą', emoji: '🐦',
+    sentences: [
+      [w('ZI', 'MĄ'), w('JEST'), w('CHŁOD', 'NO', '.')],
+      [w('PTA', 'KI'), w('SIA', 'DA', 'JĄ'), w('NA'), w('GA', 'ŁĘ', 'ZIACH', '.')],
+      [w('DZIE', 'CI'), w('SY', 'PIĄ'), w('IM'), w('ZIAR', 'NO', '.')],
+      [w('PTAK'), w('GŁO', 'ŚNO'), w('ŚPIE', 'WA', '.')],
+      [w('PO', 'TEM'), w('LE', 'CĄ'), w('NAD'), w('LA', 'SEM', '.')],
+      [w('WIO', 'SNĄ'), w('ZNÓW'), w('WRÓ', 'CĄ', '.')],
+    ],
+    scene: { bg: 'snow', actors: [
+      { emoji: '🐦', x: 40, y: 44, size: 72, anim: 'float' },
+      { emoji: '🌳', x: 66, y: 60, size: 112, anim: 'sway', delay: 0.5 },
+      { emoji: '🌾', x: 24, y: 78, size: 58, anim: 'pulse', delay: 0.9 },
+      { emoji: '🍞', x: 88, y: 78, size: 54, anim: 'wiggle', delay: 1.3 },
+    ] },
+    comprehension: { question: 'Co dzieci sypią ptakom?', options: ['🍞', '🥕', '🌾'], answer: 2 },
+  },
+  {
+    id: 'cz-99', group: 4, title: 'Auto taty', emoji: '🚗',
+    sentences: [
+      [w('TA', 'TA'), w('MY', 'JE'), w('AU', 'TO', '.')],
+      [w('AU', 'TO'), w('STO', 'I'), w('NA'), w('PO', 'DWÓR', 'KU', '.')],
+      [w('O', 'LA'), w('MY', 'JE'), w('OK', 'NO', '.')],
+      [w('BU', 'REK'), w('PA', 'TRZY'), w('PRZEZ'), w('OK', 'NO', '.')],
+      [w('PO', 'TEM'), w('JE', 'DZIE', 'MY'), w('DO'), w('BAB', 'CI', '.')],
+    ],
+    scene: { bg: 'room', actors: [
+      { emoji: '🚗', x: 42, y: 68, size: 112, anim: 'bob' },
+      { emoji: '🧔', x: 16, y: 62, size: 100, anim: 'sway', delay: 0.4 },
+      { emoji: '👧', x: 70, y: 64, size: 90, anim: 'bob', delay: 0.9 },
+      { emoji: '🐶', x: 90, y: 74, size: 70, anim: 'wiggle', delay: 1.3 },
+    ] },
+    comprehension: { question: 'Kto myje auto?', options: ['🧔', '👧', '🐶'], answer: 0 },
+  },
+  {
+    id: 'cz-100', group: 4, title: 'Dobranoc', emoji: '🌙',
+    sentences: [
+      [w('ZA'), w('OK', 'NEM'), w('JEST'), w('CIEM', 'NO', '.')],
+      [w('O', 'LA'), w('ZA', 'KŁA', 'DA'), w('PI', 'ŻA', 'MĘ', '.')],
+      [w('MA', 'MA'), w('CZY', 'TA'), w('NAM'), w('BAJ', 'KĘ', '.')],
+      [w('KO', 'TEK'), w('ŚPI'), w('NA'), w('ŁÓŻ', 'KU', '.')],
+      [w('NA'), w('NIE', 'BIE'), w('MRU', 'GA', 'JĄ'), w('GWIAZ', 'DY', '.')],
+      [w('O', 'LA'), w('I', 'DZIE'), w('SPAĆ', '.')],
+    ],
+    scene: { bg: 'night', actors: [
+      { emoji: '🌙', x: 74, y: 26, size: 80, anim: 'float' },
+      { emoji: '⭐', x: 90, y: 40, size: 52, anim: 'pulse', delay: 0.5 },
+      { emoji: '👧', x: 36, y: 64, size: 100, anim: 'bob', delay: 0.9 },
+      { emoji: '🐱', x: 60, y: 74, size: 70, anim: 'wiggle', delay: 1.3 },
+      { emoji: '🧸', x: 14, y: 76, size: 60, anim: 'pulse', delay: 1.7 },
+    ] },
+    comprehension: { question: 'Kto śpi na łóżku?', options: ['🧸', '🐱', '🐶'], answer: 1 },
+  },
+
 ]
 
 export function getCzytankaById(id: string): Czytanka | undefined {
