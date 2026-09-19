@@ -38,6 +38,7 @@ export const CZYTANKI_DEFAULTS: CzytankiSettings = {
   tempo: 'normal',
   mergedSyllables: false,
   spellMode: false,
+  randomMode: false,
 }
 
 // Lista wszystkich poziomów w kolejności rosnącej trudności. Single source of truth

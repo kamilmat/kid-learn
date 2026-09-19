@@ -19,10 +19,15 @@ export type Comprehension = {
   question: string                             // "Kto jadł trawę?"
   options: readonly [string, string, string]   // emoji, dokładnie 3
   answer: 0 | 1 | 2
+  /**
+   * Pytanie złożone z nagrań słów (sylaby per słowo). Czytanki z puli
+   * generowanej nie mają własnego klipu `cz-q-*` — grają `cz-word-*` po kolei.
+   */
+  questionWords?: readonly (readonly string[])[]
 }
 
 export type Czytanka = {
-  id: string          // 'cz-01' … 'cz-60'
+  id: string          // 'cz-01' … 'cz-2000'
   group: CzytankaGroup
   title: string       // dla rodzica
   emoji: string       // ikona kafelka

@@ -14,7 +14,7 @@ import { useNumbers } from '@/modules/numbers/store/numbersStore'
 import { useCzytanki } from '@/modules/czytanki/store/czytankiStore'
 import { ALL_WORDS } from '@/modules/reading/data/words'
 import { ALL_SYLLABLES } from '@/modules/reading/data/syllables'
-import { CZYTANKI, GROUP_ORDER, getCzytankiByGroup } from '@/modules/czytanki/data/czytanki'
+import { CZYTANKI, GROUP_ORDER, getCzytankaById, getCzytankiByGroup } from '@/modules/czytanki/data/czytanki'
 import { countComprehension, exportReportToMarkdown, topTappedWords } from '@/shared/stats/exporter'
 import { toUnifiedSessions } from '@/shared/stats/aggregate'
 import {
@@ -174,6 +174,8 @@ function ReadingStats() {
   )
 }
 
+const OPENED_LIST_MAX = 30
+
 function CzytankiStats() {
   const openedIds = useCzytanki((s) => s.openedIds)
   const wordTaps = useCzytanki((s) => s.wordTaps)
@@ -195,10 +197,13 @@ function CzytankiStats() {
     [timeMs],
   )
 
+  // Przy puli ~2000 czytanek pełna lista tytułów byłaby ścianą tekstu —
+  // pokazujemy ostatnio otwarte (openedIds rośnie w kolejności otwierania).
   const openedList = useMemo(
-    () => CZYTANKI.filter((c) => openedIds.includes(c.id)),
+    () => openedIds.slice(-OPENED_LIST_MAX).map(getCzytankaById).filter((c) => c !== undefined),
     [openedIds],
   )
+  const openedSet = useMemo(() => new Set(openedIds), [openedIds])
 
   const sectionStyle = {
     padding: 16,
@@ -221,7 +226,7 @@ function CzytankiStats() {
         </p>
         {GROUP_ORDER.map((g) => {
           const inGroup = getCzytankiByGroup(g)
-          const n = inGroup.filter((c) => openedIds.includes(c.id)).length
+          const n = inGroup.filter((c) => openedSet.has(c.id)).length
           return (
             <p key={g} style={{ margin: '0 0 2px', fontSize: 13, color: '#6b7280' }}>
               Grupa {g}: {n}/{inGroup.length}
@@ -244,6 +249,7 @@ function CzytankiStats() {
         )}
         {openedList.length > 0 ? (
           <p style={{ margin: '8px 0 0', fontSize: 13, color: '#6b7280' }}>
+            {openedIds.length > OPENED_LIST_MAX && `Ostatnie ${OPENED_LIST_MAX}: `}
             {openedList.map((c) => `${c.emoji} ${c.title}`).join(', ')}
           </p>
         ) : (

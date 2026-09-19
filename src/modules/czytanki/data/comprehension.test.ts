@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CZYTANKI } from './czytanki'
+import { CZYTANKI, CZYTANKI_LEGACY } from './czytanki'
 import { AUDIO_KEY_RE, questionAudioKey } from './audioKeys'
 
 // cz-12 („PADA I PADA.") nie ma rzeczownika — każde pytanie o „co?" miałoby dwie
@@ -15,8 +15,7 @@ function sceneEmoji(id: string): string[] {
 
 describe('comprehension', () => {
   it('każda czytanka z rzeczownikiem ma pytanie', () => {
-    expect(CZYTANKI.length).toBe(100)
-    expect(withQuestion.length).toBe(100 - WITHOUT_QUESTION.length)
+    expect(withQuestion.length).toBe(CZYTANKI.length - WITHOUT_QUESTION.length)
     const missing = CZYTANKI.filter((c) => !c.comprehension).map((c) => c.id)
     expect(missing).toEqual(WITHOUT_QUESTION)
   })
@@ -57,16 +56,18 @@ describe('comprehension', () => {
     }
   })
 
-  it('pozycja poprawnej odpowiedzi rozłożona: każdy indeks ≥15 razy', () => {
+  // Pula generowana ma własny test rozkładu (generated.test.ts, per grupa).
+  it('pozycja poprawnej odpowiedzi rozłożona w cz-01…cz-100: każdy indeks ≥15 razy', () => {
+    const legacy = CZYTANKI_LEGACY.filter((c) => c.comprehension)
     const counts = [0, 0, 0]
-    for (const c of withQuestion) counts[c.comprehension!.answer]! += 1
+    for (const c of legacy) counts[c.comprehension!.answer]! += 1
     for (const n of counts) expect(n).toBeGreaterThanOrEqual(15)
     expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(5)
-    expect(counts.reduce((a, b) => a + b, 0)).toBe(withQuestion.length)
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(legacy.length)
   })
 
-  it('klucze audio pytań są unikalne i lowercase', () => {
-    const keys = withQuestion.map((c) => questionAudioKey(c.id))
+  it('klucze audio nagranych pytań cz-q-* są unikalne i lowercase', () => {
+    const keys = withQuestion.filter((c) => !c.comprehension!.questionWords).map((c) => questionAudioKey(c.id))
     expect(new Set(keys).size).toBe(keys.length)
     for (const k of keys) expect(k).toBe(k.toLowerCase())
   })

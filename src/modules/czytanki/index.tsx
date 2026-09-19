@@ -1,9 +1,12 @@
 import { useCallback, useEffect } from 'react'
-import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import { KidNav } from '@/shared/ui/KidNav'
-import { CZYTANKI, getCzytankaById } from './data/czytanki'
+import { CZYTANKI, GROUP_ORDER, getCzytankaById, getCzytankiByGroup } from './data/czytanki'
+import type { CzytankaGroup } from './data/types'
+import { czytankaWeightFn } from './data/deckWeight'
+import { useCzytanki } from './store/czytankiStore'
 import { setPendingCue, takePendingCue } from './audio/pendingCue'
 import { CzytankaList } from './components/CzytankaList'
 import { CzytankaView } from './components/CzytankaView'
@@ -58,14 +61,51 @@ function ListRoute({ audioBus }: { audioBus: Bus }) {
     setPendingCue('czytanki-ui-open')
     navigate(id)
   }, [audioBus, navigate])
-  return <CzytankaList audioBus={audioBus} onOpen={onOpen} />
+  const draw = useDraw()
+  const onDraw = useCallback((group: CzytankaGroup) => {
+    const id = draw(group)
+    if (!id) return
+    audioBus.stop()
+    audioBus.unlock()
+    setPendingCue('czytanki-ui-open')
+    navigate(`${id}?${RANDOM_PARAM}=${group}`)
+  }, [audioBus, draw, navigate])
+  return <CzytankaList audioBus={audioBus} onOpen={onOpen} onDraw={onDraw} />
+}
+
+// `?los=<grupa>` — czytanka otwarta z talii 🎲: ▶ losuje dalej zamiast iść po kolei.
+const RANDOM_PARAM = 'los'
+
+function useDraw() {
+  const drawNext = useCzytanki((s) => s.drawNext)
+  return useCallback((group: CzytankaGroup) => {
+    const ids = getCzytankiByGroup(group).map((c) => c.id)
+    // Wagi liczone przy losowaniu, nie przy renderze — tapy z ostatniej
+    // czytanki są już wtedy zapisane (flush na wyjściu z ekranu).
+    return drawNext(group, ids, czytankaWeightFn(useCzytanki.getState().wordTaps))
+  }, [drawNext])
+}
+
+function parseRandomGroup(value: string | null): CzytankaGroup | null {
+  const n = Number(value)
+  return (GROUP_ORDER as readonly number[]).includes(n) ? (n as CzytankaGroup) : null
 }
 
 function ViewRoute({ audioBus }: { audioBus: Bus }) {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const draw = useDraw()
   const czytanka = id ? getCzytankaById(id) : undefined
   if (!czytanka) return <Navigate to=".." replace />
+  const randomGroup = parseRandomGroup(searchParams.get(RANDOM_PARAM))
+  if (randomGroup !== null) {
+    const drawNextCzytanka = () => {
+      const nextId = draw(randomGroup)
+      if (nextId) void navigate(`../${nextId}?${RANDOM_PARAM}=${randomGroup}`, { relative: 'path', replace: true })
+    }
+    return <CzytankaView key={czytanka.id} czytanka={czytanka} audioBus={audioBus} onNext={drawNextCzytanka} revealSceneAfterRead />
+  }
   const idx = CZYTANKI.indexOf(czytanka)
   const prev = CZYTANKI[idx - 1]
   const next = CZYTANKI[idx + 1]

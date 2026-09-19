@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { drawFromDeck, type Deck } from '../data/deck'
 
 // Wejście-wyjście-wejście w kilkanaście sekund (dziecko szuka właściwej czytanki,
 // myli się w kafelku) to nadal JEDNO czytanie — dopiero po minucie liczymy kolejne.
@@ -24,6 +25,10 @@ export type CzytankiState = {
   answeredQuestionIds: string[]
   /** id czytanki → czy trafiło za pierwszym, za drugim razem, czy wcale. */
   comprehensionResults: Record<string, ComprehensionResult>
+  /** Tryb „losowo”: talia per grupa ('1'…'4'). */
+  decks: Record<string, Deck>
+  /** Następna czytanka z talii grupy (zapisuje przesuniętą talię). */
+  drawNext: (group: number, ids: readonly string[], weightOf: (id: string) => number) => string | null
   markOpened: (id: string) => void
   /** Zaliczenie czytania — wołane dopiero po dowodzie przejścia tekstu (nie na mount). */
   markRead: (id: string, nowMs?: number) => void
@@ -44,6 +49,7 @@ const initialState = {
   lastCountedAt: {} as Record<string, number>,
   answeredQuestionIds: [] as string[],
   comprehensionResults: {} as Record<string, ComprehensionResult>,
+  decks: {} as Record<string, Deck>,
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -69,6 +75,26 @@ export function migrateCzytankiV3(persisted: unknown): PersistedCzytanki {
   return p
 }
 
+/** v3 → v4: talie trybu 🎲. */
+export function migrateCzytankiV4(persisted: unknown): PersistedCzytanki {
+  const p = (persisted ?? {}) as PersistedCzytanki
+  if (!isPlainObject(p.decks)) p.decks = {}
+  return p
+}
+
+function sanitizeDecks(value: unknown): Record<string, Deck> {
+  if (!isPlainObject(value)) return {}
+  const out: Record<string, Deck> = {}
+  for (const [group, deck] of Object.entries(value)) {
+    if (!isPlainObject(deck)) continue
+    const order = deck.order
+    const pos = deck.pos
+    if (!Array.isArray(order) || typeof pos !== 'number') continue
+    out[group] = { order: order.filter((id): id is string => typeof id === 'string'), pos }
+  }
+  return out
+}
+
 export function mergeCzytankiState(persisted: unknown, current: CzytankiState): CzytankiState {
   const p = (persisted ?? {}) as Partial<CzytankiState>
   return {
@@ -86,6 +112,7 @@ export function mergeCzytankiState(persisted: unknown, current: CzytankiState): 
     comprehensionResults: isPlainObject(p.comprehensionResults)
       ? (p.comprehensionResults as Record<string, ComprehensionResult>)
       : {},
+    decks: sanitizeDecks(p.decks),
   } as CzytankiState
 }
 
@@ -129,6 +156,11 @@ export const useCzytanki = create<CzytankiState>()(
               ? [...s.answeredQuestionIds, id]
               : s.answeredQuestionIds,
         })),
+      drawNext: (group, ids, weightOf) => {
+        const { id, deck } = drawFromDeck(get().decks[String(group)], ids, weightOf)
+        set((s) => ({ decks: { ...s.decks, [String(group)]: deck } }))
+        return id
+      },
       markIntroSeen: (key) =>
         set((s) => (s.seenIntros.includes(key) ? s : { seenIntros: [...s.seenIntros, key] })),
       hasSeenIntro: (key) => get().seenIntros.includes(key),
@@ -136,13 +168,14 @@ export const useCzytanki = create<CzytankiState>()(
     }),
     {
       name: 'iskierki-czytanki-v1',
-      version: 3,
+      version: 4,
       // Bez `migrate` bump wersji wyrzuciłby cały postęp — `merge` sanityzuje shape.
       // Łańcuch append-only: każdy krok dokłada pola swojej wersji.
       migrate: (persisted, version) => {
         let p = (persisted ?? {}) as PersistedCzytanki
         if (version < 2) p = migrateCzytankiV2(p)
         if (version < 3) p = migrateCzytankiV3(p)
+        if (version < 4) p = migrateCzytankiV4(p)
         return p as CzytankiState
       },
       merge: mergeCzytankiState,

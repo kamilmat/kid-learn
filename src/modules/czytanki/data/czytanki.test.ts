@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CZYTANKI, getCzytankiByGroup, getCzytankaById } from './czytanki'
+import { CZYTANKI, CZYTANKI_LEGACY, getCzytankiByGroup, getCzytankaById } from './czytanki'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { AUDIO_KEY_RE, syllableAudioKey, wordAudioKey } from './audioKeys'
@@ -7,12 +7,19 @@ import { AUDIO_KEY_RE, syllableAudioKey, wordAudioKey } from './audioKeys'
 const OPEN_CV = /^[BCDFGHJKLŁMNPRSTWZ]?[AEIOUYÓ]$/u
 
 describe('CZYTANKI', () => {
-  it('100 sztuk, unikalne id cz-NN, 25 na grupę', () => {
-    expect(CZYTANKI).toHaveLength(100)
+  it('ręczne 100 (po 25 na grupę) + pula generowana, unikalne id cz-N', () => {
+    expect(CZYTANKI_LEGACY).toHaveLength(100)
+    for (const g of [1, 2, 3, 4] as const) expect(CZYTANKI_LEGACY.filter((c) => c.group === g)).toHaveLength(25)
     const ids = new Set(CZYTANKI.map((c) => c.id))
-    expect(ids.size).toBe(100)
-    for (const c of CZYTANKI) expect(c.id).toMatch(/^cz-\d{2,3}$/)
-    for (const g of [1, 2, 3, 4] as const) expect(getCzytankiByGroup(g)).toHaveLength(25)
+    expect(ids.size).toBe(CZYTANKI.length)
+    for (const c of CZYTANKI) expect(c.id).toMatch(/^cz-\d{2,4}$/)
+  })
+  it('CZYTANKI uporządkowane grupami, ręczne na początku swojej grupy', () => {
+    const groups = CZYTANKI.map((c) => c.group)
+    expect(groups).toEqual([...groups].sort())
+    for (const g of [1, 2, 3, 4] as const) {
+      expect(getCzytankiByGroup(g).slice(0, 25)).toEqual(CZYTANKI_LEGACY.filter((c) => c.group === g))
+    }
   })
   it('grupa 1: dokładnie 1 zdanie × 3 słowa, tylko sylaby otwarte', () => {
     for (const c of getCzytankiByGroup(1)) {
@@ -48,11 +55,9 @@ describe('CZYTANKI', () => {
       }
     }
   })
-  it('KAŻDE słowo i sylaba mają już nagranie — czytanki nie tworzą nowych kluczy', () => {
-    // Kontrakt tej porcji czytanek: powstały WYŁĄCZNIE z form, które są już
-    // nagrane, więc dołożenie ich nie wymagało ani jednego nowego pliku audio.
-    // Manifest to jedyne miejsce, które o tym wie — pliki źródłowe audio są
-    // GENEROWANE z tych danych, więc same z siebie nigdy nie zgłoszą braku.
+  it('KAŻDE słowo i sylaba (także słowa pytań ❓) mają nagranie w manifeście', () => {
+    // Manifest to jedyne miejsce, które wie, co naprawdę nagrano — pliki źródłowe
+    // audio są GENEROWANE z tych danych, więc same z siebie nigdy nie zgłoszą braku.
     const manifest = JSON.parse(
       readFileSync(join(process.cwd(), 'public/audio/.manifest.json'), 'utf8'),
     ) as Record<string, unknown>
@@ -68,6 +73,9 @@ describe('CZYTANKI', () => {
             if (!(syllableAudioKey(syl) in entries)) missing.push(`${c.id}: ${syllableAudioKey(syl)}`)
           }
         }
+      }
+      for (const qw of c.comprehension?.questionWords ?? []) {
+        if (!(wordAudioKey(qw) in entries)) missing.push(`${c.id} (pytanie): ${wordAudioKey(qw)}`)
       }
     }
     expect(missing).toEqual([])

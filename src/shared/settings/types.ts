@@ -48,6 +48,9 @@ export type CzytankiSettings = {
   // końcu w całości. Dla dziecka, które zapomniało, jakie litery tu stoją.
   // Default false — normalny tap w sylabę zostaje domyślnym zachowaniem.
   spellMode: boolean
+  // 🎲 na liście czytanek: zamiast przeglądania wszystkich — poziom i
+  // czytanka z potasowanej talii (bez powtórek w rundzie). Default false.
+  randomMode: boolean
 }
 
 // Moduł 1: jak brzmi prompt litery. `phoneme` = sam dźwięk („b"), `name` =

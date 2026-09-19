@@ -3,27 +3,61 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
-## Stan aktualny (2026-09-05, `bd726d2`)
+## Stan aktualny (2026-09-19, po puli losowej czytanek)
 
 Jeden ekran prawdy na start sesji. Szczegóły — w sekcjach niżej, w kolejności odwrotnej chronologicznie.
 
 | | |
 |---|---|
-| **Moduły live** | 1 Literki · 2 Czytanie · 3 Cyferki · 4 Czytanki (**100 czytanek**, po 25 na grupę) |
-| **Testy** | `pnpm test --run` → **1081/1081** (962 src + 119 scripts) |
-| **Audio** | `pnpm audio:check` → **1430/1430**; plików `public/audio/*.mp3` = **1437** (7 nadwyżkowych, opisane w CLAUDE.md) |
-| **Persist** | `iskierki-state-v1` **v7** · `iskierki-letters-v1` v2 · `iskierki-reading-v1` v1 · `iskierki-numbers-v1` v3 · `iskierki-czytanki-v1` v3 |
-| **Ostatnie zmiany** | tryb „po literkach" (`A\|B`) w czytankach · guzik ↻ nowej wersji · fix crashu raportu po bramce · +40 czytanek · fix dystraktorów `word-meaning` |
+| **Moduły live** | 1 Literki · 2 Czytanie · 3 Cyferki · 4 Czytanki (**2000 czytanek**, po 500 na grupę: 100 ręcznych + 1900 z puli) |
+| **Testy** | `pnpm test --run` → **1091/1091** |
+| **Audio** | `pnpm audio:check` → **2789/2789**; plików `public/audio/*.mp3` = **2796** (te same 7 nadwyżkowych, opisane w CLAUDE.md) |
+| **Persist** | `iskierki-state-v1` **v8** · `iskierki-letters-v1` v2 · `iskierki-reading-v1` v1 · `iskierki-numbers-v1` v3 · `iskierki-czytanki-v1` **v4** |
+| **Ostatnie zmiany** | pula 1900 czytanek ze słownika 1492 form · tryb 🎲 (talia bez powtórek) · lista stronicowana z zakładkami poziomów · scena zakryta do przeczytania |
 
 **Otwarte, świadomie odłożone** (nic nie blokuje):
-- Odsłuch starszych nagrań Azure: `phon-*` (32), `syl-*` (91), `cz-q-01`…`cz-q-60`. Nowe (`cz-q-61`…`cz-q-100`, `cz-let-*`) user odsłuchał — OK.
+- **Odsłuch nowych nagrań Azure: 377 sylab `cz-syl-*` i 956 słów `cz-word-*`** (Agnieszka). Słowa czytane z ortografii zwykle są OK; ryzyko jest przy izolowanych sylabach (`azure-ipa` + G2P). Poprawka: wpis w `audio-source/pronunciation-overrides.json` + `pnpm audio:build`.
+- Odsłuch starszych nagrań Azure: `phon-*` (32), `syl-*` (91), `cz-q-01`…`cz-q-60`.
 - 404 na `favicon.png` / `favicon.svg` na podstronach (ścieżka względna; kosmetyka, nic nie psuje).
 - Reszta długu z Fal 1-2 — patrz „Fala 1+2 — odłożone drobiazgi" w `CLAUDE.md`.
 
-**Jak weryfikować zmiany** (sprawdzone w tej sesji, działa):
+**Jak weryfikować zmiany** (sprawdzone, działa):
 - Przeglądarka: Chrome DevTools MCP na `localhost:5173` (dev) albo wprost na produkcji; okno 1180×820 = iPad 10" poziomo, 820×1180 = pionowo.
-- Audio: `afplay public/audio/<klucz>.mp3` — agent NIE słyszy nagrań, ale `afplay` puszcza je **na głośnikach usera**, więc „podegraj" znaczy: odpal `afplay` po kolei na sprawdzanych kluczach i czekaj na jego werdykt. Wcześniejsze notatki „agent nie ma wyjścia audio, user musi odsłuchać sam" były przez to mylące — odsłuch da się odpalić z sesji.
+- Audio: `afplay public/audio/<klucz>.mp3` — agent NIE słyszy nagrań, ale `afplay` puszcza je na głośnikach usera, więc „podegraj" znaczy: odpal `afplay` po kolei i czekaj na werdykt.
 - Deploy: `git push` → GH Actions ~45 s → weryfikacja live przez `curl` bundla i `HTTP` na nowe mp3.
+
+## Pula losowa czytanek: 100 → 2000 (2026-09-19) — ukończona
+
+Problem od usera: dziecko zapamiętywało 100 czytanek (szczególnie krótkie z grupy 1) i „czytało" je z pamięci, rozpoznając czytankę po kafelku i obrazku. Lekarstwo: duża pula plus losowanie bez powtórek. Spec: `docs/superpowers/specs/2026-09-19-czytanki-losowe-design.md`.
+
+### Treść
+
+- **1900 nowych czytanek** (`cz-101`…`cz-2000`) w `data/generated/g*.ts`, w zwartym formacie (`data/compact.ts`): numer, tło, emoji sceny, tekst z podziałem na sylaby, pytanie, 3 opcje, indeks odpowiedzi. Sceny liczy `layoutScene` deterministycznie z listy emoji (seed = numer) — 1900 scen nie dało się ułożyć ręcznie.
+- **Słownik = budżet nagrań** (`data/lexicon.ts` ← `lexiconText.ts` + `generated/lex-*.ts`): **1492 formy**, każda z jednym podziałem na sylaby. Czytanki wolno składać TYLKO z tych form, dzięki czemu dziecko spotyka te same wyrazy w wielu zdaniach, a liczba nagrań jest skończona.
+- **Reguły grup egzekwuje `data/validate.ts`** + `scripts/czytanki-validate.ts` (uruchamialny per plik): liczba zdań i słów, grupa 1 tylko sylaby otwarte CV, słownik, duplikaty tekstu, reguły pytania (≤5 słów, bez przeczeń, 3 różne emoji, ≥1 dystraktor widoczny w scenie, poprawna w scenie lub na kafelku).
+- **Jak powstały:** 1 agent ułożył słownik (838 nowych form, w tym 340 CV-only), 8 agentów napisało czytanki (po tematach, bez dublowania), 7 innych agentów zrobiło korektę. Korekta poprawiła **127 czytanek** (~7%): niejednoznaczne pytania, skoki czasów, złe tła, dwa słowa spoza standardowej polszczyzny („pi-lu-je", „doma") i „ko-te-ki" → „kot-ki".
+- **Pytania ❓ puli nie mają klipu `cz-q-*`** — grają słowa pytania po kolei (`comprehension.questionWords`). 1900 osobnych nagrań pytań to byłoby +32 MB i ~1,7 h buildu.
+
+### UI
+
+- **Przełącznik 🎲 na liście czytanek** (`settings.czytanki.randomMode`, settings v8, default off), obok licznika.
+- **Tryb „wszystkie":** zakładki 4 poziomów + strony kafelków (rozmiar strony z pomiaru kontenera, bez scrolla), strzałki ◀ ▶ z cue, kropki albo pasek postępu przy >12 stronach. Powrót z czytanki otwiera stronę z `lastOpenedId`.
+- **Tryb 🎲:** 4 duże przyciski poziomów; tap otwiera `/czytanki/<id>?los=<grupa>`. W tym trybie ◀ jest ukryte, ▶ losuje kolejną, a **scena jest zakryta 📖 do czasu przeczytania** (ten sam dowód co dla ❓: całe ▶ albo 60% dotkniętych sylab), żeby obrazek nie podpowiadał.
+- **Kafelek listy** pokazuje pierwszy przedmiot/zwierzę sceny, nie postać i nie poprawną odpowiedź — inaczej 2000 kafelków to byłyby same twarze.
+
+### Talia (rotacja bez powtórek)
+
+`data/deck.ts` + `czytankiStore.decks` (v4, per grupa): ważone tasowanie Efraimidis–Spirakis (waga z liczby dotknięć słów czytanki, `deckWeight.ts`), czytanka nie wraca, dopóki nie padną wszystkie inne z grupy, a końcówka poprzedniej rundy nie może otworzyć nowej (szew `k = min(50, n/4)`). `reconcileDeck` godzi zapisaną talię z pulą, więc dokładanie czytanek nie wymaga migracji.
+
+### Liczby
+
+- `pnpm tsc -b` czysto, `pnpm test --run` **1091/1091**, `pnpm audio:check` **2789/2789**.
+- Nowe nagrania: **377 sylab** (`azure-ipa`) + **956 słów** (`azure`) + 9 cue UI (🎲, strony, poziomy, „zobacz obrazek"). Build Azure ~70 min, 0 błędów.
+- Bundle: `index-*.js` 1045 kB (292 kB gzip), precache PWA ~18 MB → strona ~36 MB (limit GH Pages to 1 GB).
+
+### Sprawdzone w przeglądarce
+
+1180×820: lista z zakładkami i stronami, 🎲 → losowanie z grupy 2, zakryta scena, ▶ losuje dalej. `cz-1848` (6 zdań, grupa 4) mieści się bez scrolla.
 
 ## Dokładka 40 czytanek (2026-09-05) — ukończona
 

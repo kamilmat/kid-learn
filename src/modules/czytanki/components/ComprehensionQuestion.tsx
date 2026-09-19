@@ -3,7 +3,7 @@ import type { AudioBus } from '@/shared/audio/AudioBus'
 import { colors, radii } from '@/app/theme'
 import { useTapHandler } from '@/shared/ui/useTapHandler'
 import { useCzytanki } from '../store/czytankiStore'
-import { questionAudioKey } from '../data/audioKeys'
+import { questionAudioKeys } from '../data/audioKeys'
 import type { Comprehension } from '../data/types'
 
 // 👏 znika dopiero, gdy pochwała wybrzmi: `play()` rozstrzyga się na `ended`,
@@ -58,6 +58,9 @@ function OptionTile({ emoji, index, reveal, onPick }: OptionTileProps) {
 
 export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onClose }: Props) {
   const recordComprehension = useCzytanki((s) => s.recordComprehension)
+  const playQuestion = useCallback(() => {
+    for (const key of questionAudioKeys(czytankaId, comprehension)) void audioBus.play(key)
+  }, [audioBus, czytankaId, comprehension])
   // Indeks kafelka, który odpadł po pierwszej pomyłce (null = wszystkie trzy widoczne).
   const [rejected, setRejected] = useState<number | null>(null)
   const [praising, setPraising] = useState(false)
@@ -71,7 +74,7 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
   useEffect(() => {
     audioBus.stop()
     void audioBus.play('czytanki-q-intro')
-    void audioBus.play(questionAudioKey(czytankaId))
+    playQuestion()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [czytankaId])
 
@@ -132,16 +135,16 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
       audioBus.stop()
       void audioBus.play('czytanki-q-again')
       // „Posłuchaj jeszcze raz" musi mieć czego słuchać — pytanie leci zaraz po.
-      void audioBus.play(questionAudioKey(czytankaId))
+      playQuestion()
     },
-    [audioBus, comprehension.answer, czytankaId, missing, praising, playThenClose, recordComprehension, rejected],
+    [audioBus, comprehension.answer, czytankaId, missing, praising, playQuestion, playThenClose, recordComprehension, rejected],
   )
 
   const repeatTap = useTapHandler({
     onTap: () => {
       if (praising || missing) return
       audioBus.stop()
-      void audioBus.play(questionAudioKey(czytankaId))
+      playQuestion()
     },
   })
 

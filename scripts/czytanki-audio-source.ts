@@ -34,6 +34,8 @@ export function buildCzytankiSource(): CzytankiSources {
         words.set(wordAudioKey(w.syllables), w.syllables.join('').toLowerCase())
       }
     }
+    // Pula generowana gra pytanie ❓ słowo po słowie — te słowa też muszą mieć nagranie.
+    for (const qw of c.comprehension?.questionWords ?? []) words.set(wordAudioKey(qw), qw.join('').toLowerCase())
   }
   const syllables: Record<string, string> = { _voice: 'agnieszka', _engine: 'azure-ipa' }
   for (const [k, v] of [...syl.entries()].sort()) syllables[k] = v
@@ -41,7 +43,7 @@ export function buildCzytankiSource(): CzytankiSources {
   for (const [k, v] of [...words.entries()].sort()) wordMap[k] = v
   // Pytania to pełne zdania — Azure wymawia je poprawnie z ortografii, więc plain SSML.
   const questions: Record<string, string> = { _voice: 'agnieszka', _engine: 'azure' }
-  for (const c of CZYTANKI) if (c.comprehension) questions[questionAudioKey(c.id)] = c.comprehension.question
+  for (const c of CZYTANKI) if (c.comprehension && !c.comprehension.questionWords) questions[questionAudioKey(c.id)] = c.comprehension.question
   return { syllables, words: wordMap, questions }
 }
 

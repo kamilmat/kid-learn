@@ -1,4 +1,6 @@
 import type { Czytanka, CzytankaGroup, Word } from './types'
+import { GENERATED_BY_GROUP } from './generated'
+import { expandCompact } from './compact'
 
 // Skrót: w('KO','TA','.') → { syllables: ['KO','TA'], punct: '.' }
 function w(...parts: string[]): Word {
@@ -11,7 +13,8 @@ function w(...parts: string[]): Word {
 
 export const GROUP_ORDER: readonly CzytankaGroup[] = [1, 2, 3, 4]
 
-export const CZYTANKI: readonly Czytanka[] = [
+/** cz-01…cz-100 — ręcznie ułożone sceny i nagrane pytania `cz-q-*`. */
+export const CZYTANKI_LEGACY: readonly Czytanka[] = [
   // — grupa 1: 1 zdanie, 3 słowa, wyłącznie sylaby otwarte CV —
   {
     id: 'cz-01', group: 1, title: 'Kot taty', emoji: '🐱',
@@ -1478,10 +1481,23 @@ export const CZYTANKI: readonly Czytanka[] = [
 
 ]
 
+/**
+ * Pula całości: ręczne cz-01…cz-100 na początku swoich grup, dalej pula
+ * generowana (spec 2026-09-19). Kolejność = kolejność grup — ◀▶ w czytance i
+ * stronicowanie listy idą po tej tablicy.
+ */
+export const CZYTANKI: readonly Czytanka[] = GROUP_ORDER.flatMap((g) => [
+  ...CZYTANKI_LEGACY.filter((c) => c.group === g),
+  ...GENERATED_BY_GROUP[g].map((c) => expandCompact(g, c)),
+])
+
+const BY_ID = new Map(CZYTANKI.map((c) => [c.id, c]))
+const BY_GROUP = new Map(GROUP_ORDER.map((g) => [g, CZYTANKI.filter((c) => c.group === g)]))
+
 export function getCzytankaById(id: string): Czytanka | undefined {
-  return CZYTANKI.find((c) => c.id === id)
+  return BY_ID.get(id)
 }
 
 export function getCzytankiByGroup(group: CzytankaGroup): Czytanka[] {
-  return CZYTANKI.filter((c) => c.group === group)
+  return BY_GROUP.get(group) ?? []
 }

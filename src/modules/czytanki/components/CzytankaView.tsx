@@ -43,6 +43,11 @@ type Props = {
   audioBus: Pick<AudioBus, 'play' | 'stop' | 'setPlaybackRate'>
   onPrev?: () => void
   onNext?: () => void
+  /**
+   * Tryb 🎲: aktorzy sceny pojawiają się dopiero po przeczytaniu tekstu —
+   * obrazek nie może podpowiadać, co jest napisane.
+   */
+  revealSceneAfterRead?: boolean
 }
 
 const roundBtn = {
@@ -59,7 +64,7 @@ const toggleBtn = {
   WebkitTapHighlightColor: 'transparent',
 } as const
 
-export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
+export function CzytankaView({ czytanka, audioBus, onPrev, onNext, revealSceneAfterRead = false }: Props) {
   const markOpened = useCzytanki((s) => s.markOpened)
   const markRead = useCzytanki((s) => s.markRead)
   const hasSeenIntro = useCzytanki((s) => s.hasSeenIntro)
@@ -261,7 +266,11 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
     if (!readEvidence || readCountedRef.current) return
     readCountedRef.current = true
     markRead(czytanka.id)
-  }, [readEvidence, czytanka.id, markRead])
+    // Kolejkowane (bez stop) — nie ucina ostatniej sylaby ani końca ▶.
+    if (revealSceneAfterRead) void audioBus.play('czytanki-ui-picture')
+  }, [readEvidence, czytanka.id, markRead, revealSceneAfterRead, audioBus])
+
+  const sceneHidden = revealSceneAfterRead && !readEvidence
 
   const questionTap = useTapHandler({
     onTap: () => {
@@ -351,7 +360,13 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext }: Props) {
   return (
     <div data-testid="czytanka-view" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 12, padding: `0 ${tapTargets.minMargin}px ${tapTargets.minMargin}px`, position: 'relative' }}>
       <div style={{ flex: `0 0 ${sceneBasis}%`, minHeight: 0, position: 'relative' }}>
-        <CzytankaScene scene={czytanka.scene} />
+        <CzytankaScene scene={sceneHidden ? { bg: czytanka.scene.bg, actors: [] } : czytanka.scene} />
+        {sceneHidden && (
+          <span data-testid="scene-hidden" aria-hidden="true"
+            style={{ position: 'absolute', left: '50%', top: '42%', transform: 'translate(-50%, -50%)', fontSize: 72, opacity: 0.55 }}>
+            📖
+          </span>
+        )}
         {onPrev && <button type="button" aria-label="Poprzednia czytanka" {...prevTap} style={{ ...roundBtn, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)' }}>◀</button>}
         {onNext && <button type="button" aria-label="Następna czytanka" {...nextTap} style={{ ...roundBtn, position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>▶</button>}
         <div style={{ position: 'absolute', left: '50%', bottom: 8, transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 10 }}>

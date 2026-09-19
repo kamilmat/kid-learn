@@ -1,5 +1,6 @@
 import { slugPl } from '@/shared/audio/slugPl'
 import { soundKey } from '@/modules/letters/audio/promptKeys'
+import type { Comprehension } from './types'
 
 export { slugPl, AUDIO_KEY_RE } from '@/shared/audio/slugPl'
 
@@ -14,6 +15,15 @@ export function wordAudioKey(syllables: readonly string[]): string {
 // 'cz-01' → 'cz-q-01' — pytanie o rozumienie czytanki.
 export function questionAudioKey(czytankaId: string): string {
   return czytankaId.replace(/^cz-/, 'cz-q-')
+}
+
+/**
+ * Klipy pytania ❓: cz-01…cz-100 mają własne nagranie `cz-q-*`, pula
+ * generowana składa pytanie z nagrań słów (`questionWords`).
+ */
+export function questionAudioKeys(czytankaId: string, comprehension: Comprehension): string[] {
+  if (comprehension.questionWords) return comprehension.questionWords.map(wordAudioKey)
+  return [questionAudioKey(czytankaId)]
 }
 
 /**
