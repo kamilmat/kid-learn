@@ -1488,9 +1488,10 @@ export const CZYTANKI_LEGACY: readonly Czytanka[] = [
  */
 /**
  * Kafelek na liście to samo emoji — przy 500 czytankach na grupę powtórki są
- * nieuniknione (112–179 różnych emoji), ale dwa identyczne kafelki OBOK SIEBIE
- * są dla dziecka nie do rozróżnienia. Rozrzucamy więc czytanki tak, żeby to samo
- * emoji wracało możliwie rzadko: karuzela po kubełkach emoji, największe najpierw.
+ * nieuniknione (112–179 różnych emoji na grupę), ale dwa identyczne kafelki na
+ * jednej stronie są dla dziecka nie do rozróżnienia. Każde emoji dostaje więc
+ * pozycje rozłożone RÓWNOMIERNIE po całej liście (karuzela po kubełkach zbijała
+ * resztki największego kubełka na ostatnich stronach).
  */
 function spreadByEmoji(list: readonly Czytanka[]): Czytanka[] {
   const buckets = new Map<string, Czytanka[]>()
@@ -1499,22 +1500,23 @@ function spreadByEmoji(list: readonly Czytanka[]): Czytanka[] {
     if (bucket) bucket.push(c)
     else buckets.set(c.emoji, [c])
   }
-  const queues = [...buckets.values()].sort((a, b) => b.length - a.length)
-  const out: Czytanka[] = []
-  while (out.length < list.length) {
-    let placedInPass = false
-    for (const q of queues) {
-      const next = q.shift()
-      if (next) {
-        out.push(next)
-        placedInPass = true
+  const n = list.length
+  const slots: (Czytanka | undefined)[] = new Array<Czytanka | undefined>(n)
+  // Największe kubełki pierwsze — mają najmniej luzu, więc dostają swoje
+  // idealne pozycje, a rzadkie emoji upychają się w to, co zostanie.
+  for (const bucket of [...buckets.values()].sort((a, b) => b.length - a.length)) {
+    bucket.forEach((c, j) => {
+      const ideal = Math.floor(((j + 0.5) * n) / bucket.length)
+      for (let d = 0; d < n; d++) {
+        const at = ideal + (d % 2 === 0 ? d / 2 : -((d + 1) / 2))
+        if (at >= 0 && at < n && slots[at] === undefined) {
+          slots[at] = c
+          return
+        }
       }
-    }
-    // Kubełki są skończone, więc pętla zawsze się kończy — ten warunek chroni
-    // tylko przed nieskończonym obrotem, gdyby lista miała dziury.
-    if (!placedInPass) break
+    })
   }
-  return out
+  return slots.filter((c): c is Czytanka => c !== undefined)
 }
 
 export const CZYTANKI: readonly Czytanka[] = GROUP_ORDER.flatMap((g) => [

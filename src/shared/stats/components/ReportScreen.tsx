@@ -181,14 +181,20 @@ function CzytankiStats() {
   const wordTaps = useCzytanki((s) => s.wordTaps)
   const timeMs = useCzytanki((s) => s.timeMs)
   const readCounts = useCzytanki((s) => s.readCounts)
+  const lastCountedAt = useCzytanki((s) => s.lastCountedAt)
   const comprehensionResults = useCzytanki((s) => s.comprehensionResults)
   const comprehension = useMemo(() => countComprehension(comprehensionResults), [comprehensionResults])
 
   // Powtórne czytanie tej samej czytanki to sygnał płynności, nie nudy —
   // rodzic widzi, co dziecko wraca czytać samo.
+  // Sortowane od ostatnio czytanych: `CZYTANKI.filter` daje kolejność puli,
+  // więc „Ostatnie 30” pokazywałoby końcówkę grupy 4, a nie świeże czytanki.
   const repeatList = useMemo(
-    () => CZYTANKI.filter((c) => (readCounts[c.id] ?? 0) >= 2),
-    [readCounts],
+    () =>
+      CZYTANKI.filter((c) => (readCounts[c.id] ?? 0) >= 2).sort(
+        (a, b) => (lastCountedAt[b.id] ?? 0) - (lastCountedAt[a.id] ?? 0),
+      ),
+    [readCounts, lastCountedAt],
   )
 
   const topTaps = useMemo(() => topTappedWords(wordTaps), [wordTaps])
@@ -239,7 +245,7 @@ function CzytankiStats() {
         {repeatList.length > 0 && (
           <p style={{ margin: '2px 0 0', fontSize: 13, color: '#6b7280' }}>
             {repeatList.length > OPENED_LIST_MAX && `Ostatnie ${OPENED_LIST_MAX}: `}
-            {repeatList.slice(-OPENED_LIST_MAX).map((c) => `${c.emoji} ${c.title}`).join(', ')}
+            {repeatList.slice(0, OPENED_LIST_MAX).map((c) => `${c.emoji} ${c.title}`).join(', ')}
           </p>
         )}
         {comprehension.total > 0 && (

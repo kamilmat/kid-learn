@@ -31,6 +31,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Testy PRZED buildem: `czytanki.test.ts` to jedyne miejsce, które łapie
+      # czytankę bez nagrania (cisza zamiast błędu). Sam `pnpm build` (tsc+vite)
+      # przepuściłby ją do produkcji.
+      - run: pnpm test --run
+
       - name: Build (with /kid-learn/ base)
         env:
           VITE_BASE: /kid-learn/

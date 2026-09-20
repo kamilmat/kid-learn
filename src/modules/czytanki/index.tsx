@@ -50,6 +50,9 @@ export function CzytankiModule({ audioBus = defaultAudioBus }: { audioBus?: Bus 
 
 function ListRoute({ audioBus }: { audioBus: Bus }) {
   const navigate = useNavigate()
+  // Ta sama pułapka co przy ▶ w czytance: nawigacja jest asynchroniczna, więc
+  // drugi tap zdążyłby pobrać kolejną kartę z talii i wyrzucić ją bez pokazania.
+  const drawingRef = useRef(false)
 
   // Lista znika w tym samym tick'u co nawigacja — cue odbierze i odtworzy
   // dopiero docelowy ekran (CzytankaView) po zamontowaniu, przez pendingCue.
@@ -63,8 +66,10 @@ function ListRoute({ audioBus }: { audioBus: Bus }) {
   }, [audioBus, navigate])
   const draw = useDraw()
   const onDraw = useCallback((group: CzytankaGroup) => {
+    if (drawingRef.current) return
     const id = draw(group)
     if (!id) return
+    drawingRef.current = true
     audioBus.stop()
     // iOS: pierwszy synchroniczny play() w gestcie odblokowuje element.
     audioBus.unlock()

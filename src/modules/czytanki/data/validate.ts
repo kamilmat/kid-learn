@@ -1,6 +1,6 @@
 import type { BgKind, CzytankaGroup } from './types'
 import type { CompactCzytanka } from './compact'
-import { parseSentences, parseWords, splitEmoji } from './compact'
+import { parseSentences, parseWords, pickTileEmoji, splitEmoji } from './compact'
 import { LEXICON } from './lexicon'
 
 // Reguły trudności grup — te same, którymi układano cz-01…cz-100, tu
@@ -73,11 +73,26 @@ export function validateCompact(group: CzytankaGroup, c: CompactCzytanka): strin
     if (SKIN_TONE.test(e)) errors.push(`${where}: emoji ${e} z odcieniem skóry`)
   }
   const correct = opts[answer]
-  if (correct && !sceneEmoji.includes(correct) && tile !== correct) {
-    errors.push(`${where}: poprawnej odpowiedzi ${correct} nie ma w scenie ani na kafelku`)
+  // Poprawna odpowiedź MUSI być w scenie. „Widać ją na kafelku” nie jest dowodem —
+  // kafelek znika, gdy czytanka się otworzy, a scena bez poprawnej, za to z dwoma
+  // dystraktorami, aktywnie myli.
+  if (correct && !sceneEmoji.includes(correct)) {
+    errors.push(`${where}: poprawnej odpowiedzi ${correct} nie ma w scenie`)
+  }
+  // Liczy się kafelek, który dziecko NAPRAWDĘ widzi — przy braku jawnego `tile`
+  // wybiera go `pickTileEmoji` z emoji sceny.
+  if ((tile ?? pickTileEmoji(sceneEmoji, correct)) === correct) {
+    errors.push(`${where}: kafelek pokazuje poprawną odpowiedź na ❓`)
   }
   if (!opts.some((o, i) => i !== answer && sceneEmoji.includes(o))) {
     errors.push(`${where}: żaden dystraktor nie jest widoczny w scenie (anty-three-cueing)`)
+  }
+  // Powtórzone emoji to najsilniejsze cue wzrokowe — gdy jest nim opcja pytania,
+  // dziecko trafia z obrazka zamiast z tekstu.
+  for (const o of new Set(opts)) {
+    if (sceneEmoji.filter((e) => e === o).length > 1) {
+      errors.push(`${where}: opcja ${o} powtórzona w scenie`)
+    }
   }
   return errors
 }

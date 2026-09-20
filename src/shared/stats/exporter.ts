@@ -423,11 +423,14 @@ export function exportReportToMarkdown(
     }
     // Kontrakt: te dwie linie muszą mówić to samo co sekcja Czytanki w UI raportu.
     const readCounts = czytankiSnapshot.readCounts ?? {}
-    const repeats = CZYTANKI.filter((c) => (readCounts[c.id] ?? 0) >= 2)
+    const lastCountedAt = czytankiSnapshot.lastCountedAt ?? {}
+    const repeats = CZYTANKI.filter((c) => (readCounts[c.id] ?? 0) >= 2).sort(
+      (a, b) => (lastCountedAt[b.id] ?? 0) - (lastCountedAt[a.id] ?? 0),
+    )
     lines.push(`- **Przeczytane ≥2×**: ${repeats.length}`)
     if (repeats.length > 0) {
       // Przy puli 2000 czytanek pełna lista to dziesiątki tysięcy znaków w jednej linii.
-      const shown = repeats.slice(-REPEAT_LIST_MAX)
+      const shown = repeats.slice(0, REPEAT_LIST_MAX)
       const prefix = repeats.length > REPEAT_LIST_MAX ? `ostatnie ${REPEAT_LIST_MAX}: ` : ''
       lines.push(`  - ${prefix}${shown.map((c) => `${c.emoji} ${c.title}`).join(', ')}`)
     }

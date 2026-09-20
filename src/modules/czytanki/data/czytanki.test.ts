@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { CZYTANKI, CZYTANKI_LEGACY, getCzytankiByGroup, getCzytankaById } from './czytanki'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { AUDIO_KEY_RE, syllableAudioKey, wordAudioKey } from './audioKeys'
+import { AUDIO_KEY_RE, letterUnitAudioKey, syllableAudioKey, wordAudioKey } from './audioKeys'
+import { splitToLetterUnits } from './letterUnits'
 
 const OPEN_CV = /^[BCDFGHJKLŁMNPRSTWZ]?[AEIOUYÓ]$/u
 
@@ -55,28 +56,37 @@ describe('CZYTANKI', () => {
       }
     }
   })
-  it('KAŻDE słowo i sylaba (także słowa pytań ❓) mają nagranie w manifeście', () => {
-    // Manifest to jedyne miejsce, które wie, co naprawdę nagrano — pliki źródłowe
-    // audio są GENEROWANE z tych danych, więc same z siebie nigdy nie zgłoszą braku.
+  it('KAŻDE słowo, sylaba, literka A|B i słowo pytania mają nagranie — manifest I plik', () => {
+    // Manifest wie, co wygenerowano, ale nie co leży na dysku: nagrania jadą do
+    // repo paczkami ≤1 MB (sieć usera), więc przerwana seria daje wpis bez pliku,
+    // czyli ciszę. Pliki źródłowe audio są GENEROWANE z tych danych, więc same
+    // braku nigdy nie zgłoszą — to jedyne miejsce, które go łapie.
     const manifest = JSON.parse(
       readFileSync(join(process.cwd(), 'public/audio/.manifest.json'), 'utf8'),
     ) as Record<string, unknown>
     const entries = (manifest.entries ?? manifest) as Record<string, unknown>
+    const files = new Set(
+      readdirSync(join(process.cwd(), 'public/audio'))
+        .filter((f) => f.endsWith('.mp3'))
+        .map((f) => f.slice(0, -4)),
+    )
     const missing: string[] = []
+    const check = (key: string, where: string) => {
+      if (!(key in entries)) missing.push(`${where}: ${key} (brak w manifeście)`)
+      else if (!files.has(key)) missing.push(`${where}: ${key} (brak pliku mp3)`)
+    }
     for (const c of CZYTANKI) {
       for (const sent of c.sentences) {
         for (const word of sent) {
-          if (!(wordAudioKey(word.syllables) in entries)) {
-            missing.push(`${c.id}: ${wordAudioKey(word.syllables)}`)
-          }
+          check(wordAudioKey(word.syllables), c.id)
           for (const syl of word.syllables) {
-            if (!(syllableAudioKey(syl) in entries)) missing.push(`${c.id}: ${syllableAudioKey(syl)}`)
+            check(syllableAudioKey(syl), c.id)
+            // Tryb A|B czyta sylabę literka po literce — te klucze też muszą istnieć.
+            for (const unit of splitToLetterUnits(syl)) check(letterUnitAudioKey(unit), `${c.id} (A|B)`)
           }
         }
       }
-      for (const qw of c.comprehension?.questionWords ?? []) {
-        if (!(wordAudioKey(qw) in entries)) missing.push(`${c.id} (pytanie): ${wordAudioKey(qw)}`)
-      }
+      for (const qw of c.comprehension?.questionWords ?? []) check(wordAudioKey(qw), `${c.id} (pytanie)`)
     }
     expect(missing).toEqual([])
   })

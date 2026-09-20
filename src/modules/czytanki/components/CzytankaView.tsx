@@ -266,14 +266,11 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext, revealSceneAf
     if (!readEvidence || readCountedRef.current) return
     readCountedRef.current = true
     markRead(czytanka.id)
-    // Odsłonięcie sceny to nagroda za przeczytanie — cue musi zagrać, więc
-    // przerywa bieżący klip. Kolejkowanie „grzecznie” przegrywało: następny tap
-    // w sylabę (dzieci stukają seriami) albo otwarcie ❓ woła `audioBus.stop()`,
-    // który czyścił kolejkę razem z pochwałą.
-    if (revealSceneAfterRead) {
-      audioBus.stop()
-      void audioBus.play('czytanki-ui-picture')
-    }
+    // Kolejkowane, NIE przerywające: przerwanie zjadało sylabę, którą dziecko
+    // właśnie stuknęło (a to ona jest najważniejszym sygnałem zwrotnym).
+    // Cena: przy szybkiej serii tapów pochwała może zostać wyrzucona z kolejki
+    // przez kolejny `stop()` — scena i tak odsłania się na oczach dziecka.
+    if (revealSceneAfterRead) void audioBus.play('czytanki-ui-picture')
   }, [readEvidence, czytanka.id, markRead, revealSceneAfterRead, audioBus])
 
   const sceneHidden = revealSceneAfterRead && !readEvidence

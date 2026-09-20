@@ -155,8 +155,8 @@ export function CzytankaList({ audioBus, onOpen, onDraw }: {
       if (cue) void audioBus.play(cue)
       // W trybie 🎲 lista kafelków nie istnieje — intro o wybieraniu czytanki
       // wprowadzałoby w błąd, a bez cue ekran czterech poziomów jest niemy.
-      if (randomMode) void audioBus.play('czytanki-random-intro')
-      else void playIntroOnce(audioBus, 'czytanki-list-intro', hasSeenIntro, markIntroSeen)
+      const introKey = randomMode ? 'czytanki-random-intro' : 'czytanki-list-intro'
+      void playIntroOnce(audioBus, introKey, hasSeenIntro, markIntroSeen)
     }, 0)
     return () => window.clearTimeout(introTimeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps

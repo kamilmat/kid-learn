@@ -65,9 +65,12 @@ export function sentenceCase(words: readonly Word[]): string {
  * odpowiedź na ❓ — sceny zwykle zaczynają się od postaci, więc same twarze
  * na kafelkach byłyby nie do odróżnienia.
  */
-function pickTileEmoji(scene: readonly string[], answer: string | undefined): string {
-  const things = scene.filter((e) => !PEOPLE.has(e))
-  return things.find((e) => e !== answer) ?? things[0] ?? scene[0] ?? '📖'
+export function pickTileEmoji(scene: readonly string[], answer: string | undefined): string {
+  // Kafelek NIGDY nie pokazuje poprawnej odpowiedzi — dziecko zapamiętałoby ją
+  // z listy i trafiało w ❓ bez czytania. Gdy w scenie nie ma nic innego, wolimy
+  // neutralne 📖 niż podpowiedź.
+  const other = scene.filter((e) => e !== answer)
+  return other.find((e) => !PEOPLE.has(e)) ?? other[0] ?? '📖'
 }
 
 export function czytankaId(num: number): string {
