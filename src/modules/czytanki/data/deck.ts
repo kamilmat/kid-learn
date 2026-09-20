@@ -60,7 +60,9 @@ export function drawFromDeck(
   if (ids.length === 0) return { id: null, deck: { order: [], pos: 0 } }
   let current = deck ? reconcileDeck(deck, ids, rand) : { order: [] as string[], pos: 0 }
   if (!deck || current.pos >= current.order.length) {
-    const tail = current.order.slice(-seamSize(ids.length))
+    // `slice(-0)` zwraca CAŁĄ tablicę, więc przy k = 0 ogon musi być pusty.
+    const k = seamSize(ids.length)
+    const tail = k > 0 ? current.order.slice(-k) : []
     current = { order: buildDeck(ids, weightOf, tail, rand), pos: 0 }
   }
   const id = current.order[current.pos]!

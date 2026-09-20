@@ -36,7 +36,7 @@ function GroupTab({ group, active, onPick }: { group: CzytankaGroup; active: boo
   const level = GROUP_LEVEL[group]
   const tap = useTapHandler({ onTap: () => onPick(group) })
   return (
-    <button type="button" data-testid={`group-tab-${group}`} aria-pressed={active} aria-label={`Poziom ${group}`} {...tap}
+    <button type="button" role="tab" data-testid={`group-tab-${group}`} aria-selected={active} aria-label={`Poziom ${group}`} {...tap}
       style={{
         minWidth: 96, height: 64, padding: '0 12px', borderRadius: radii.kid,
         border: `4px solid ${active ? LEVEL_TILE_BORDER[level] : 'transparent'}`,
@@ -153,7 +153,10 @@ export function CzytankaList({ audioBus, onOpen, onDraw }: {
     const introTimeout = window.setTimeout(() => {
       const cue = takePendingCue()
       if (cue) void audioBus.play(cue)
-      void playIntroOnce(audioBus, 'czytanki-list-intro', hasSeenIntro, markIntroSeen)
+      // W trybie 🎲 lista kafelków nie istnieje — intro o wybieraniu czytanki
+      // wprowadzałoby w błąd, a bez cue ekran czterech poziomów jest niemy.
+      if (randomMode) void audioBus.play('czytanki-random-intro')
+      else void playIntroOnce(audioBus, 'czytanki-list-intro', hasSeenIntro, markIntroSeen)
     }, 0)
     return () => window.clearTimeout(introTimeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -216,7 +219,7 @@ export function CzytankaList({ audioBus, onOpen, onDraw }: {
             <div ref={gridRef} style={{ flex: 1, height: '100%', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div data-testid="czytanki-page" style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, ${tile}px)`, gridAutoRows: `${tile}px`, gap: GAP }}>
                 {visible.map((c) => (
-                  <CzytankaTile key={c.id} czytanka={c} opened={opened.has(c.id)} readCount={readCounts[c.id] ?? 0} onOpen={onOpen} />
+                  <CzytankaTile key={c.id} czytanka={c} opened={opened.has(c.id)} readCount={readCounts[c.id] ?? 0} size={tile} onOpen={onOpen} />
                 ))}
               </div>
             </div>

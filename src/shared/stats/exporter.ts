@@ -110,7 +110,7 @@ const SEVERITY_LABEL: Record<AntiCheatFlag['severity'], string> = {
 
 /**
  * Slug audio → tekst słowa z sylabami (`WIE-WIÓR-KA`). Budowane leniwie raz —
- * 60 czytanek × kilkanaście słów, a raport otwiera się wielokrotnie.
+ * 2000 czytanek × kilkanaście słów, a raport otwiera się wielokrotnie.
  */
 let wordLabelBySlug: Map<string, string> | null = null
 
@@ -151,6 +151,9 @@ export function topTappedWords(
 }
 
 const MODULE_ORDER: StatsModuleId[] = ['letters', 'reading', 'numbers']
+
+/** Ile tytułów czytanek wypisujemy, zanim lista zamieni się w ścianę tekstu. */
+const REPEAT_LIST_MAX = 30
 
 export function exportReportToMarkdown(
   letters: Record<string, LetterState>,
@@ -412,9 +415,10 @@ export function exportReportToMarkdown(
     lines.push('## Czytanki')
     lines.push('')
     lines.push(`- **Otwarte**: ${czytankiSnapshot.openedIds.length}/${CZYTANKI.length}`)
+    const openedSet = new Set(czytankiSnapshot.openedIds)
     for (const g of GROUP_ORDER) {
       const inGroup = getCzytankiByGroup(g)
-      const n = inGroup.filter((c) => czytankiSnapshot.openedIds.includes(c.id)).length
+      const n = inGroup.filter((c) => openedSet.has(c.id)).length
       lines.push(`  - Grupa ${g}: ${n}/${inGroup.length}`)
     }
     // Kontrakt: te dwie linie muszą mówić to samo co sekcja Czytanki w UI raportu.
@@ -422,7 +426,10 @@ export function exportReportToMarkdown(
     const repeats = CZYTANKI.filter((c) => (readCounts[c.id] ?? 0) >= 2)
     lines.push(`- **Przeczytane ≥2×**: ${repeats.length}`)
     if (repeats.length > 0) {
-      lines.push(`  - ${repeats.map((c) => `${c.emoji} ${c.title}`).join(', ')}`)
+      // Przy puli 2000 czytanek pełna lista to dziesiątki tysięcy znaków w jednej linii.
+      const shown = repeats.slice(-REPEAT_LIST_MAX)
+      const prefix = repeats.length > REPEAT_LIST_MAX ? `ostatnie ${REPEAT_LIST_MAX}: ` : ''
+      lines.push(`  - ${prefix}${shown.map((c) => `${c.emoji} ${c.title}`).join(', ')}`)
     }
     const topTaps = topTappedWords(czytankiSnapshot.wordTaps ?? {})
     if (topTaps.length > 0) {

@@ -158,6 +158,9 @@ export const useCzytanki = create<CzytankiState>()(
         })),
       drawNext: (group, ids, weightOf) => {
         const { id, deck } = drawFromDeck(get().decks[String(group)], ids, weightOf)
+        // Pusta pula daje pustą talię — zapisanie jej podłożyłoby śmieć, przez
+        // który następne losowanie poszłoby `reconcileDeck` zamiast `buildDeck`.
+        if (id === null) return null
         set((s) => ({ decks: { ...s.decks, [String(group)]: deck } }))
         return id
       },

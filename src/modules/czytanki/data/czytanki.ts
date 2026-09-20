@@ -1486,18 +1486,58 @@ export const CZYTANKI_LEGACY: readonly Czytanka[] = [
  * generowana (spec 2026-09-19). Kolejność = kolejność grup — ◀▶ w czytance i
  * stronicowanie listy idą po tej tablicy.
  */
+/**
+ * Kafelek na liście to samo emoji — przy 500 czytankach na grupę powtórki są
+ * nieuniknione (112–179 różnych emoji), ale dwa identyczne kafelki OBOK SIEBIE
+ * są dla dziecka nie do rozróżnienia. Rozrzucamy więc czytanki tak, żeby to samo
+ * emoji wracało możliwie rzadko: karuzela po kubełkach emoji, największe najpierw.
+ */
+function spreadByEmoji(list: readonly Czytanka[]): Czytanka[] {
+  const buckets = new Map<string, Czytanka[]>()
+  for (const c of list) {
+    const bucket = buckets.get(c.emoji)
+    if (bucket) bucket.push(c)
+    else buckets.set(c.emoji, [c])
+  }
+  const queues = [...buckets.values()].sort((a, b) => b.length - a.length)
+  const out: Czytanka[] = []
+  while (out.length < list.length) {
+    let placedInPass = false
+    for (const q of queues) {
+      const next = q.shift()
+      if (next) {
+        out.push(next)
+        placedInPass = true
+      }
+    }
+    // Kubełki są skończone, więc pętla zawsze się kończy — ten warunek chroni
+    // tylko przed nieskończonym obrotem, gdyby lista miała dziury.
+    if (!placedInPass) break
+  }
+  return out
+}
+
 export const CZYTANKI: readonly Czytanka[] = GROUP_ORDER.flatMap((g) => [
   ...CZYTANKI_LEGACY.filter((c) => c.group === g),
-  ...GENERATED_BY_GROUP[g].map((c) => expandCompact(g, c)),
+  ...spreadByEmoji(GENERATED_BY_GROUP[g].map((c) => expandCompact(g, c))),
 ])
 
 const BY_ID = new Map(CZYTANKI.map((c) => [c.id, c]))
-const BY_GROUP = new Map(GROUP_ORDER.map((g) => [g, CZYTANKI.filter((c) => c.group === g)]))
+const INDEX_BY_ID = new Map(CZYTANKI.map((c, i) => [c.id, i]))
+const BY_GROUP = new Map<CzytankaGroup, readonly Czytanka[]>(
+  GROUP_ORDER.map((g) => [g, CZYTANKI.filter((c) => c.group === g)]),
+)
 
 export function getCzytankaById(id: string): Czytanka | undefined {
   return BY_ID.get(id)
 }
 
-export function getCzytankiByGroup(group: CzytankaGroup): Czytanka[] {
+/** Pozycja w `CZYTANKI` — dla sąsiadów ◀▶ bez liniowego `indexOf` po 2000 pozycjach. */
+export function getCzytankaIndex(id: string): number {
+  return INDEX_BY_ID.get(id) ?? -1
+}
+
+/** `readonly`, bo zwracana jest WSPÓŁDZIELONA tablica — mutacja przestawiłaby grupę wszystkim. */
+export function getCzytankiByGroup(group: CzytankaGroup): readonly Czytanka[] {
   return BY_GROUP.get(group) ?? []
 }

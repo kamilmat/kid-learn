@@ -238,7 +238,8 @@ function CzytankiStats() {
         </p>
         {repeatList.length > 0 && (
           <p style={{ margin: '2px 0 0', fontSize: 13, color: '#6b7280' }}>
-            {repeatList.map((c) => `${c.emoji} ${c.title}`).join(', ')}
+            {repeatList.length > OPENED_LIST_MAX && `Ostatnie ${OPENED_LIST_MAX}: `}
+            {repeatList.slice(-OPENED_LIST_MAX).map((c) => `${c.emoji} ${c.title}`).join(', ')}
           </p>
         )}
         {comprehension.total > 0 && (

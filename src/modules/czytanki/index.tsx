@@ -1,9 +1,9 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { AudioBus } from '@/shared/audio/AudioBus'
 import { audioBus as defaultAudioBus } from '@/shared/audio/AudioBus'
 import { KidNav } from '@/shared/ui/KidNav'
-import { CZYTANKI, GROUP_ORDER, getCzytankaById, getCzytankiByGroup } from './data/czytanki'
+import { CZYTANKI, GROUP_ORDER, getCzytankaById, getCzytankaIndex, getCzytankiByGroup } from './data/czytanki'
 import type { CzytankaGroup } from './data/types'
 import { czytankaWeightFn } from './data/deckWeight'
 import { useCzytanki } from './store/czytankiStore'
@@ -66,7 +66,10 @@ function ListRoute({ audioBus }: { audioBus: Bus }) {
     const id = draw(group)
     if (!id) return
     audioBus.stop()
+    // iOS: pierwszy synchroniczny play() w gestcie odblokowuje element.
     audioBus.unlock()
+    // Który poziom wybrało dziecko — tak samo jak zakładka w trybie „wszystkie”.
+    void audioBus.play(`czytanki-ui-level-${group}`)
     setPendingCue('czytanki-ui-open')
     navigate(`${id}?${RANDOM_PARAM}=${group}`)
   }, [audioBus, draw, navigate])
@@ -96,17 +99,28 @@ function ViewRoute({ audioBus }: { audioBus: Bus }) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const draw = useDraw()
+  const drawingRef = useRef(false)
+  // Nowa czytanka jest już na ekranie — kolejne ▶ może losować dalej.
+  useEffect(() => { drawingRef.current = false }, [id])
   const czytanka = id ? getCzytankaById(id) : undefined
   if (!czytanka) return <Navigate to=".." replace />
-  const randomGroup = parseRandomGroup(searchParams.get(RANDOM_PARAM))
+  // `?los=2` na czytance z grupy 3 (ręcznie podrasowany URL) losowałoby dalej
+  // z obcej grupy — bierzemy pod uwagę tylko parametr zgodny z czytanką.
+  const paramGroup = parseRandomGroup(searchParams.get(RANDOM_PARAM))
+  const randomGroup = paramGroup === czytanka.group ? paramGroup : null
   if (randomGroup !== null) {
     const drawNextCzytanka = () => {
+      // Dziecko stuka ▶ seriami: bez tej blokady każdy tap przesuwa talię,
+      // więc karty znikają z rundy bez pokazania (nawigacja jest asynchroniczna).
+      if (drawingRef.current) return
+      drawingRef.current = true
       const nextId = draw(randomGroup)
       if (nextId) void navigate(`../${nextId}?${RANDOM_PARAM}=${randomGroup}`, { relative: 'path', replace: true })
+      else drawingRef.current = false
     }
     return <CzytankaView key={czytanka.id} czytanka={czytanka} audioBus={audioBus} onNext={drawNextCzytanka} revealSceneAfterRead />
   }
-  const idx = CZYTANKI.indexOf(czytanka)
+  const idx = getCzytankaIndex(czytanka.id)
   const prev = CZYTANKI[idx - 1]
   const next = CZYTANKI[idx + 1]
   // `exactOptionalPropertyTypes` nie pozwala jawnie przekazać `undefined` do

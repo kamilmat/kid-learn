@@ -10,11 +10,14 @@ export const GROUP_LEVEL: Record<CzytankaGroup, Level> = { 1: 'iskierka', 2: 'pl
 // i tak nie zmieściłoby się czytelnie w rogu kafelka.
 const MAX_DOTS = 3
 
-export function CzytankaTile({ czytanka, opened, readCount = 0, onOpen }: {
+export function CzytankaTile({ czytanka, opened, readCount = 0, size, onOpen }: {
   czytanka: Czytanka
   opened: boolean
   /** Ile razy czytanka była czytana — kropki od drugiego razu. */
   readCount?: number
+  /** Bok kafelka policzony przez siatkę listy; bez niego kafelek wymusza 120 px
+   *  i przy niskim oknie wychodzi poza swój wiersz. */
+  size?: number
   onOpen: (id: string) => void
 }) {
   const tap = useTapHandler({ onTap: () => onOpen(czytanka.id) })
@@ -23,9 +26,10 @@ export function CzytankaTile({ czytanka, opened, readCount = 0, onOpen }: {
   return (
     <button type="button" data-testid={`tile-${czytanka.id}`} id={`tile-${czytanka.id}`} aria-label={czytanka.title} {...tap}
       style={{
-        position: 'relative', width: '100%', aspectRatio: '1', minHeight: 120,
+        position: 'relative', width: '100%', aspectRatio: '1', minHeight: size ?? 120,
         borderRadius: radii.kid * 1.5, background: LEVEL_TILE_BG[level], border: `4px solid ${LEVEL_TILE_BORDER[level]}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: size ? Math.round(size * 0.48) : 64, cursor: 'pointer',
         touchAction: 'manipulation', userSelect: 'none', WebkitUserSelect: 'none', WebkitTapHighlightColor: 'transparent',
       }}>
       <span aria-hidden="true">{czytanka.emoji}</span>

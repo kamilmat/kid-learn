@@ -72,6 +72,10 @@ export function ComprehensionQuestion({ czytankaId, comprehension, audioBus, onC
   const dismissingRef = useRef(false)
 
   useEffect(() => {
+    // Cleanup poprzedniego montowania ustawia `closedRef` na true; w StrictMode
+    // (dev) mount → cleanup → mount zostawiał overlay, którego nie dało się
+    // zamknąć. Reset MUSI być tutaj, bo cleanupy lecą przed efektami.
+    closedRef.current = false
     audioBus.stop()
     void audioBus.play('czytanki-q-intro')
     playQuestion()

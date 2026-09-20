@@ -56,7 +56,9 @@ export function layoutScene(emojis: readonly string[], seed: number): Actor[] {
   let order = 0
 
   // Aktorzy na ziemi rozstawieni równo po szerokości — z lekkim rozrzutem,
-  // żeby sceny nie wyglądały jak jedna szablonowa linijka.
+  // żeby sceny nie wyglądały jak jedna szablonowa linijka. Pas 56–78% jest
+  // zajęty przez przyciski sterowania (🗣 🔊 🐢 KO|TA A|B ❓, `bottom: 8`),
+  // więc ziemia trzyma się wyżej, a środek dołu zostaje pusty.
   ground.forEach((emoji, i) => {
     const n = ground.length
     const baseX = n === 1 ? 50 : 16 + (i * 68) / (n - 1)
@@ -65,7 +67,7 @@ export function layoutScene(emojis: readonly string[], seed: number): Actor[] {
     actors.push({
       emoji,
       x: Math.round(baseX + (rand() - 0.5) * 8),
-      y: Math.round((kind === 'big' ? 56 : 64) + (i % 2) * 8 + rand() * 6),
+      y: Math.round((kind === 'big' ? 30 : 36) + (i % 2) * 6 + rand() * 4),
       size: Math.round(lo + rand() * (hi - lo)),
       anim: pick(rand, ANIMS[kind]),
       delay: Math.round((order++ * 0.4 + rand() * 0.3) * 10) / 10,
@@ -73,12 +75,12 @@ export function layoutScene(emojis: readonly string[], seed: number): Actor[] {
   })
   sky.forEach((emoji, i) => {
     const n = sky.length
-    const baseX = n === 1 ? 78 : 22 + (i * 60) / (n - 1)
+    const baseX = n === 1 ? 80 : 24 + (i * 58) / (n - 1)
     const [lo, hi] = SIZE.sky
     actors.push({
       emoji,
       x: Math.round(baseX + (rand() - 0.5) * 10),
-      y: Math.round(24 + rand() * 14),
+      y: Math.round(16 + rand() * 10),
       size: Math.round(lo + rand() * (hi - lo)),
       anim: pick(rand, ANIMS.sky),
       delay: Math.round((order++ * 0.4 + rand() * 0.3) * 10) / 10,

@@ -266,8 +266,14 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext, revealSceneAf
     if (!readEvidence || readCountedRef.current) return
     readCountedRef.current = true
     markRead(czytanka.id)
-    // Kolejkowane (bez stop) — nie ucina ostatniej sylaby ani końca ▶.
-    if (revealSceneAfterRead) void audioBus.play('czytanki-ui-picture')
+    // Odsłonięcie sceny to nagroda za przeczytanie — cue musi zagrać, więc
+    // przerywa bieżący klip. Kolejkowanie „grzecznie” przegrywało: następny tap
+    // w sylabę (dzieci stukają seriami) albo otwarcie ❓ woła `audioBus.stop()`,
+    // który czyścił kolejkę razem z pochwałą.
+    if (revealSceneAfterRead) {
+      audioBus.stop()
+      void audioBus.play('czytanki-ui-picture')
+    }
   }, [readEvidence, czytanka.id, markRead, revealSceneAfterRead, audioBus])
 
   const sceneHidden = revealSceneAfterRead && !readEvidence
@@ -363,7 +369,8 @@ export function CzytankaView({ czytanka, audioBus, onPrev, onNext, revealSceneAf
         <CzytankaScene scene={sceneHidden ? { bg: czytanka.scene.bg, actors: [] } : czytanka.scene} />
         {sceneHidden && (
           <span data-testid="scene-hidden" aria-hidden="true"
-            style={{ position: 'absolute', left: '50%', top: '42%', transform: 'translate(-50%, -50%)', fontSize: 72, opacity: 0.55 }}>
+            // Niżej niż 32% nachodzi na pasek 🗣 🔊 🐢 KO|TA A|B przy niskiej scenie (grupy 3–4).
+            style={{ position: 'absolute', left: '50%', top: '30%', transform: 'translate(-50%, -50%)', fontSize: 56, opacity: 0.55 }}>
             📖
           </span>
         )}

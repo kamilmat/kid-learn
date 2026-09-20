@@ -1,9 +1,10 @@
 import { wordAudioKey } from './audioKeys'
 import { getCzytankaById } from './czytanki'
 
-// Co 5 dotknięć słów czytanki = +1 do wagi, najwyżej 3× bazowa. Więcej
-// zamieniłoby talię w powtórkę kilku „trudnych” czytanek.
-const TAPS_PER_WEIGHT = 5
+// Waga liczona ze ŚREDNIEJ liczby tapów na słowo, nie z sumy: suma rosła z
+// długością czytanki (grupa 4 ma ~25 słów), więc po kilkudziesięciu czytankach
+// cała pula siedziała na maksimum i ważenie po cichu przestawało działać.
+const TAPS_PER_WORD_FOR_WEIGHT = 1.5
 const MAX_EXTRA_WEIGHT = 2
 
 /**
@@ -19,9 +20,14 @@ export function czytankaWeightFn(wordTaps: Record<string, Record<string, number>
     const c = getCzytankaById(id)
     if (!c || totals.size === 0) return 1
     let taps = 0
+    let words = 0
     for (const sent of c.sentences) {
-      for (const w of sent) taps += totals.get(wordAudioKey(w.syllables).replace('cz-word-', '')) ?? 0
+      for (const w of sent) {
+        taps += totals.get(wordAudioKey(w.syllables).replace('cz-word-', '')) ?? 0
+        words += 1
+      }
     }
-    return 1 + Math.min(MAX_EXTRA_WEIGHT, taps / TAPS_PER_WEIGHT)
+    if (words === 0) return 1
+    return 1 + Math.min(MAX_EXTRA_WEIGHT, taps / words / TAPS_PER_WORD_FOR_WEIGHT)
   }
 }
