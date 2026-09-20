@@ -431,7 +431,8 @@ export function exportReportToMarkdown(
     if (repeats.length > 0) {
       // Przy puli 2000 czytanek pełna lista to dziesiątki tysięcy znaków w jednej linii.
       const shown = repeats.slice(0, REPEAT_LIST_MAX)
-      const prefix = repeats.length > REPEAT_LIST_MAX ? `ostatnie ${REPEAT_LIST_MAX}: ` : ''
+      // Ta sama etykieta co w UI raportu — kontrakt „obie sekcje mówią to samo”.
+      const prefix = repeats.length > REPEAT_LIST_MAX ? `Ostatnie ${REPEAT_LIST_MAX}: ` : ''
       lines.push(`  - ${prefix}${shown.map((c) => `${c.emoji} ${c.title}`).join(', ')}`)
     }
     const topTaps = topTappedWords(czytankiSnapshot.wordTaps ?? {})

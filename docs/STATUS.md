@@ -3,17 +3,17 @@
 **Live**: https://kamilmat.github.io/kid-learn/ (PWA, instalowalna)
 **Repo**: https://github.com/kamilmat/kid-learn (public)
 
-## Stan aktualny (2026-09-19, po puli losowej czytanek)
+## Stan aktualny (2026-09-20, po puli losowej czytanek i 3 rundach CR)
 
 Jeden ekran prawdy na start sesji. Szczegóły — w sekcjach niżej, w kolejności odwrotnej chronologicznie.
 
 | | |
 |---|---|
 | **Moduły live** | 1 Literki · 2 Czytanie · 3 Cyferki · 4 Czytanki (**2000 czytanek**, po 500 na grupę: 100 ręcznych + 1900 z puli) |
-| **Testy** | `pnpm test --run` → **1091/1091** |
-| **Audio** | `pnpm audio:check` → **2789/2789**; plików `public/audio/*.mp3` = **2796** (te same 7 nadwyżkowych, opisane w CLAUDE.md) |
+| **Testy** | `pnpm test --run` → **1091/1091** (CI odpala je przed buildem) |
+| **Audio** | `pnpm audio:check` → **2790/2790**; plików `public/audio/*.mp3` = **2797** (te same 7 nadwyżkowych, opisane w CLAUDE.md) |
 | **Persist** | `iskierki-state-v1` **v8** · `iskierki-letters-v1` v2 · `iskierki-reading-v1` v1 · `iskierki-numbers-v1` v3 · `iskierki-czytanki-v1` **v4** |
-| **Ostatnie zmiany** | pula 1900 czytanek ze słownika 1492 form · tryb 🎲 (talia bez powtórek) · lista stronicowana z zakładkami poziomów · scena zakryta do przeczytania |
+| **Ostatnie zmiany** | pula 1900 czytanek ze słownika 1504 form · tryb 🎲 (talia bez powtórek) · lista stronicowana z zakładkami poziomów · scena zakryta do przeczytania · **3 rundy CR + weryfikacja** (28 poprawek) |
 
 **Otwarte, świadomie odłożone** (nic nie blokuje):
 - **Odsłuch nowych nagrań Azure: 377 sylab `cz-syl-*` i 956 słów `cz-word-*`** (Agnieszka). Słowa czytane z ortografii zwykle są OK; ryzyko jest przy izolowanych sylabach (`azure-ipa` + G2P). Poprawka: wpis w `audio-source/pronunciation-overrides.json` + `pnpm audio:build`.
@@ -25,6 +25,33 @@ Jeden ekran prawdy na start sesji. Szczegóły — w sekcjach niżej, w kolejno�
 - Przeglądarka: Chrome DevTools MCP na `localhost:5173` (dev) albo wprost na produkcji; okno 1180×820 = iPad 10" poziomo, 820×1180 = pionowo.
 - Audio: `afplay public/audio/<klucz>.mp3` — agent NIE słyszy nagrań, ale `afplay` puszcza je na głośnikach usera, więc „podegraj" znaczy: odpal `afplay` po kolei i czekaj na werdykt.
 - Deploy: `git push` → GH Actions ~45 s → weryfikacja live przez `curl` bundla i `HTTP` na nowe mp3.
+
+## Przeglądy kodu puli losowej: 3 rundy + weryfikacja (2026-09-20) — ukończone
+
+Po wdrożeniu puli poszły trzy niezależne rundy przeglądu (standardowy CR, potem trzech recenzentów: iPad/UX, audio+persistencja, dane+wydajność, potem runda adwersaryjna na poprawkach) i osobna runda weryfikacyjna. Razem **28 poprawek**, commity `d08d0ac`, `9857718` i następne.
+
+### Najpoważniejsze znaleziska
+
+- **Trzy poprawki opisane w `d08d0ac` NIE trafiły do plików** — edycja przez podmianę tekstu nie dopasowała wzorca i przeszła po cichu, a opis commita twierdził, że zrobione. Runda 3 to wyłapała. Wniosek na przyszłość: po każdej masowej podmianie sprawdzać `grep`iem, że zmiana jest w pliku, zanim powstanie commit.
+- **CI publikowało bez testów.** `deploy.yml` robił install + build; jedyny strażnik przed czytanką grającą ciszą (`czytanki.test.ts`) nie był uruchamiany. Teraz `pnpm test --run` stoi przed buildem.
+- **Test nagrań sprawdzał tylko manifest, nie pliki.** Przy wypychaniu audio paczkami ≤1 MB przerwana seria daje wpis bez mp3 = cisza przy zielonych testach. Teraz sprawdza jedno i drugie, plus literki trybu A|B. Kontrola negatywna (usunięcie jednego pliku) wywala test.
+- **Sceny: aktorzy pod przyciskami i ucinani** — do 66% powierzchni pod paskiem, 20% aktorów w grupie 4 ucinanych. `CzytankaScene` liczy teraz układ w pikselach z realnej wysokości sceny i mapuje zakres na pas nad przyciskami. Zmierzone po poprawce (9 czytanek × 2 orientacje): **0% zasłonięcia, 0 px ucięcia**.
+- **Ważenie talii wysycało się** po ~50 czytankach (suma tapów po wszystkich słowach) i cicho degenerowało się do zwykłego tasowania. Teraz liczy się średnia tapów na słowo.
+- **Kafelki listy**: do 8 identycznych emoji na stronie. `spreadByEmoji` rozkłada każde emoji równomiernie po liście: max **2** na stronę, **0** sąsiadujących.
+- **Bundle**: dane 2000 czytanek były w głównym chunku, ładowane też przez Literki. Moduły przez `React.lazy` → główny chunk **1045 → 264 kB** (292 → 83 kB gzip), dane w osobnym chunku.
+- Pozostałe: podwójny tap ▶/kafelka poziomu zjadał karty z talii; overlay ❓ nie zamykał się w dev (StrictMode); cue „zobacz obrazek” zjadał stukniętą sylabę; intro 🎲 grało za każdym wejściem; „Ostatnie 30” w raporcie pokazywało koniec puli zamiast ostatnio czytanych; `getCzytankiByGroup` zwracał mutowalną tablicę współdzieloną.
+
+### Świadome decyzje usera (nie-cele)
+
+- Pytania ❓ puli zostają składane ze słów (nagranie 1900 pytań to +32 MB i ~1,7 h buildu).
+- Licznik „X / 2000” na liście zostaje.
+- Tryb „wszystkie” zostaje przy 28 stronach na poziom — przeglądanie dalszych stron jest nierealne, ale od tego jest 🎲.
+
+### Znane, świadomie zostawione
+
+- Jednoklatkowy przeskok pozycji aktorów przy nawigacji SPA między czytankami (auto-fit `CzytankaView` przelicza wysokość sceny). ~16 ms, po przeładowaniu strony nie występuje.
+- Głębia sceny w landscape dla grup 3–4 to 14–23 px (pas nad przyciskami jest wtedy niski). W portrait 132–220 px.
+- Strzałki ◀▶ nachodzą na aktorów do 14% powierzchni.
 
 ## Pula losowa czytanek: 100 → 2000 (2026-09-19) — ukończona
 

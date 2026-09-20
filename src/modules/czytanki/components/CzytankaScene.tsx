@@ -14,6 +14,10 @@ const MAX_SCALE = 1.15
 // 72 px wysokości + 8 px marginesu. Aktorzy muszą zmieścić się nad nim.
 const CONTROLS_BAND = 80
 const EDGE_PADDING = 4
+// Poniżej tylu punktów różnicy w danych scena jest „płaska” — rozstawiamy
+// aktorów delikatnie wokół środka pasa zamiast rozciągać ich na całą wysokość.
+const MIN_SPREAD = 6
+const SUBTLE_SPREAD_PX = 6
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -63,8 +67,15 @@ function layout(actors: readonly Actor[], sceneHeight: number, scale: number): n
   const ys = actors.map((a) => a.y)
   const lo = Math.min(...ys)
   const hi = Math.max(...ys)
+  // Sceny, w których wszyscy stoją praktycznie równo (różnica kilku punktów),
+  // NIE są rozciągane na cały pas — normalizacja robiłaby z szumu w danych
+  // dramatyczną głębię (jeden punkt różnicy = 200 px rozjazdu).
+  if (hi - lo < MIN_SPREAD) {
+    const mid = (bandTop + bandBottom) / 2
+    return actors.map((a) => clamp(mid + (a.y - (lo + hi) / 2) * SUBTLE_SPREAD_PX, bandTop, bandBottom))
+  }
   return actors.map((a) => {
-    const frac = hi > lo ? (a.y - lo) / (hi - lo) : 0.5
+    const frac = (a.y - lo) / (hi - lo)
     return bandTop + frac * (bandBottom - bandTop)
   })
 }
